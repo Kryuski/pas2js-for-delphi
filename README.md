@@ -17,6 +17,14 @@ The original Pas2js supports several operation systems and compilation targets. 
 * has the pas2js.dpr command-line utility for **Windows**, **32-bit**. You can compile it in Delphi IDE.
 * It was tested for the **browser** target platform, i.e. it can generate JS files to use in HTML pages.
 
+## Compiling of Pas2js.dpr project in Delphi
+* Open pas2js.dpr in your Delphi IDE.
+* Open Delphi compiler options in menu Project | Options | Building | Delphi compiler. Then update settings as follows:
+** Conditional defines: `DEBUG;FPC_HAS_CPSTRING;WINDOWS;UsePChar;FPC`
+** Search path: `..\..\packages;..\..\packages\pastojs\src;..\..\packages\fcl-passrc\src;..\..\packages\fcl-js\src;..\..\packages\fcl-json\src`
+** Unit output directory: `..\..\..\Units\$(Platform)-$(Config)`
+You're ready to build the project. Press Shift-F9.
+
 ## Testing and compatibility
 Pas2js for Delphi tested on demo programs included in the original Pas2js package.
 
