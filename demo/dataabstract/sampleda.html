@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="utf-8" />
+    <title>
+      Data Abstract dataset demo
+    </title>
+
+    <!-- Bootstrap -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+      }
+    </style>
+    <script src="RemObjectsSDK.js" type="text/javascript"></script>
+    <script src="DataAbstract.js" type="text/javascript"></script>
+    <script src="DataAbstract4_intf.js" type="text/javascript"></script>
+    <script src="sampleda.js" type="text/javascript"></script>
+  </head>
+
+  <body role="document">
+    <div class="navbar navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <div class="navbar-brand">Data Abstract for Pas2JS</div>
+        </div>
+        <button id="btn-fetch" class="btn btn-default">Load Data</button>
+        <div><a href="sampleda.lpr"> View pascal sources</a></div>
+      </div>
+    </div>
+    <div id="wrapper" class="container" style="display:none;">
+      <div class="content">
+        <div class="row">
+          <table class="table table-bordered table-striped">
+            <thead>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Phone</th>
+            </thead>
+            <tbody id="tableRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <hr />
+    </footer>
+
+    <script>
+      window.addEventListener("load",rtl.run);
+    </script>
+  </body>
+</html>

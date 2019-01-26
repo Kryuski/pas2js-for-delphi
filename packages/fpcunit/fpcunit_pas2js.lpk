@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <Name Value="fpcunit_pas2js"/>
+    <Type Value="RunTimeOnly"/>
+    <AutoUpdate Value="Manually"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <SearchPaths>
+        <UnitOutputDirectory Value="js"/>
+      </SearchPaths>
+      <Other>
+        <ExecuteBefore>
+          <Command Value="$MakeExe(pas2js) -O- -Jc -vbq fpcunit_pas2js.pas"/>
+          <ScanForFPCMsgs Value="True"/>
+        </ExecuteBefore>
+      </Other>
+      <SkipCompiler Value="True"/>
+    </CompilerOptions>
+    <Version Major="1"/>
+    <Files Count="8">
+      <Item1>
+        <Filename Value="fpcunit.pas"/>
+        <UnitName Value="fpcunit"/>
+      </Item1>
+      <Item2>
+        <Filename Value="testregistry.pas"/>
+        <UnitName Value="testregistry"/>
+      </Item2>
+      <Item3>
+        <Filename Value="testdecorator.pas"/>
+        <UnitName Value="testdecorator"/>
+      </Item3>
+      <Item4>
+        <Filename Value="consoletestrunner.pas"/>
+        <UnitName Value="consoletestrunner"/>
+      </Item4>
+      <Item5>
+        <Filename Value="fpcunitreport.pas"/>
+        <UnitName Value="fpcunitreport"/>
+      </Item5>
+      <Item6>
+        <Filename Value="plaintestreport.pas"/>
+        <UnitName Value="plaintestreport"/>
+      </Item6>
+      <Item7>
+        <Filename Value="browsertestrunner.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="browsertestrunner"/>
+      </Item7>
+      <Item8>
+        <Filename Value="htmltestreport.pp"/>
+        <UnitName Value="htmltestreport"/>
+      </Item8>
+    </Files>
+    <RequiredPkgs Count="2">
+      <Item1>
+        <PackageName Value="fcl_base_pas2js"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="pas2js_rtl"/>
+      </Item2>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="."/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>

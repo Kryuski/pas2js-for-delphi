@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <Name Value="fcl_base_pas2js"/>
+    <Type Value="RunTimeOnly"/>
+    <Author Value="Mattias Gaertner"/>
+    <AutoUpdate Value="Manually"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <SearchPaths>
+        <UnitOutputDirectory Value="."/>
+      </SearchPaths>
+      <Other>
+        <ExecuteBefore>
+          <Command Value="$MakeExe(IDE,pas2js) -O- -Jc -vbq fcl_base_pas2js.pas"/>
+          <ScanForFPCMsgs Value="True"/>
+        </ExecuteBefore>
+      </Other>
+      <SkipCompiler Value="True"/>
+    </CompilerOptions>
+    <Description Value="Free Pascal Component Library - Base
+Port to pas2js."/>
+    <License Value="Modified LGPL-2"/>
+    <Version Major="1"/>
+    <Files Count="4">
+      <Item1>
+        <Filename Value="custapp.pas"/>
+        <UnitName Value="custapp"/>
+      </Item1>
+      <Item2>
+        <Filename Value="nodejsapp.pas"/>
+        <UnitName Value="nodejsapp"/>
+      </Item2>
+      <Item3>
+        <Filename Value="browserapp.pas"/>
+        <UnitName Value="browserapp"/>
+      </Item3>
+      <Item4>
+        <Filename Value="fpexprpars.pas"/>
+        <UnitName Value="fpexprpars"/>
+      </Item4>
+    </Files>
+    <RequiredPkgs Count="1">
+      <Item1>
+        <PackageName Value="pas2js_rtl"/>
+      </Item1>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>

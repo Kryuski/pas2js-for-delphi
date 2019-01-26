@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Example showing how to use TjsPDF">
+    <meta name="author" content="silvioprog">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.min.js" integrity="sha256-tzkPfJgrAehd0mUYdxwWvn+TQrk2VjRJL/xP9iW5fhk=" crossorigin="anonymous"></script>
+    <script src="js/basic.js"></script>
+    <title>TjsPDF example</title>
+    <style>
+      .title {
+        margin: 20px 0 30px 0
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h3 class="title">
+        TjsPDF <small class="text-muted">Create PDFs using Pas2JS & jsPDF</small>
+      </h3>
+      <div class="row">
+        <div class="col-3-">
+          <select class="form-control btn-block" id="edSelExample" autofocus>
+            <option selected disabled>-- Select an example --</option>
+            <option value="hello">Hello world</option>
+            <option value="font">Font faces, text alignment and rotation</option>
+            <option value="two_page">Two page Hello World</option>
+            <option value="circles">Circles</option>
+            <option value="lines">Lines</option>
+            <option value="rectangles">Rectangles</option>
+            <option value="triangles">Triangles</option>
+          </select>
+          <button type="button" class="btn btn-primary btn-lg btn-block" id="btDownload" disabled>Download</button>
+        </div>
+        <div class="col-8">
+          <div class="shadow-sm p-1 bg-white rounded" style="height: 500px;">
+            <embed width="100%" height="100%" type="application/pdf" id="ebPreview">
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      rtl.run();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <script type="application/javascript" src="../Pas2JS_WebGL_OBJ.js"></script>
+  </head>
+  <body>
+  	<script type="application/glsl" id="vertex.glsl">
+			attribute vec3 in_position;
+      attribute vec2 in_texCoord;
+      attribute vec3 in_normal;
+
+      uniform mat4 projTransform;
+      uniform mat4 viewTransform;
+      uniform mat4 modelTransform;
+      uniform mat4 inverseViewTransform;
+
+      uniform vec3 lightPosition;
+
+      varying vec3 toLight;
+      varying vec3 surfaceNormal;
+      varying vec3 toCamera;
+
+			void main() {
+        vec4 worldPosition = modelTransform * vec4(in_position, 1);
+			  gl_Position = projTransform * viewTransform * worldPosition;
+        surfaceNormal = (modelTransform * vec4(in_normal, 0)).xyz;
+        toLight = lightPosition - worldPosition.xyz;
+        toCamera = (inverseViewTransform * vec4(0, 0, 0, 1)).xyz - worldPosition.xyz;
+			}
+  	</script>
+  	<script type="application/glsl" id="fragment.glsl">
+      precision mediump float;
+
+      uniform vec3 lightColor;
+      uniform float shineDamper;
+      uniform float reflectivity;
+
+      varying vec3 toLight;
+      varying vec3 surfaceNormal;
+      varying vec3 toCamera;
+
+			void main() {
+
+        float brightness = dot(normalize(toLight), normalize(surfaceNormal));
+        brightness = max(brightness, 0.0);
+        vec3 diffuse = lightColor * brightness;
+
+        vec3 lightDirection = -normalize(toLight);
+        vec3 reflectedDirection = reflect(lightDirection, normalize(surfaceNormal));
+        float specular = dot(reflectedDirection, normalize(toCamera));
+        specular = max(specular, 0.0);
+        float damper = pow(specular, shineDamper);
+        vec3 specularColor = damper * reflectivity * lightColor;
+
+			  gl_FragColor = vec4(diffuse, 1) * vec4(0.3, 0.8, 0.2, 1) + vec4(specularColor, 1);
+			}
+  	</script>
+    <script type="application/javascript">
+     rtl.run();
+    </script>
+  </body>
+</html>

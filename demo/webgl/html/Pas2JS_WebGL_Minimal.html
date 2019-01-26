@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <script type="application/javascript" src="../Pas2JS_WebGL_Minimal.js"></script>
+  </head>
+  <body>
+  	<script type="application/glsl" id="vertex.glsl">
+			attribute vec2 in_position;
+
+			void main() {
+			  gl_Position = vec4(in_position, 1, 1);
+			}
+  	</script>
+  	<script type="application/glsl" id="fragment.glsl">
+      precision mediump float;
+
+			void main() {
+			  gl_FragColor = vec4(1, 0, 0, 1);
+			}
+  	</script>
+    <script type="application/javascript">
+     rtl.run();
+    </script>
+  </body>
+</html>

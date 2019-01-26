@@ -1,0 +1,246 @@
+{
+  "metaData" : { "fields" : [ 
+    { "name": "Name", "type": "string"}, 
+    { "name" : "Population", "type": "int" }
+    ],
+    "root" : "Data"     
+  },
+  "Data" : [
+    {
+      "Name" : "Afghanistan",
+      "Population" : 31628000
+    },
+    {
+      "Name" : "Albania",
+      "Population" : 2894000
+    },
+    {
+      "Name" : "Algeria",
+      "Population" : 38934000
+    },
+    {
+      "Name" : "Angola",
+      "Population" : 24228000
+    },
+    {
+      "Name" : "Argentina",
+      "Population" : 42980000
+    },
+    {
+      "Name" : "Armenia",
+      "Population" : 3006000
+    },
+    {
+      "Name" : "Australia",
+      "Population" : 23491000
+    },
+    {
+      "Name" : "Austria",
+      "Population" : 8534000
+    },
+    {
+      "Name" : "Azerbaijan",
+      "Population" : 9538000
+    },
+    {
+      "Name" : "Bahrain",
+      "Population" : 1362000
+    },
+    {
+      "Name" : "Bangladesh",
+      "Population" : 159078000
+    },
+    {
+      "Name" : "Belarus",
+      "Population" : 9470000
+    },
+    {
+      "Name" : "Belgium",
+      "Population" : 11225000
+    },
+    {
+      "Name" : "Benin",
+      "Population" : 10598000
+    },
+    {
+      "Name" : "Bolivia",
+      "Population" : 10562000
+    },
+    {
+      "Name" : "Bosnia and Herzegovina",
+      "Population" : 3818000
+    },
+    {
+      "Name" : "Botswana",
+      "Population" : 2220000
+    },
+    {
+      "Name" : "Brazil",
+      "Population" : 206078000
+    },
+    {
+      "Name" : "Bulgaria",
+      "Population" : 7226000
+    },
+    {
+      "Name" : "Burkina Faso",
+      "Population" : 17589000
+    },
+    {
+      "Name" : "Burundi",
+      "Population" : 10817000
+    },
+    {
+      "Name" : "Cambodia",
+      "Population" : 15328000
+    },
+    {
+      "Name" : "Cameroon",
+      "Population" : 22773000
+    },
+    {
+      "Name" : "Canada",
+      "Population" : 35540000
+    },
+    {
+      "Name" : "Central African Republic",
+      "Population" : 4804000
+    },
+    {
+      "Name" : "Chad",
+      "Population" : 13587000
+    },
+    {
+      "Name" : "Chile",
+      "Population" : 17763000
+    },
+    {
+      "Name" : "China",
+      "Population" : 1364270000
+    },
+    {
+      "Name" : "Colombia",
+      "Population" : 47791000
+    },
+    {
+      "Name" : "Congo Dem. Rep.",
+      "Population" : 74877000
+    },
+    {
+      "Name" : "Congo Rep.",
+      "Population" : 4505000
+    },
+    {
+      "Name" : "Costa Rica",
+      "Population" : 4758000
+    },
+    {
+      "Name" : "Croatia",
+      "Population" : 4236000
+    },
+    {
+      "Name" : "Cuba",
+      "Population" : 11379000
+    },
+    {
+      "Name" : "Cyprus",
+      "Population" : 1154000
+    },
+    {
+      "Name" : "Czech Republic",
+      "Population" : 10511000
+    },
+    {
+      "Name" : "Denmark",
+      "Population" : 5640000
+    },
+    {
+      "Name" : "Dominican Republic",
+      "Population" : 10406000
+    },
+    {
+      "Name" : "Ecuador",
+      "Population" : 15903000
+    },
+    {
+      "Name" : "Egypt Arab Rep.",
+      "Population" : 89580000
+    },
+    {
+      "Name" : "El Salvador",
+      "Population" : 6108000
+    },
+    {
+      "Name" : "Eritrea",
+      "Population" : 5110000
+    },
+    {
+      "Name" : "Estonia",
+      "Population" : 1314000
+    },
+    {
+      "Name" : "Ethiopia",
+      "Population" : 96959000
+    },
+    {
+      "Name" : "Finland",
+      "Population" : 5464000
+    },
+    {
+      "Name" : "France",
+      "Population" : 66207000
+    },
+    {
+      "Name" : "Gabon",
+      "Population" : 1688000
+    },
+    {
+      "Name" : "Gambia The",
+      "Population" : 1928000
+    },
+    {
+      "Name" : "Georgia",
+      "Population" : 4504000
+    },
+    {
+      "Name" : "Germany",
+      "Population" : 80890000
+    },
+    {
+      "Name" : "Ghana",
+      "Population" : 26787000
+    },
+    {
+      "Name" : "Greece",
+      "Population" : 10958000
+    },
+    {
+      "Name" : "Guatemala",
+      "Population" : 16015000
+    },
+    {
+      "Name" : "Guinea-Bissau",
+      "Population" : 1801000
+    },
+    {
+      "Name" : "Guinea",
+      "Population" : 12276000
+    },
+    {
+      "Name" : "Haiti",
+      "Population" : 10572000
+    },
+    {
+      "Name" : "Honduras",
+      "Population" : 7962000
+    },
+    {
+      "Name" : "Hong Kong SAR China",
+      "Population" : 7242000
+    },
+    {
+      "Name" : "Hungary",
+      "Population" : 9862000
+    }
+  ]
+}

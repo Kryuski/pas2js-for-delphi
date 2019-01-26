@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>addClass demo</title>
+  <style>
+  div {
+    background: white;
+  }
+  .red {
+    background: red;
+  }
+  .red.green {
+    background: green;
+  }
+  </style>
+  <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="demoaddclass2.js" type="application/javascript"></script>
+</head>
+<body>
+ 
+ <div>This div should be white</div>
+ <div class="red">This div will be green because it now has the "green" and "red" classes.
+   It would be red if the addClass function failed.</div>
+ <div>This div should be white</div>
+ <p>There are zero green divs</p>
+ 
+<script>
+  rtl.run();
+</script>
+ 
+</body>
+</html>

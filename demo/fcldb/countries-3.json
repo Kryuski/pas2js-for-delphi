@@ -1,0 +1,218 @@
+{
+  "metaData" : { "fields" : [ 
+    { "name": "Name", "type": "string"}, 
+    { "name" : "Population", "type": "int" }
+    ],
+    "root" : "Data"     
+  },
+  "Data" : [
+    {
+      "Name" : "Pakistan",
+      "Population" : 185044000
+    },
+    {
+      "Name" : "Panama",
+      "Population" : 3868000
+    },
+    {
+      "Name" : "Papua New Guinea",
+      "Population" : 7464000
+    },
+    {
+      "Name" : "Paraguay",
+      "Population" : 6553000
+    },
+    {
+      "Name" : "Peru",
+      "Population" : 30973000
+    },
+    {
+      "Name" : "Philippines",
+      "Population" : 99139000
+    },
+    {
+      "Name" : "Poland",
+      "Population" : 37996000
+    },
+    {
+      "Name" : "Portugal",
+      "Population" : 10397000
+    },
+    {
+      "Name" : "Puerto Rico",
+      "Population" : 3548000
+    },
+    {
+      "Name" : "Qatar",
+      "Population" : 2172000
+    },
+    {
+      "Name" : "Romania",
+      "Population" : 19911000
+    },
+    {
+      "Name" : "Russian Federation",
+      "Population" : 143820000
+    },
+    {
+      "Name" : "Rwanda",
+      "Population" : 11342000
+    },
+    {
+      "Name" : "Saudi Arabia",
+      "Population" : 30887000
+    },
+    {
+      "Name" : "Senegal",
+      "Population" : 14673000
+    },
+    {
+      "Name" : "Serbia",
+      "Population" : 7129000
+    },
+    {
+      "Name" : "Sierra Leone",
+      "Population" : 6316000
+    },
+    {
+      "Name" : "Singapore",
+      "Population" : 5470000
+    },
+    {
+      "Name" : "Slovak Republic",
+      "Population" : 5419000
+    },
+    {
+      "Name" : "Slovenia",
+      "Population" : 2062000
+    },
+    {
+      "Name" : "Somalia",
+      "Population" : 10518000
+    },
+    {
+      "Name" : "South Africa",
+      "Population" : 54002000
+    },
+    {
+      "Name" : "South Sudan",
+      "Population" : 11911000
+    },
+    {
+      "Name" : "Spain",
+      "Population" : 46405000
+    },
+    {
+      "Name" : "Sri Lanka",
+      "Population" : 20639000
+    },
+    {
+      "Name" : "Sudan",
+      "Population" : 39350000
+    },
+    {
+      "Name" : "Swaziland",
+      "Population" : 1269000
+    },
+    {
+      "Name" : "Sweden",
+      "Population" : 9690000
+    },
+    {
+      "Name" : "Switzerland",
+      "Population" : 8190000
+    },
+    {
+      "Name" : "Syrian Arab Republic",
+      "Population" : 22158000
+    },
+    {
+      "Name" : "Tajikistan",
+      "Population" : 8296000
+    },
+    {
+      "Name" : "Tanzania",
+      "Population" : 51823000
+    },
+    {
+      "Name" : "Thailand",
+      "Population" : 67726000
+    },
+    {
+      "Name" : "Timor-Leste",
+      "Population" : 1212000
+    },
+    {
+      "Name" : "Togo",
+      "Population" : 7115000
+    },
+    {
+      "Name" : "Trinidad and Tobago",
+      "Population" : 1354000
+    },
+    {
+      "Name" : "Tunisia",
+      "Population" : 10997000
+    },
+    {
+      "Name" : "Turkey",
+      "Population" : 75932000
+    },
+    {
+      "Name" : "Turkmenistan",
+      "Population" : 5307000
+    },
+    {
+      "Name" : "Uganda",
+      "Population" : 37783000
+    },
+    {
+      "Name" : "Ukraine",
+      "Population" : 45363000
+    },
+    {
+      "Name" : "United Arab Emirates",
+      "Population" : 9086000
+    },
+    {
+      "Name" : "United Kingdom",
+      "Population" : 64510000
+    },
+    {
+      "Name" : "United States",
+      "Population" : 318857000
+    },
+    {
+      "Name" : "Uruguay",
+      "Population" : 3420000
+    },
+    {
+      "Name" : "Uzbekistan",
+      "Population" : 30743000
+    },
+    {
+      "Name" : "Venezuela RB",
+      "Population" : 30694000
+    },
+    {
+      "Name" : "Vietnam",
+      "Population" : 90730000
+    },
+    {
+      "Name" : "West Bank and Gaza",
+      "Population" : 4295000
+    },
+    {
+      "Name" : "Yemen Rep.",
+      "Population" : 26184000
+    },
+    {
+      "Name" : "Zambia",
+      "Population" : 15721000
+    },
+    {
+      "Name" : "Zimbabwe",
+      "Population" : 15246000
+    }
+  ]
+}

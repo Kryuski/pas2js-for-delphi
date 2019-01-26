@@ -1,0 +1,69 @@
+ 
+<HTML>
+  <head>
+  <meta charset="UTF-8"> 
+  <Title>Pas2JS web compiler demo</Title>
+  <script SRC="demowebcompiler.js" type="application/javascript"></script>
+  <!-- We use bootstrap for the GUI -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+<body>
+<div class="container">
+  <div class="panel panel-default">
+    <div class="panel-heading">Enter your program here</div>
+    <div class="panel-body">
+      <ul class="nav nav-tabs">
+        <li class="active"><a data-toggle="tab" id="act-source" href="#source">Program Source</a></li>
+        <li><a data-toggle="tab" id="act-load" href="#load">Load units</a></li>
+        <li><a data-toggle="tab" id="act-output" href="#output">Compiler output</a></li>
+      
+      </ul>
+      <div class="tab-content">
+        <div id="source" class="tab-pane fade in active">
+          <textarea id="memo-program-src" rows="15" cols="80">
+          program main;
+          
+          uses browserconsole;  // For output in correct console panel...
+
+          begin
+            // Your code here
+            Writeln('Hello, world!');
+          end.
+          </textarea>
+        </div>
+        <div id="load" class="tab-pane fade">
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <textarea id="memo-loaded-units" rows="15~5" cols="80">
+              </textarea>
+            </div>
+              <form class="form-inline">
+                <div class="form-group">
+                <button id="btn-load-defaults" class="btn btn-defaults">Load default units</button> 
+                <button id="btn-load-unit" class="btn btn-defaults">Load this unit:</button>
+                <input type="text" class="form-control" id="edt-load-unit-name">
+                </div>
+              </form>
+          </div>    
+        </div>
+        <div id="output" class="tab-pane fade">
+          <textarea id="memo-compiler-output" rows="15" cols="80">
+          </textarea>
+          <div id="compile-result"></div>
+        </div>  
+      </div>
+    </div>
+    <div class="panel-footer">
+    <button id="btn-compile" class="btn btn-primary">Compile</button> 
+    <button id="btn-run" class="btn btn-success" disabled="disabled">Run</button>
+    </div>
+  </div>
+  <iframe id="runarea" src="run.html" height=320 width=800></iframe>
+</div> <!-- container -->  
+<script>
+  rtl.run();
+</script>
+</body>
+</HTML>

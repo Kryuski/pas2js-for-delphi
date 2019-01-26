@@ -1,0 +1,194 @@
+{
+  "metaData" : { "fields" : [ 
+    { "name": "Name", "type": "string"}, 
+    { "name" : "Population", "type": "int" }
+    ],
+    "root" : "Data"     
+  },
+  "Data" : [
+    {
+      "Name" : "India",
+      "Population" : 1295292000
+    },
+    {
+      "Name" : "Indonesia",
+      "Population" : 254455000
+    },
+    {
+      "Name" : "Iran Islamic Rep.",
+      "Population" : 78144000
+    },
+    {
+      "Name" : "Iraq",
+      "Population" : 34812000
+    },
+    {
+      "Name" : "Ireland",
+      "Population" : 4613000
+    },
+    {
+      "Name" : "Israel",
+      "Population" : 8215000
+    },
+    {
+      "Name" : "Italy",
+      "Population" : 61336000
+    },
+    {
+      "Name" : "Jamaica",
+      "Population" : 2721000
+    },
+    {
+      "Name" : "Japan",
+      "Population" : 127132000
+    },
+    {
+      "Name" : "Jordan",
+      "Population" : 6607000
+    },
+    {
+      "Name" : "Kazakhstan",
+      "Population" : 17289000
+    },
+    {
+      "Name" : "Kenya",
+      "Population" : 44864000
+    },
+    {
+      "Name" : "Korea Dem. Rep.",
+      "Population" : 25027000
+    },
+    {
+      "Name" : "Korea Rep.",
+      "Population" : 50424000
+    },
+    {
+      "Name" : "Kosovo",
+      "Population" : 1823000
+    },
+    {
+      "Name" : "Kuwait",
+      "Population" : 3753000
+    },
+    {
+      "Name" : "Kyrgyz Republic",
+      "Population" : 5834000
+    },
+    {
+      "Name" : "Lao PDR",
+      "Population" : 6689000
+    },
+    {
+      "Name" : "Latvia",
+      "Population" : 1990000
+    },
+    {
+      "Name" : "Lebanon",
+      "Population" : 4547000
+    },
+    {
+      "Name" : "Lesotho",
+      "Population" : 2109000
+    },
+    {
+      "Name" : "Liberia",
+      "Population" : 4397000
+    },
+    {
+      "Name" : "Libya",
+      "Population" : 6259000
+    },
+    {
+      "Name" : "Lithuania",
+      "Population" : 2929000
+    },
+    {
+      "Name" : "Macedonia FYR",
+      "Population" : 2076000
+    },
+    {
+      "Name" : "Madagascar",
+      "Population" : 23572000
+    },
+    {
+      "Name" : "Malawi",
+      "Population" : 16695000
+    },
+    {
+      "Name" : "Malaysia",
+      "Population" : 29902000
+    },
+    {
+      "Name" : "Mali",
+      "Population" : 17086000
+    },
+    {
+      "Name" : "Mauritania",
+      "Population" : 3970000
+    },
+    {
+      "Name" : "Mauritius",
+      "Population" : 1261000
+    },
+    {
+      "Name" : "Mexico",
+      "Population" : 125386000
+    },
+    {
+      "Name" : "Moldova",
+      "Population" : 3556000
+    },
+    {
+      "Name" : "Mongolia",
+      "Population" : 2910000
+    },
+    {
+      "Name" : "Morocco",
+      "Population" : 33921000
+    },
+    {
+      "Name" : "Mozambique",
+      "Population" : 27216000
+    },
+    {
+      "Name" : "Myanmar",
+      "Population" : 53437000
+    },
+    {
+      "Name" : "Namibia",
+      "Population" : 2403000
+    },
+    {
+      "Name" : "Nepal",
+      "Population" : 28175000
+    },
+    {
+      "Name" : "Netherlands",
+      "Population" : 16854000
+    },
+    {
+      "Name" : "New Zealand",
+      "Population" : 4510000
+    },
+    {
+      "Name" : "Nicaragua",
+      "Population" : 6014000
+    },
+    {
+      "Name" : "Niger",
+      "Population" : 19114000
+    },
+    {
+      "Name" : "Nigeria",
+      "Population" : 177476000
+    },
+    {
+      "Name" : "Norway",
+      "Population" : 5136000
+    },
+    {
+      "Name" : "Oman",
+      "Population" : 4236000
+    }
+  ]
+}
