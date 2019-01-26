@@ -4,7 +4,7 @@ It's a Pascal to JavaScript transpiler, adapted for Delphi compiler. It can get 
 The original Pas2js was downloaded from SVN on **January 21, 2019**. I.e. Pas2js for Delphi is inherited from this edition of Pas2js for FPC.
 
 ## Most important changes
-In my edition there are no any modifications, except those that are necessary for compiling a transpiler in Delphi for Windows.
+In my edition there are no any modifications, except those that are necessary for compiling in Delphi for Windows.
 * Used Unicode UTF-16 instead of UTF-8 (and ANSI) strings in the transpiler code.
 * Used generic collections (TDictionary<string, XXX>) instead of TFPHashObjectList.
 
@@ -14,8 +14,8 @@ In my edition there are no any modifications, except those that are necessary fo
 
 ## Limitation of Pas2js for Delphi
 The original Pas2js supports several operation systems and compilation targets. This Pas2js for Delphi
-* Can compile the pas2js command-line utility for Windows, 32-bit.
-* It was tested for the browser target platform, i.e. it can generate JS files to use in HTML pages.
+* has the pas2js.dpr command-line utility for **Windows**, **32-bit**. You can compile it in Delphi IDE.
+* It was tested for the **browser** target platform, i.e. it can generate JS files to use in HTML pages.
 
 ## Testing and compatibility
 Pas2js for Delphi tested on demo programs included in the original Pas2js package.
