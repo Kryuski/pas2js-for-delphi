@@ -20,9 +20,9 @@ The original Pas2js supports several operation systems and compilation targets. 
 ## Compiling of Pas2js.dpr project in Delphi
 * Open pas2js.dpr in your Delphi IDE.
 * Open Delphi compiler options in menu Project | Options | Building | Delphi compiler. Then update settings as follows:
-** Conditional defines: `DEBUG;FPC_HAS_CPSTRING;WINDOWS;UsePChar;FPC`
-** Search path: `..\..\packages;..\..\packages\pastojs\src;..\..\packages\fcl-passrc\src;..\..\packages\fcl-js\src;..\..\packages\fcl-json\src`
-** Unit output directory: `..\..\..\Units\$(Platform)-$(Config)`
+  * Conditional defines: `DEBUG;FPC_HAS_CPSTRING;WINDOWS;UsePChar;FPC`
+  * Search path: `..\..\packages;..\..\packages\pastojs\src;..\..\packages\fcl-passrc\src;..\..\packages\fcl-js\src;..\..\packages\fcl-json\src`
+  * Unit output directory: `..\..\..\Units\$(Platform)-$(Config)`
 You're ready to build the project. Press Shift-F9.
 
 ## Testing and compatibility
