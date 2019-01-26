@@ -23,6 +23,7 @@ The original Pas2js supports several operation systems and compilation targets. 
   * Conditional defines: `FPC_HAS_CPSTRING;WINDOWS;UsePChar;FPC`
   * Search path: `..\..\packages;..\..\packages\pastojs\src;..\..\packages\fcl-passrc\src;..\..\packages\fcl-js\src;..\..\packages\fcl-json\src`
   * Unit output directory: `..\..\..\Units\$(Platform)-$(Config)`
+
 You're ready to build the project. Press Shift-F9.
 
 ## Testing and compatibility
