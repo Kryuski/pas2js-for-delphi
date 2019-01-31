@@ -1,7 +1,7 @@
 # Pas2js Pascal to JavaScript transpiler for Delphi
 It's a Pascal to JavaScript transpiler, adapted for Delphi compiler. It can get Delphi / Free Pascal projects and units and convert them to JavaScript. The original Pas2js transpiler for Free Pascal is [here](http://wiki.freepascal.org/pas2js).
 
-Trunk revision 41148 of Pas2js was downloaded from [SVN](https://svn.freepascal.org/svn/projects/pas2js/trunk) on January 30, 2019. Pas2js for Delphi is inherited from this edition of Pas2js for FPC.
+Trunk **revision 41148** of Pas2js was downloaded from [SVN](https://svn.freepascal.org/svn/projects/pas2js/trunk) on **January 30, 2019**. Pas2js for Delphi is inherited from this edition of Pas2js for FPC.
 
 ## Most important changes
 In my edition there are no any modifications, except those that are necessary for compiling in Delphi for Windows.
