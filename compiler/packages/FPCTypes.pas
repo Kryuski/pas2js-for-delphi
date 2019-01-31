@@ -56,9 +56,9 @@ type
   PUnicodeChar = PWideChar;
   TSystemCodePage = Word;
 
-type
   //PathStr = string[FileNameLen];
   PathStr = string;
+  TStringArray = array of string;
 
 Function SetDirSeparators(Const FileName : PathStr) : PathStr;
 function BoolToStr(B: Boolean;UseBoolStrs:Boolean=False): string; overload;

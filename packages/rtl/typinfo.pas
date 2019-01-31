@@ -42,7 +42,7 @@ type
     tkPointer,  // 15
     tkJSValue,  // 16
     tkRefToProcVar, // 17
-    tkInterface // 18
+    tkInterface, // 18
     //tkObject,
     //tkSString,tkLString,tkAString,tkWString,
     //tkVariant,
@@ -51,12 +51,12 @@ type
     //tkQWord,
     //tkInterfaceRaw,
     //tkUString,tkUChar,
-    //tkHelper,
+    tkHelper    // 19
     //tkFile,
     );
   TTypeKinds = set of TTypeKind;
 
-  // for compatibility with Delphi/FPC, ignored under pas2js
+  // TCallConv for compatibility with Delphi/FPC, ignored under pas2js
   TCallConv = (ccReg, ccCdecl, ccPascal, ccStdCall, ccSafeCall, ccCppdecl,
     ccFar16, ccOldFPCCall, ccInternProc, ccSysCall, ccSoftFloat, ccMWPascal);
 
@@ -339,6 +339,15 @@ type
   public
     InterfaceType: TJSObject external name 'interface';
     Ancestor: TTypeInfoInterface external name 'ancestor';
+  end;
+
+  { TTypeInfoHelper - Kind = tkHelper }
+
+  TTypeInfoHelper = class external name 'rtl.tTypeInfoHelper'(TTypeInfoStruct)
+  public
+    HelperType: TJSObject external name 'helper';
+    Ancestor: TTypeInfoHelper external name 'ancestor';
+    HelperFor: TTypeInfo external name 'helperfor';
   end;
 
   EPropertyError  = class(Exception);

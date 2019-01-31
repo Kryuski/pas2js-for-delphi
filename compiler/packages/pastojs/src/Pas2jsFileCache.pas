@@ -427,7 +427,6 @@ end;
 function ConvertTextToUTF16(const Src: RawByteString; var SrcEncoding: string): string;
 var
   NormSrcEncoding: string;
-  p: PWideChar;
 begin
   Result := '';
   if SrcEncoding = '' then
@@ -437,12 +436,10 @@ begin
   NormSrcEncoding := NormalizeEncoding(SrcEncoding);
   if NormSrcEncoding = NormalizeEncoding(EncodingUTF8) then begin
     Result := UTF8ToString(Src);
-    if Length(Result) > 3 then begin
-      p := PWideChar(Result);
-      if (p^=#$EF) and (p[1]=#$BB) and (p[2]=#$BF) then
-        // cut out UTF-8 BOM
-        Delete(Result, 1, 3);
-    end;
+    if (Length(Result) > 1)
+      and (Result[1] = #$FEFF)
+    then
+      Delete(Result, 1, 1);
   end else if (NormSrcEncoding = EncodingSystem)
     or (NormSrcEncoding = GetDefaultTextEncoding)
   then
@@ -1803,10 +1800,11 @@ begin
   AddSrcUnitPaths(aValue,FromCmdLine,Result);
 end;
 
-function TPas2jsFilesCache.TryCreateRelativePath(const Filename, BaseDirectory: string; UsePointDirectory: Boolean; out
-  RelPath: string): Boolean;
+function TPas2jsFilesCache.TryCreateRelativePath(const Filename, BaseDirectory: String;
+  UsePointDirectory: boolean; out RelPath: String): Boolean;
 begin
-  Result := Pas2jsFileUtils.TryCreateRelativePath(Filename, BaseDirectory, UsePointDirectory, RelPath);
+  Result:=Pas2jsFileUtils.TryCreateRelativePath(Filename, BaseDirectory,
+    UsePointDirectory, true, RelPath);
 end;
 
 function TPas2jsFilesCache.FindIncludeFileName(const aFilename: string): string;

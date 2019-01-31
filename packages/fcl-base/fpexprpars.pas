@@ -1323,7 +1323,8 @@ begin
   Result:=FChar;
 end;
 
-procedure Val(const S: string; out V: TExprFloat; out Code: Integer);
+{$ifndef pas2js}
+procedure Val(const S: string; out V: TExprFloat; out Code: Integer); overload;
 var
   L64: NativeInt;
 begin
@@ -1336,6 +1337,7 @@ begin
   else
     System.Val(S, V, Code);
 end;
+{$endif}
 
 Function TFPExpressionScanner.DoNumber(AKind: TNumberKind) : TTokenType;
 

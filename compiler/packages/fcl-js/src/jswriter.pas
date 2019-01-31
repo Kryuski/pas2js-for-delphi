@@ -234,6 +234,7 @@ type
 {$ifdef FPC_HAS_CPSTRING}
 function UTF16ToUTF8(const S: UnicodeString): RawByteString;
 {$endif}
+Function QuoteJSString(const S: TJSString; Quote: TJSChar = #0): TJSString;
 
 implementation
 
@@ -262,6 +263,32 @@ begin
   SetCodePage(PRawByteString(@Result)^, CP_ACP, False);
 end;
 {$endif}
+
+function QuoteJSString(const S: TJSString; Quote: TJSChar): TJSString;
+var
+  i, j, Count: Integer;
+begin
+  if Quote=#0 then begin
+    if Pos('"',S)>0 then
+      Quote:=''''
+    else
+      Quote:='"';
+    end;
+  Result := '' + Quote;
+  Count := length(S);
+  i := 0;
+  j := 0;
+  while i < Count do begin
+    inc(i);
+    if S[i] = Quote then begin
+      Result := Result + copy(S, 1 + j, i - j) + Quote;
+      j := i;
+    end;
+  end;
+  if i <> j then
+    Result := Result + copy(S, 1 + j, i - j);
+  Result := Result + Quote;
+end;
 
 { TBufferWriter }
 
@@ -337,20 +364,11 @@ begin
   FCapacity := FBufPos;
 end;
 {$else}
-Var
-  DesLen, MinLen: Integer;
+var
+  s1: RawByteString;
 begin
-  Result := Length(S)*SizeOf(TJSWriterChar);
-  if Result = 0 then exit;
-  MinLen := Result+Integer(FBufPos);
-  if MinLen > Integer(Capacity) then begin
-    DesLen := (FCapacity*3) div 2;
-    if DesLen > MinLen then
-      MinLen := DesLen;
-    Capacity := MinLen;
-  end;
-  Move(S[1], FBuffer[FBufPos], Result);
-  FBufPos := Integer(FBufPos) + Result;
+  s1 := UTF16ToUTF8(S);
+  Result := DoWrite(s1);
 end;
 {$endif}
 
@@ -705,7 +723,8 @@ begin
             if Exp=0 then
               // 1.1E+000 -> 1.1
               Delete(S,i,Length(S))
-            else if (Exp>=-6) and (Exp<=6) then begin //1E-0003 - Delphi
+            else if (Exp>=-6) and (Exp<=6) then begin
+              // small exponent -> use notation without E (1E-0003 --> 0.001)
               Delete(S,i,Length(S));
               j := Pos('.',S);
               if j>0 then
@@ -741,11 +760,11 @@ begin
                   Insert('.',S,j);
               end;
             end else begin
-              // e.g. 1.0E+001  -> 1.0E1
+              // e.g. 1.1E+0010  -> 1.1E10
               S := LeftStr(S,i)+IntToStr(Exp);
-              // 1.0E1 --> 1E1
               if (i >= 4) and (s[i-1] = '0') and (s[i-2] = '.') then
-                Delete(s, i-2, 2);
+                // e.g. 1.0E22 -> 1E22
+                Delete(S, i-2, 2);
             end
           end;
         end;
@@ -931,14 +950,11 @@ end;
 
 
 procedure TJSWriter.WriteObjectLiteral(El: TJSObjectLiteral);
-
-
-Var
+var
   i,C: Integer;
   QE,WC: Boolean;
   S: TJSString;
   Prop: TJSObjectLiteralElement;
-
 begin
   C := El.Elements.Count-1;
   QE := (woQuoteElementNames in Options);
@@ -960,8 +976,14 @@ begin
    Prop := El.Elements[i];
    Writer.CurElement := Prop.Expr;
    S := Prop.Name;
-   if QE or not IsValidJSIdentifier(S) then
-     S := '"'+S+'"';
+   if QE or not IsValidJSIdentifier(S) then begin
+     if (length(S)>1)
+         and (((S[1]='"') and (S[length(S)]='"'))
+           or ((S[1]='''') and (S[length(S)]=''''))) then
+       // already quoted
+     else
+       S:=QuoteJSString(s);
+   end;
    Write(S+': ');
    Indent;
    FSkipRoundBrackets := true;

@@ -9,9 +9,23 @@ program pas2js;
 {$R *.res}
 
 uses
-  Classes, SysUtils,
-  Pas2jsFileUtils, Pas2jsLogger, Pas2jsCompiler,
-  Pas2JSFSCompiler, Pas2JSCompilerPP, Pas2JSCompilerCfg;
+  Classes,
+  SysUtils,
+  Pas2jsFileUtils in '..\..\packages\pastojs\src\Pas2jsFileUtils.pas',
+  Pas2jsLogger in '..\..\packages\pastojs\src\Pas2jsLogger.pas',
+  Pas2jsCompiler in '..\..\packages\pastojs\src\Pas2jsCompiler.pas',
+  Pas2JSFSCompiler in '..\..\packages\pastojs\src\Pas2JSFSCompiler.pas',
+  Pas2JSCompilerPP in '..\..\packages\pastojs\src\Pas2JSCompilerPP.pas',
+  Pas2JSCompilerCfg in '..\..\packages\pastojs\src\Pas2JSCompilerCfg.pas',
+  PasResolver in '..\..\packages\fcl-passrc\src\PasResolver.pas',
+  pastree in '..\..\packages\fcl-passrc\src\pastree.pas',
+  PScanner in '..\..\packages\fcl-passrc\src\PScanner.pas',
+  PParser in '..\..\packages\fcl-passrc\src\PParser.pas',
+  PasResolveEval in '..\..\packages\fcl-passrc\src\PasResolveEval.pas',
+  FPPas2Js in '..\..\packages\pastojs\src\FPPas2Js.pas',
+  jswriter in '..\..\packages\fcl-js\src\jswriter.pas',
+  fppjssrcmap in '..\..\packages\pastojs\src\fppjssrcmap.pas',
+  Pas2jsFileCache in '..\..\packages\pastojs\src\Pas2jsFileCache.pas';
 
 type
   { TPas2jsCLI }

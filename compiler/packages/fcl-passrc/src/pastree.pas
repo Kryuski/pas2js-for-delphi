@@ -56,10 +56,10 @@ resourcestring
   SPasTreeObjectType = 'object';
   SPasTreeClassType = 'class';
   SPasTreeInterfaceType = 'interface';
-  SPasTreeGenericType = 'generic class';
   SPasTreeSpecializedType = 'specialized class type';
-  SPasClassHelperType = 'Class helper type';
-  SPasRecordHelperType = 'Record helper type';
+  SPasClassHelperType = 'class helper type';
+  SPasRecordHelperType = 'record helper type';
+  SPasTypeHelperType = 'type helper type';
   SPasTreeArgument = 'argument';
   SPasTreeProcedureType = 'procedure type';
   SPasTreeResultElement = 'function result';
@@ -737,7 +737,7 @@ type
 
   TPasObjKind = (
     okObject, okClass, okInterface,
-    okGeneric, // MG: what is okGeneric?
+    // okGeneric  removed in FPC 3.3.1  check instead GenericTemplateTypes.Count>0
     // okSpecialize removed in FPC 3.1.1
     okClassHelper,okRecordHelper,okTypeHelper,
     okDispInterface);
@@ -772,7 +772,6 @@ type
     ExternalNameSpace : string;
     ExternalName : string;
     InterfaceType: TPasClassInterfaceType;
-    Procedure SetGenericTemplates(AList : TFPList); override;
     Function FindMember(MemberClass : TPTreeElement; Const MemberName : string) : TPasElement;
     Function FindMemberInAncestors(MemberClass : TPTreeElement; Const MemberName : string) : TPasElement;
     Function InterfaceGUID : string;
@@ -1074,11 +1073,25 @@ type
   end;
 
   { TPasOperator }
-  TOperatorType = (otUnknown,otImplicit,otExplicit,otMul,otPlus, otMinus, otDivision,otLessThan, otEqual,
-                   otGreaterThan, otAssign,otNotEqual,otLessEqualThan,otGreaterEqualThan,otPower,
-                   otSymmetricalDifference, otInc, otDec, otMod, otNegative, otPositive, otBitWiseOr, otDiv,
-                   otLeftShift, otLogicalOr, otBitwiseAnd, otbitwiseXor,otLogicalAnd,otLogicalNot,otLogicalXor,
-                   otRightShift,otEnumerator, otIn);
+  TOperatorType = (
+    otUnknown,
+    otImplicit, otExplicit,
+    otMul, otPlus, otMinus, otDivision,
+    otLessThan, otEqual, otGreaterThan,
+    otAssign, otNotEqual, otLessEqualThan, otGreaterEqualThan,
+    otPower, otSymmetricalDifference,
+    otInc, otDec,
+    otMod,
+    otNegative, otPositive,
+    otBitWiseOr,
+    otDiv,
+    otLeftShift,
+    otLogicalOr,
+    otBitwiseAnd, otbitwiseXor,
+    otLogicalAnd, otLogicalNot, otLogicalXor,
+    otRightShift,
+    otEnumerator, otIn
+    );
   TOperatorTypes = set of TOperatorType;
 
   TPasOperator = class(TPasFunction)
@@ -1599,6 +1612,10 @@ type
   end;
 
 const
+  okWithFields = [okObject, okClass];
+  okAllHelpers = [okClassHelper,okRecordHelper,okTypeHelper];
+  okWithClassFields = okWithFields+okAllHelpers;
+
   AccessNames: array[TArgumentAccess] of string = ('', 'const ', 'var ', 'out ','constref ');
   AccessDescriptions: array[TArgumentAccess] of string = ('default', 'const', 'var', 'out','constref');
   AllVisibilities: TPasMemberVisibilities =
@@ -1610,8 +1627,9 @@ const
     'strict private', 'strict protected');
 
   ObjKindNames: array[TPasObjKind] of string = (
-    'object', 'class', 'interface', 'class',
-    'class helper','record helper','type helper','dispinterface');
+    'object', 'class', 'interface',
+    'class helper','record helper','type helper',
+    'dispinterface');
 
   InterfaceTypeNames: array[TPasClassInterfaceType] of string = (
     'COM',
@@ -3014,9 +3032,9 @@ begin
     okObject: Result := SPasTreeObjectType;
     okClass: Result := SPasTreeClassType;
     okInterface: Result := SPasTreeInterfaceType;
-    okGeneric : Result := SPasTreeGenericType;
     okClassHelper : Result:=SPasClassHelperType;
     okRecordHelper : Result:=SPasRecordHelperType;
+    okTypeHelper : Result:=SPasTypeHelperType;
   else
     Result:='ObjKind('+IntToStr(ord(ObjKind))+')';
   end;
@@ -3036,17 +3054,9 @@ begin
   ForEachChildCall(aMethodCall,Arg,GUIDExpr,false);
 end;
 
-procedure TPasClassType.SetGenericTemplates(AList: TFPList);
-begin
-  ObjKind:=okGeneric;
-  inherited SetGenericTemplates(AList);
-end;
-
 function TPasClassType.FindMember(MemberClass: TPTreeElement; const MemberName: string): TPasElement;
-
 var
-  I : Integer;
-
+  I: Integer;
 begin
 //  Writeln('Looking for ',MemberName,'(',MemberClass.ClassName,') in ',Name);
   Result:=Nil;

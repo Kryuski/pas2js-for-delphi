@@ -104,7 +104,7 @@ var
   requestPromise : TJSPromise;
 
 begin
-  fakeNetworkWait := Wait(3000 * random * Ord(fakeSlowNetwork));
+  fakeNetworkWait := Wait(trunc(3000 * random * Ord(fakeSlowNetwork)));
   requestPromise:=TJSPromise.New(@DoRequest);
   Result:=TJSPromise.all([fakeNetworkWait, requestPromise])._then(@ReturnResult);
 end;

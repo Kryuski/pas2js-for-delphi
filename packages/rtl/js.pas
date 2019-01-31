@@ -728,10 +728,19 @@ type
     function _finally(value : TJSPromiseFinallyHandler): TJSPromise;
   end;
 
+  TJSFunctionArguments = class external name 'arguments'
+  private
+    FLength: NativeInt; external name 'length';
+    function GetElements(Index: NativeInt): JSValue; external name '[]';
+    procedure SetElements(Index: NativeInt; const AValue: JSValue); external name '[]';
+  public
+    property Length: NativeInt read FLength;
+    property Elements[Index: NativeInt]: JSValue read GetElements write SetElements; default;
+  end;
 
 var
   // This can be used in procedures/functions to provide access to the 'arguments' array.
-  JSArguments: TJSValueDynArray; external name 'arguments';
+  JSArguments: TJSFunctionArguments; external name 'arguments';
   // This can be used in all code to access the javascript 'this' object.
   JSThis: TJSObject; external name 'this';
   // This can be used in catch blocks to access the JS throw value

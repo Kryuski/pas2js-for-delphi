@@ -328,10 +328,9 @@ Type
     protocol : string;
     search : string;
     username : string;
-    procedure assign(aURL : String);
+    procedure assign(aURL : String); overload;
     procedure reload(aForce : Boolean);
     procedure replace(aURL : String);
-    function toString : String;
     property origin : string read FOrigin;
   end;
   
@@ -513,7 +512,6 @@ Type
     procedure setStartAfter(aStartNode : TJSNode);
     procedure setStartBefore(aStartNode : TJSNode);
     procedure surroundContents(aNode : TJSNode);
-    function toString : string;
     property collapsed : boolean read FCollapsed;
     property commonAncestorContainer : TJSNode read FcommonAncestorContainer ;
     property endContainer : TJSNode read FendContainer;
@@ -607,7 +605,6 @@ Type
     procedure deleteFromDocument;
     function containsNode(aNode : TJSNode; aPartlyContained : Boolean) : Boolean;
     procedure setBaseAndExtent(aAnchorNode : TJSNode; aAnchorOffset : NativeInt; aFocusNode : TJSNode; aFocusOffset : NativeInt);
-    function toString : String;
     property anchorNode : TJSNode read FAnchorNode;
     property anchorOffset : NativeInt read FAnchorOffset;
     property focusNode : TJSNode read FFocusNode;

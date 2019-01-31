@@ -67,10 +67,13 @@ __recovery/
 
 # My additions
 Tests/
-Bin/
+Docs/
+Bin/*.txt
+Bin/*.cmd
 *.cmd
 Makefile*.*
 Makefile*
 *.lpi
 Pas2JS for Delphi Modifications.txt
 Copying.fpc
+packages/*.js

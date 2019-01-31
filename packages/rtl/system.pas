@@ -431,9 +431,18 @@ begin
     Target:=copy(t,1,Index-1)+Insertion+copy(t,Index,length(t));
 end;
 
+type
+  TJSArguments = class external name 'arguments'
+  private
+    FLength: NativeInt; external name 'length';
+    function GetElements(Index: NativeInt): JSValue; external name '[]';
+  public
+    property Length: NativeInt read FLength;
+    property Elements[Index: NativeInt]: JSValue read GetElements; default;
+  end;
 var
   WriteBuf: String;
-  JSArguments: array of JSValue; external name 'arguments';
+  JSArguments: TJSArguments; external name 'arguments';
   WriteCallBack : TConsoleHandler;
 
 Function SetWriteCallBack(H : TConsoleHandler) : TConsoleHandler;
@@ -447,7 +456,7 @@ procedure Write;
 var
   i: Integer;
 begin
-  for i:=0 to length(JSArguments)-1 do
+  for i:=0 to JSArguments.Length-1 do
     if Assigned(WriteCallBack) then
       WriteCallBack(JSArguments[i],False)
     else
@@ -461,7 +470,7 @@ var
   s: String;
 
 begin
-  L:=length(JSArguments)-1;
+  L:=JSArguments.Length-1;
   if Assigned(WriteCallBack) then
     begin
     for i:=0 to L do

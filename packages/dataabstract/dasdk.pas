@@ -188,7 +188,6 @@ Type
     procedure fromObject(aItems : Array of TDATableRequestInfoData);overload;
     procedure fromObject(aItems : Array of TDATableRequestInfoV5Data);overload;
     procedure fromObject(aItems : Array of TDATableRequestInfoV6Data);overload;
-    procedure fromObject(aItems : array of TJSObject);overload;
   Public
     items : array of TDATableRequestInfo;
   end;

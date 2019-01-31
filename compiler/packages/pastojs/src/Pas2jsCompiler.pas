@@ -134,6 +134,7 @@ type
     // source map
     coSourceMapCreate,
     coSourceMapInclude,
+    coSourceMapFilenamesAbsolute,
     coSourceMapXSSIHeader
     );
   TP2jsCompilerOptions = set of TP2jsCompilerOption;
@@ -182,6 +183,7 @@ const
     'Keep not used declarations (WPO)',
     'Create source map',
     'Include Pascal sources in source map',
+    'Do not shorten filenames in source map',
     'Prepend XSSI protection )]} to source map'
     );
 
@@ -503,6 +505,7 @@ type
     function GetSkipDefaultConfig: Boolean; inline;
     function GetSrcMapEnable: boolean;
     function GetSrcMapInclude: boolean;
+    function GetSrcMapFilenamesAbsolute: boolean;
     function GetSrcMapXSSIHeader: boolean;
     function GetTargetPlatform: TPasToJsPlatform;
     function GetTargetProcessor: TPasToJsProcessor;
@@ -530,6 +533,7 @@ type
     procedure SetSrcMapBaseDir(const AValue: string);
     procedure SetSrcMapEnable(const AValue: boolean);
     procedure SetSrcMapInclude(const AValue: boolean);
+    procedure SetSrcMapFilenamesAbsolute(const AValue: boolean);
     procedure SetSrcMapXSSIHeader(const AValue: boolean);
     procedure SetTargetPlatform(const AValue: TPasToJsPlatform);
     procedure SetTargetProcessor(const AValue: TPasToJsProcessor);
@@ -657,6 +661,7 @@ type
     property SrcMapSourceRoot: string read FSrcMapSourceRoot write FSrcMapSourceRoot;
     property SrcMapInclude: boolean read GetSrcMapInclude write SetSrcMapInclude;
     property SrcMapXSSIHeader: boolean read GetSrcMapXSSIHeader write SetSrcMapXSSIHeader;
+    property SrcMapFilenamesAbsolute: boolean read GetSrcMapFilenamesAbsolute write SetSrcMapFilenamesAbsolute;
     property ShowDebug: boolean read GetShowDebug write SetShowDebug;
     property ShowFullPaths: boolean read GetShowFullPaths write SetShowFullPaths;
     property ShowLogo: Boolean read GetShowLogo write SetShowLogo;
@@ -693,7 +698,7 @@ uses
   pas2jsutils, StrUtils, Types, FPCTypes;
 
 const
-  __DATE__ = '2019/01/21';
+  __DATE__ = '2019/01/30';
   __FPCTARGETOS__ =
     {$IFDEF WIN32}'Win32'{$ENDIF}
     {$IFDEF WIN64}'Win64'{$ENDIF}
@@ -1996,7 +2001,8 @@ begin
       SrcMap.SourceContents[i] := aFile.Source;
     end;
     // translate local file name
-    if BaseDir <> '' then
+    MapFilename:=LocalFilename;
+    if (BaseDir<>'') and not SrcMapFilenamesAbsolute then
     begin
       if not FS.TryCreateRelativePath(LocalFilename,BaseDir,true,MapFilename) then
       begin
@@ -2011,12 +2017,14 @@ begin
         // the source is included, do not translate the filename
         MapFilename := LocalFilename;
       end;
-      {$IFNDEF Unix}
-      // use / as PathDelim
-      MapFilename := StringReplace(MapFilename,PathDelim,'/',[rfReplaceAll]);
-      {$ENDIF}
-      SrcMap.SourceTranslatedFiles[i] := MapFilename;
     end;
+    {$IFNDEF Unix}
+    // use / as PathDelim
+    if PathDelim<>'/' then
+      MapFilename:=StringReplace(MapFilename,PathDelim,'/',[rfReplaceAll]);
+    {$ENDIF}
+    if LocalFilename<>MapFilename then
+      SrcMap.SourceTranslatedFiles[i]:=MapFilename;
   end;
 end;
 
@@ -2467,6 +2475,11 @@ begin
   Result := coSourceMapInclude in FOptions;
 end;
 
+function TPas2jsCompiler.GetSrcMapFilenamesAbsolute: boolean;
+begin
+  Result:=coSourceMapFilenamesAbsolute in FOptions;
+end;
+
 function TPas2jsCompiler.GetSrcMapXSSIHeader: boolean;
 begin
   Result := coSourceMapXSSIHeader in FOptions;
@@ -2570,6 +2583,11 @@ end;
 procedure TPas2jsCompiler.SetSrcMapInclude(const AValue: boolean);
 begin
   SetOption(coSourceMapInclude,AValue);
+end;
+
+procedure TPas2jsCompiler.SetSrcMapFilenamesAbsolute(const AValue: boolean);
+begin
+  SetOption(coSourceMapFilenamesAbsolute,AValue);
 end;
 
 procedure TPas2jsCompiler.SetSrcMapXSSIHeader(const AValue: boolean);
@@ -3035,6 +3053,10 @@ begin
         SrcMapInclude := true
       else if aValue = 'include-' then
         SrcMapInclude := false
+      else if aValue = 'absolute' then
+        SrcMapFilenamesAbsolute := true
+      else if aValue = 'absolute-' then
+        SrcMapFilenamesAbsolute := false
       else if aValue = 'xssiheader' then
         SrcMapXSSIHeader := true
       else if aValue = 'xssiheader-' then
@@ -3042,7 +3064,7 @@ begin
       else begin
         i := Pos('=', aValue);
         if i<1 then
-          result := false
+          ParamFatal('unknown -Jm parameter "'+aValue+'"')
         else begin
           s := LeftStr(aValue,i-1);
           Delete(aValue,1,i);
@@ -3051,7 +3073,7 @@ begin
           else if s = 'basedir' then
             SrcMapBaseDir := aValue
           else
-            Result := False;
+            ParamFatal('unknown -Jm parameter "'+s+'"')
         end;
       end;
       // enable source maps when setting any -Jm<x> option
@@ -4147,9 +4169,9 @@ begin
   w('   -Jl   : lower case identifiers');
   w('   -Jm   : generate source maps');
   w('     -Jmsourceroot=<x>: use x as "sourceRoot", prefix URL for source file names.');
-  w('     -Jmbasedir=<x>: write source file names relative to directory x.');
+  w('     -Jmbasedir=<x>: write source file names relative to directory x, default is map file folder.');
   w('     -Jminclude: include Pascal sources in source map.');
-  w('     -Jmxssiheader: start source map with XSSI protection )]}'', default.');
+  w('     -Jmabsolute: store absolute filenames, not relative.');
   w('     -Jm-: disable generating source maps');
   w('   -Jo<x>: Enable or disable extra option. The x is case insensitive:');
   w('     -JoSearchLikeFPC: search source files like FPC, default: search case insensitive.');
