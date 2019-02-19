@@ -25,7 +25,8 @@ uses
   FPPas2Js in '..\..\packages\pastojs\src\FPPas2Js.pas',
   jswriter in '..\..\packages\fcl-js\src\jswriter.pas',
   fppjssrcmap in '..\..\packages\pastojs\src\fppjssrcmap.pas',
-  Pas2jsFileCache in '..\..\packages\pastojs\src\Pas2jsFileCache.pas';
+  Pas2jsFileCache in '..\..\packages\pastojs\src\Pas2jsFileCache.pas',
+  pas2jsuseanalyzer in '..\..\packages\pastojs\src\pas2jsuseanalyzer.pas';
 
 type
   { TPas2jsCLI }

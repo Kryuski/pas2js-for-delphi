@@ -2376,6 +2376,17 @@ Type
     Function toDataURL(aMimeType : String; aQuality : Double) : String; overload;
   end;
 
+  TJSHTMLProgressElement = class external name 'HTMLProgressElement' (TJSHTMLElement)
+  private
+    Fposition: Double; external name 'position';
+    Flabels: TJSNodeList; external name 'labels';
+  public
+    max: Double;
+    value: Double;
+    property position: Double read Fposition;
+    property labels: TJSNodeList read Flabels;
+  end;
+
   // Opaque objects
   TJSCanvasGradient = class external name 'CanvasGradient'  (TJSObject)
   end;

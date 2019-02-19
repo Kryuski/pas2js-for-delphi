@@ -254,7 +254,7 @@ type
     function SearchLowUpCase(var Filename: string): Boolean;
     function FindCustomJSFileName(const aFilename: string): string; override;
     function FindUnitJSFileName(const aUnitFilename: string): string; override;
-    function FindUnitFileName(const aUnitname, InFilename: string; out IsForeign: Boolean): string; override;
+    function FindUnitFileName(const aUnitname, InFilename, ModuleDir: string; out IsForeign: boolean): String; override;
     function FindIncludeFileName(const aFilename: string): string; override;
     function AddIncludePaths(const Paths: string; FromCmdLine: Boolean; out ErrorMsg: string): Boolean;
     function AddUnitPaths(const Paths: string; FromCmdLine: Boolean; out ErrorMsg: string): Boolean;
@@ -1884,7 +1884,8 @@ begin
 end;
 
 
-function TPas2jsFilesCache.FindUnitFileName(const aUnitname, InFilename: string; out IsForeign: Boolean): string;
+function TPas2jsFilesCache.FindUnitFileName(const aUnitname, InFilename,
+  ModuleDir: string; out IsForeign: boolean): String;
 var
   SearchedDirs: TStringList;
 
@@ -1920,7 +1921,7 @@ begin
         if SearchLowUpCase(Result) then Exit;
       end else
       begin
-        Result := ResolveDots(BaseDirectory+Result);
+        Result:=ResolveDots(ModuleDir+Result);
         if SearchLowUpCase(Result) then Exit;
       end;
       Exit('');
@@ -1934,6 +1935,10 @@ begin
         IsForeign := True;
         Exit;
       end;
+
+    // then in ModuleDir
+    IsForeign:=false;
+    if SearchInDir(ModuleDir,Result) then exit;
 
     // then in BaseDirectory
     IsForeign := False;

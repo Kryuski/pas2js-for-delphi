@@ -1694,7 +1694,7 @@ begin
   For i:=0 to count-1 do
     begin
     S:=Strings[i];
-    doQuote:=FAlwaysQuote or (TJSString(s).search(RE)=-1);
+    doQuote:=FAlwaysQuote or (TJSString(s).search(RE)<>-1);
     if DoQuote then
       Result:=Result+QuoteString(S,QuoteChar)
     else

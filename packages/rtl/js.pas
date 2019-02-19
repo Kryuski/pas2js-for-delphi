@@ -739,14 +739,14 @@ type
   end;
 
 var
-  // This can be used in procedures/functions to provide access to the 'arguments' array.
+  // JSArguments can be used in procedures/functions to provide access to the 'arguments' array.
   JSArguments: TJSFunctionArguments; external name 'arguments';
-  // This can be used in all code to access the javascript 'this' object.
+  // JSThis can be used in all code to access the javascript 'this' object.
   JSThis: TJSObject; external name 'this';
-  // This can be used in catch blocks to access the JS throw value
+  // JSExceptValue can be used in catch blocks to access the JS throw value
   JSExceptValue: JSValue; external name '$e';
 
-Function new(aElements: TJSValueDynArray) : TJSObject; overload;
+function new(aElements: TJSValueDynArray) : TJSObject; overload;
 function JSDelete(const Obj: JSValue; const PropName: string): boolean; assembler; overload;
 
 function decodeURIComponent(encodedURI : String) : String; external name 'decodeURIComponent';
@@ -878,7 +878,11 @@ end;
 
 function isRecord(const v: JSValue): boolean; assembler;
 asm
-  return (typeof(v)=="function") && (typeof(v.$create) == "function");
+  return (typeof(v)==="object")
+      && (typeof(v.$new)==="function")
+      && (typeof(v.$clone)==="function")
+      && (typeof(v.$eq)==="function")
+      && (typeof(v.$assign)==="function");
 end;
 
 function isUndefined(const v: JSValue): boolean; assembler;

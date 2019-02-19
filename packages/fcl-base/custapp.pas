@@ -189,6 +189,7 @@ begin
   ShowException(ExceptObject);
   if FStopOnException then
     Terminate(ExceptionExitCode);
+  if Sender=nil then ;
 end;
 
 procedure TCustomApplication.Initialize;

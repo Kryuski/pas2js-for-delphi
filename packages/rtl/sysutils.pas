@@ -33,9 +33,9 @@ Const
 type
   { TFloatRec }
   TFloatRec = Record
-     Exponent: Integer;
-     Negative: Boolean;
-     Digits: Array[0..FloatRecDigits-1] Of Char;
+    Exponent: Integer;
+    Negative: Boolean;
+    Digits: Array[0..FloatRecDigits-1] of Char;
   End;
   TEndian = (Little,Big);
   TFileName = String;
@@ -167,7 +167,6 @@ type
 
   ENoConstructException = class(Exception);
 
-
 //function GetTickCount: Integer;
 
 
@@ -176,10 +175,10 @@ type
 *****************************************************************************}
 
 Const
-   EmptyStr = '';
-   EmptyWideStr = ''; // No difference here.
-   HexDisplayPrefix: string = '$';
-   LeadBytes = [] unimplemented;
+  EmptyStr = '';
+  EmptyWideStr = ''; // No difference here.
+  HexDisplayPrefix: string = '$';
+  LeadBytes = [] unimplemented;
 
 Function CharInSet(Ch: Char;Const CSet : array of char) : Boolean;
 
@@ -464,6 +463,7 @@ type
     procedure SetTimePMString(const Value: string);
     procedure SetTimeSeparator(const Value: char);
   public
+    class constructor Init;
     Property ShortMonthNames : TMonthNames Read GetShortMonthNames Write SetShortMonthNames;
     Property LongMonthNames : TMonthNames Read GetLongMonthNames Write SetLongMonthNames;
     Property ShortDayNames : TDayNames Read GetShortDayNames Write SetShortDayNames;
@@ -1413,7 +1413,7 @@ end;
 function AnsiCompareStr(const s1, s2: String): Integer;
 begin
   {$IFDEF ECMAScript6}
-  Result:=CompareText(TJSString(s1).normalize(),TJSString(s1).normalize());
+  Result:=CompareText(TJSString(s1).normalize(),TJSString(s2).normalize());
   {$ELSE}
   Result:=CompareText(s1,s2);
   {$ENDIF}
@@ -1432,8 +1432,6 @@ Const
   feInvalidArgIndex = 3;
 
 Procedure DoFormatError (ErrCode : Longint;const fmt: String);
-
-
 begin
   //!! must be changed to contain format string...
   Case ErrCode of
@@ -4149,6 +4147,11 @@ begin
   SysUtils.TimeSeparator := Value;
 end;
 
+class constructor TFormatSettings.Init;
+begin
+  FormatSettings := TFormatSettings.Create;
+end;
+
 { ---------------------------------------------------------------------
   FileNames
   ---------------------------------------------------------------------}
@@ -4406,10 +4409,6 @@ begin
   end else
     Result := '';
 end;
-
-
-initialization
-  FormatSettings := TFormatSettings.Create;
 
 end.
 

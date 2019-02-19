@@ -16,15 +16,11 @@ unit Math;
 
 interface
 
-uses
-  SysUtils;
-
 const
   MinInteger = -$fffffffffffff-1;
   MaxInteger = $fffffffffffff;
   MinDouble  =  5.0e-324;
   MaxDouble  =  1.7e+308;
-
 
 const
   NaN: Double; external name 'NaN';

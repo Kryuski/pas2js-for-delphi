@@ -100,7 +100,7 @@ Type
     Function FileExists(Const aFileName: string): Boolean; virtual; abstract;
     function FindUnitJSFileName(const aUnitFilename: string): string; virtual; abstract;
     function FindCustomJSFileName(const aFilename: string): string; virtual; abstract;
-    function FindUnitFileName(const aUnitname, InFilename: string; out IsForeign: boolean): string; virtual; abstract;
+    function FindUnitFileName(const aUnitname, InFilename, ModuleDir: string; out IsForeign: boolean): String; virtual; abstract;
     procedure SaveToFile(ms: TFPJSStream; Filename: string); virtual; abstract;
     function PCUExists(var aFileName: string): Boolean; virtual;
     procedure GetPCUDirs(aList: TStrings; const aBaseDir: string); virtual;

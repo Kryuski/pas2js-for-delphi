@@ -40,7 +40,7 @@
     <Description Value="pas2js RTL - Run Time Library"/>
     <License Value="Modified LGPL2 as the FPC packages."/>
     <Version Major="1"/>
-    <Files Count="20">
+    <Files Count="26">
       <Item1>
         <HasRegisterProc Value="True"/>
       </Item1>
@@ -122,6 +122,30 @@
         <Filename Value="webgl.pas"/>
         <UnitName Value="webgl"/>
       </Item20>
+      <Item21>
+        <Filename Value="class2pas.pas"/>
+        <UnitName Value="class2pas"/>
+      </Item21>
+      <Item22>
+        <Filename Value="libjquery.pas"/>
+        <UnitName Value="libjquery"/>
+      </Item22>
+      <Item23>
+        <Filename Value="timer.pas"/>
+        <UnitName Value="timer"/>
+      </Item23>
+      <Item24>
+        <Filename Value="webaudio.pas"/>
+        <UnitName Value="webaudio"/>
+      </Item24>
+      <Item25>
+        <Filename Value="webbluetooth.pas"/>
+        <UnitName Value="webbluetooth"/>
+      </Item25>
+      <Item26>
+        <Filename Value="websvg.pas"/>
+        <UnitName Value="websvg"/>
+      </Item26>
     </Files>
     <UsageOptions>
       <CustomOptions Value="-dPas2js"/>

@@ -214,6 +214,55 @@ const
 function GUIDToString(const GUID: TGUID): string; external name 'rtl.guidrToStr';
 
 {*****************************************************************************
+                              Array of const support
+*****************************************************************************}
+
+const
+  vtInteger       = 0;
+  vtBoolean       = 1;
+  //vtChar          = 2; // Delphi/FPC: ansichar
+  vtExtended      = 3; // Note: double in pas2js, PExtended in Delphi/FPC
+  //vtString        = 4; // Delphi/FPC: PShortString
+  vtPointer       = 5;
+  //vtPChar         = 6;
+  vtObject        = 7;
+  vtClass         = 8;
+  vtWideChar      = 9;
+  //vtPWideChar     = 10;
+  //vtAnsiString    = 11;
+  vtCurrency      = 12; // Note: currency in pas2js, PCurrency in Delphi/FPC
+  //vtVariant       = 13;
+  vtInterface     = 14;
+  //vtWideString    = 15;
+  //vtInt64         = 16;
+  //vtQWord         = 17;
+  vtUnicodeString = 18;
+  // only pas2js, not in Delphi/FPC:
+  vtNativeInt     = 19;
+  vtJSValue       = 20;
+
+type
+  PVarRec = ^TVarRec;
+  TVarRec = record
+    VType: byte;
+    VJSValue: JSValue;
+    VInteger: LongInt external name 'VJSValue';
+    VBoolean: Boolean external name 'VJSValue';
+    VExtended: Double external name 'VJSValue';
+    VPointer: Pointer external name 'VJSValue';
+    VObject: TObject external name 'VJSValue';
+    VClass: TClass external name 'VJSValue';
+    VWideChar: WideChar external name 'VJSValue';
+    VCurrency: Currency external name 'VJSValue';
+    VInterface: Pointer external name 'VJSValue';
+    VUnicodeString: UnicodeString external name 'VJSValue';
+    VNativeInt: NativeInt external name 'VJSValue';
+  end;
+  TVarRecArray = array of TVarRec;
+
+function VarRecs: TVarRecArray; varargs;
+
+{*****************************************************************************
                             Init / Exit / ExitProc
 *****************************************************************************}
 var
@@ -320,6 +369,24 @@ type
     property Properties[Name: String]: JSValue read GetProperties write SetProperties; default;
   end;
 
+  TJSArray = class external name 'Array'
+  public
+    //length: nativeint;
+    //constructor new; overload;
+    function push(aElement : JSValue) : NativeInt; varargs;
+  end;
+
+  TJSArguments = class external name 'arguments'
+  private
+    FLength: NativeInt; external name 'length';
+    function GetElements(Index: NativeInt): JSValue; external name '[]';
+  public
+    property Length: NativeInt read FLength;
+    property Elements[Index: NativeInt]: JSValue read GetElements; default;
+  end;
+var
+  JSArguments: TJSArguments; external name 'arguments';
+
 // function parseInt(s: String; Radix: NativeInt): NativeInt; external name 'parseInt'; // may result NaN
 function isNaN(i: JSValue): boolean; external name 'isNaN'; // may result NaN
 
@@ -327,6 +394,23 @@ function isNaN(i: JSValue): boolean; external name 'isNaN'; // may result NaN
 function SameText(const s1, s2: String): Boolean; assembler;
 asm
   return s1.toLowerCase() == s2.toLowerCase();
+end;
+
+function VarRecs: TVarRecArray;
+var
+  i: nativeint;
+  v: PVarRec;
+begin
+  Result:=nil;
+  while i<JSArguments.Length do
+    begin
+    new(v);
+    v^.VType:=byte(JSArguments[i]);
+    inc(i);
+    v^.VJSValue:=JSArguments[i];
+    inc(i);
+    TJSArray(Result).push(v^);
+    end;
 end;
 
 function ParamCount: Longint;
@@ -346,7 +430,6 @@ begin
   else
     Result:='';
 end;
-
 
 function Frac(const A: Double): Double; assembler;
 asm
@@ -431,18 +514,8 @@ begin
     Target:=copy(t,1,Index-1)+Insertion+copy(t,Index,length(t));
 end;
 
-type
-  TJSArguments = class external name 'arguments'
-  private
-    FLength: NativeInt; external name 'length';
-    function GetElements(Index: NativeInt): JSValue; external name '[]';
-  public
-    property Length: NativeInt read FLength;
-    property Elements[Index: NativeInt]: JSValue read GetElements; default;
-  end;
 var
   WriteBuf: String;
-  JSArguments: TJSArguments; external name 'arguments';
   WriteCallBack : TConsoleHandler;
 
 Function SetWriteCallBack(H : TConsoleHandler) : TConsoleHandler;

@@ -1838,32 +1838,42 @@ begin
     case CurToken of
       tkSquaredBraceOpen:
         begin
-          repeat
-            NextToken;
-            if po_arrayrangeexpr in Options then
-              begin
-              RangeExpr := DoParseExpression(Result);
-              Result.AddRange(RangeExpr);
-              end
-            else if CurToken<>tkSquaredBraceClose then
-               S := S+CurTokenText;
-            if CurToken=tkSquaredBraceClose then
-              break
-            else if CurToken=tkComma then
-              continue
-            else if po_arrayrangeexpr in Options then
-              ParseExcTokenError(']');
-          until false;
-          Result.IndexRange := S;
-          ExpectToken(tkOf);
-          Result.ElType := ParseType(Result,CurSourcePos);
+        // static array
+        if Parent is TPasArgument then
+          ParseExcTokenError('of');
+        repeat
+          NextToken;
+          if po_arrayrangeexpr in Options then
+            begin
+            RangeExpr:=DoParseExpression(Result);
+            Result.AddRange(RangeExpr);
+            end
+          else if CurToken<>tkSquaredBraceClose then
+             S:=S+CurTokenText;
+          if CurToken=tkSquaredBraceClose then
+            break
+          else if CurToken=tkComma then
+            continue
+          else if po_arrayrangeexpr in Options then
+            ParseExcTokenError(']');
+        until false;
+        Result.IndexRange:=S;
+        ExpectToken(tkOf);
+        Result.ElType := ParseType(Result,CurSourcePos);
         end;
       tkOf:
         begin
         NextToken;
         if CurToken = tkConst then
+          // array of const
+          begin
+          if not (Parent is TPasArgument) then
+            ParseExcExpectedIdentifier;
+          end
         else
           begin
+          if (CurToken=tkarray) and (Parent is TPasArgument) then
+            ParseExcExpectedIdentifier;
           UngetToken;
           Result.ElType := ParseType(Result,CurSourcePos);
           end;
@@ -2189,14 +2199,18 @@ begin
     tkIdentifier: begin
       CanSpecialize := true;
       aName := CurTokenText;
-      if CompareText(aName,'self')=0 then
+      if (CompareText(aName,'self')=0) and not (tkself in Scanner.NonTokens) then
         Last := CreateSelfExpr(AParent)
       else
         Last := CreatePrimitiveExpr(AParent,pekIdent,aName);
     end;
     tkfalse, tktrue:    Last := CreateBoolConstExpr(AParent,pekBoolConst, CurToken=tktrue);
     tknil:              Last := CreateNilExpr(AParent);
-    tkSquaredBraceOpen: Last := ParseParams(AParent,pekSet);
+    tkSquaredBraceOpen:
+      begin
+      Last:=ParseParams(AParent,pekSet);
+      UngetToken;
+      end;
     tkinherited: begin
       //inherited; inherited function
       Last := CreateInheritedExpr(AParent);
@@ -2245,6 +2259,16 @@ begin
       end;
       Last := CreatePrimitiveExpr(AParent,pekString, '^'+CurTokenText);
     end;
+    tkBraceOpen: begin
+      NextToken;
+      Last:=DoParseExpression(AParent);
+      if not Assigned(Last) then
+        ParseExcSyntaxError;
+      if (CurToken<>tkBraceClose) then begin
+        Last.Release{$IFDEF CheckPasTreeRefCount}('CreateElement'){$ENDIF};
+        CheckToken(tkBraceClose);
+      end;
+    end
     else begin
       ParseExcExpectedIdentifier;
       Last := nil;
@@ -2254,11 +2278,7 @@ begin
   ok := false;
   ISE := nil;
   try
-    if Last.Kind<>pekSet then NextToken;
-    if not (Last.Kind in [pekNumber,pekString,pekSet,pekIdent,pekSelf,pekNil]) then begin
-      ok := true;
-      Exit;
-    end;
+    NextToken;
     Func := Last;
     repeat
       case CurToken of
@@ -2438,8 +2458,6 @@ const
 var
   AllowedBinaryOps: Set of TToken;
   SrcPos: TPasSourcePos;
-  ArrParams: TParamsExpr;
-
 begin
   AllowedBinaryOps := BinaryOP;
   if not AllowEqual then
@@ -2465,62 +2483,12 @@ begin
           inc(PrefixCnt);
           NextToken;
           end;
-
-        if (CurToken = tkBraceOpen) then
-          begin
-          NextToken;
-          x := DoParseExpression(AParent);
-          if not Assigned(x) then
-            ParseExcSyntaxError;
-          if (CurToken<>tkBraceClose) then
-            begin
-            x.Release{$IFDEF CheckPasTreeRefCount}('CreateElement'){$ENDIF};
-            CheckToken(tkBraceClose);
-            end;
-          NextToken;
-          repeat
-            case CurToken of
-            tkCaret:
-              begin
-              // for expressions like (ppdouble)^^;
-              x := CreateUnaryExpr(AParent,x, TokenToExprOp(tkCaret));
-              NextToken;
-              end;
-            tkBraceOpen:
-              begin
-              // for expressions like (a+b)(0);
-              ArrParams := ParseParams(AParent,pekFuncParams,False);
-              ArrParams.Value := x;
-              x.Parent := ArrParams;
-              x := ArrParams;
-              end;
-            tkSquaredBraceOpen:
-              begin
-              // for expressions like (PChar(a)+10)[0];
-              ArrParams := ParseParams(AParent,pekArrayParams,False);
-              ArrParams.Value := x;
-              x.Parent := ArrParams;
-              x := ArrParams;
-              end;
-            tkDot:
-              begin
-              // for expressions like (TObject(m)).Free;
-              NextToken;
-              x := CreateBinaryExpr(AParent,x, ParseExprOperand(AParent), TokenToExprOp(tkDot));
-              end
-            else
-              break;
-            end;
-          until false;
-          end
-        else
-          begin
-          x := ParseExprOperand(AParent);
-          if not Assigned(x) then
-            ParseExcSyntaxError;
-          end;
+        // parse operand
+        x:=ParseExprOperand(AParent);
+        if not Assigned(x) then
+          ParseExcSyntaxError;
         ExpStack.Add(x);
-
+        // apply prefixes
         for i := 1 to PrefixCnt do
           begin
           TempOp := PopOper(SrcPos);
@@ -3784,8 +3752,6 @@ begin
       finally
         Scanner.SetForceCaret(OldForceCaret);
       end;
-{      if Result.VarType is TPasRangeType then
-        Ungettoken; // Range type stops on token after last range token}
       end
     else
       begin
@@ -4184,18 +4150,9 @@ begin
     end;
   if (CurToken=tkAbsolute) then
     begin
-    Result := True;
-    ExpectIdentifier;
-    Location := CurTokenText;
-    AbsoluteExpr := CreatePrimitiveExpr(Parent,pekIdent,CurTokenText);
+    Result:=True;
     NextToken;
-    While CurToken=tkDot do
-      begin
-      ExpectIdentifier;
-      Location := Location+'.'+CurTokenText;
-      AbsoluteExpr := CreateBinaryExpr(Parent,AbsoluteExpr,CreatePrimitiveExpr(Parent,pekIdent,CurTokenText),eopSubIdent);
-      NextToken;
-      end;
+    Location:=ReadDottedIdentifier(Parent,AbsoluteExpr,true);
     UnGetToken;
     end
   else
@@ -4416,6 +4373,7 @@ procedure TPasParser.OnScannerModeChanged(Sender: TObject;
   NewMode: TModeSwitch; Before: boolean; var Handled: boolean);
 begin
   Engine.ModeChanged(Self,NewMode,Before,Handled);
+  if Sender=nil then ;
 end;
 
 function TPasParser.SaveComments: string;
@@ -5135,20 +5093,9 @@ function TPasParser.ParseProperty(Parent: TPasElement; const AName: string;
     param: TPasExpr;
     srcPos: TPasSourcePos;
   begin
-    ExpectIdentifier;
-    Result := CurTokenString;
-    Expr := CreatePrimitiveExpr(aParent,pekIdent,CurTokenString);
-
-    // read .subident.subident...
-    repeat
-      NextToken;
-      if CurToken <> tkDot then break;
-      srcPos := CurTokenPos;
-      ExpectIdentifier;
-      Result := Result + '.' + CurTokenString;
-      AddToBinaryExprChain(Expr,CreatePrimitiveExpr(aParent,pekIdent,CurTokenString),
-        eopSubIdent,srcPos);
-    until false;
+    NextToken;
+    // read ident.subident...
+    Result:=ReadDottedIdentifier(aParent,Expr,true);
 
     // read optional array index
     if CurToken <> tkSquaredBraceOpen then
@@ -5940,7 +5887,10 @@ begin
         end;
       tkEOF:
         CheckToken(tkend);
-      tkAt,tkAtAt,tkBraceOpen,tkIdentifier,tkNumber,tkSquaredBraceOpen,tkMinus,tkPlus,tkinherited:
+      tkAt,tkAtAt,
+      tkIdentifier,tkNumber,tkString,tkfalse,tktrue,tkChar,
+      tkBraceOpen,tkSquaredBraceOpen,
+      tkMinus,tkPlus,tkinherited:
         begin
         // Do not check this here:
         //      if (CurToken=tkAt) and not (msDelphi in CurrentModeswitches) then
@@ -6636,7 +6586,12 @@ begin
           CurSection := stNone
         else
           begin
-          if not haveClass then
+          if haveClass then
+            begin
+            if LastToken=tkclass then
+              ParseExcTokenError('procedure or function');
+            end
+          else
             SaveComments;
           case CurSection of
           stType:

@@ -52,8 +52,8 @@ type
   TNJSBuffer = class external name 'buffer'
   public
     class function alloc(Size: NativeInt): TJSArrayBuffer;
-    class function alloc(Size: NativeInt; Fill: JSValue): TJSArrayBuffer;
-    class function alloc(Size: NativeInt; Fill: JSValue; Encoding: String): TJSArrayBuffer;
+    class function alloc(Size: NativeInt; const Fill: JSValue): TJSArrayBuffer;
+    class function alloc(Size: NativeInt; const Fill: JSValue; Encoding: String): TJSArrayBuffer;
     class function allocUnsafe(Size: NativeInt): TJSArrayBuffer;
     class function from(const Values: TJSValueDynArray): TJSArrayBuffer;
     class function from(s: String): TJSArrayBuffer;
@@ -138,16 +138,16 @@ type
 
   TNJSConsole = class external name 'Console'
   Public
-    procedure assert(anAssertion : string; Obj1 : JSValue); varargs;
-    procedure dir(Obj1 : JSValue);
-    procedure dir(Obj1 : JSValue; const options: TJSObject);
-    procedure error(Obj1 : JSValue); varargs;
-    procedure info(Obj1 : JSValue); varargs;
-    procedure log(Obj1 : JSValue); varargs;
-    procedure time(aName : string);
-    procedure timeEnd(aName : string);
+    procedure assert(anAssertion : string; const Obj1 : JSValue); varargs;
+    procedure dir(const Obj1 : JSValue);
+    procedure dir(const Obj1 : JSValue; const options: TJSObject);
+    procedure error(const Obj1 : JSValue); varargs;
+    procedure info(const Obj1 : JSValue); varargs;
+    procedure log(const Obj1 : JSValue); varargs;
+    procedure time(const aName : string);
+    procedure timeEnd(const aName : string);
     procedure trace;
-    procedure warn(Obj1 : JSValue); varargs;
+    procedure warn(const Obj1 : JSValue); varargs;
   end;
 
 function Require(ModuleName: String): JSValue; external name 'require';

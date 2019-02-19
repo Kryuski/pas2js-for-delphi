@@ -34,6 +34,14 @@ Function AnsiReplaceText(const AText, AFromText, AToText: string): string;
 Function AnsiMatchText(const AText: string; const AValues: array of string): Boolean;
 Function AnsiIndexText(const AText: string; const AValues: array of string): Integer;
 
+Function StartsText(const ASubText, AText: string): Boolean;
+Function EndsText(const ASubText, AText: string): Boolean;
+
+function ResemblesText(const AText, AOther: string): Boolean;
+function ContainsText(const AText, ASubText: string): Boolean;
+function MatchText(const AText: string; const AValues: array of string): Boolean;
+function IndexText(const AText: string; const AValues: array of string): Integer;
+
 { ---------------------------------------------------------------------
     Case sensitive search/replace
   ---------------------------------------------------------------------}
@@ -46,6 +54,9 @@ Function AnsiMatchStr(const AText: string; const AValues: array of string): Bool
 Function AnsiIndexStr(const AText: string; const AValues: array of string): Integer;
 Function MatchStr(const AText: String; const AValues: array of String): Boolean;
 Function IndexStr(const AText: String; const AValues: array of String): Integer;
+function ContainsStr(const AText, ASubText: string): Boolean;
+Function StartsStr(const ASubText, AText: string): Boolean;
+Function EndsStr(const ASubText, AText: string): Boolean;
 
 { ---------------------------------------------------------------------
     Miscellaneous
@@ -133,6 +144,7 @@ type
 
 Var
   AnsiResemblesProc: TCompareTextProc;
+  ResemblesProc: TCompareTextProc;
 
 { ---------------------------------------------------------------------
     Other functions, based on RxStrUtils.
@@ -2101,6 +2113,60 @@ begin
   RemovePadChars(Result,cset);
 end;
 
+function StartsText(const ASubText, AText: string): Boolean; inline;
+begin
+  Result := AnsiStartsText(ASubText, AText);
+end;
+
+
+function EndsText(const ASubText, AText: string): Boolean;
+begin
+  Result := AnsiEndsText(ASubText, AText);
+end;
+
+function ResemblesText(const AText, AOther: string): Boolean;
+begin
+  if Assigned(ResemblesProc) then
+    Result := ResemblesProc(AText, AOther)
+  else
+    Result := False;
+end;
+
+function ContainsText(const AText, ASubText: string): Boolean;
+begin
+  Result := AnsiContainsText(AText, ASubText);
+end;
+
+function MatchText(const AText: string; const AValues: array of string): Boolean;
+begin
+  Result := AnsiMatchText(AText, AValues);
+end;
+
+function IndexText(const AText: string; const AValues: array of string): Integer;
+begin
+  Result := AnsiIndexText(AText, AValues);
+end;
+
+function ContainsStr(const AText, ASubText: string): Boolean;
+begin
+  Result := AnsiContainsStr(AText, ASubText);
+end;
+
+Function StartsStr(const ASubText, AText: string): Boolean;
+
+begin
+  Result := AnsiStartsStr(AText, ASubText);
+end;
+
+Function EndsStr(const ASubText, AText: string): Boolean;
+
+begin
+  Result := AnsiEndsStr(AText, ASubText);
+end;
+
+
 initialization
   AnsiResemblesProc:= @SoundexProc;
+  ResemblesProc:=@SoundexProc;
+
 end.

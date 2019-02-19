@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Example showing how to use TChartJS">
+    <meta name="author" content="silvioprog">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js" integrity="sha256-oSgtFCCmHWRPQ/JmR4OoZ3Xke1Pw4v50uh6pLcu+fIc=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="js/democustompoints.js"></script>
+    <title>TChartJS example</title>
+    <style>
+      .title {
+        margin: 20px 0 20px 0
+      }
+      canvas{
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+      }
+      .chartjs-tooltip {
+        opacity: 1;
+        position: absolute;
+        background: rgba(0, 0, 0, .7);
+        color: white;
+        border-radius: 3px;
+        -webkit-transition: all .1s ease;
+        transition: all .1s ease;
+        pointer-events: none;
+        -webkit-transform: translate(-50%, 0);
+        transform: translate(-50%, 0);
+        padding: 4px;
+      }
+      .chartjs-tooltip-key {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h3 class="title">
+        TChartJS <small class="text-muted">Create custom points charts using Pas2JS & ChartJS (<a href="democustompoints.lpr">view source</a>)</small>
+      </h3>
+      <div id="canvas-holder1" style="width:75%;">
+        <canvas id="chart1"></canvas>
+        <div class="chartjs-tooltip" id="tooltip-0"></div>
+        <div class="chartjs-tooltip" id="tooltip-1"></div>
+      </div>
+    </div>
+    <script>
+      rtl.run();
+    </script>
+  </body>
+</html>

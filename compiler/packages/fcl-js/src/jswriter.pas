@@ -228,6 +228,8 @@ type
     property IndentSize: Byte read FIndentSize write FIndentSize;
     property UseUTF8: Boolean read GetUseUTF8;
     property LastChar: WideChar read FLastChar;
+    property SkipCurlyBrackets: Boolean read FSkipCurlyBrackets write FSkipCurlyBrackets;
+    property SkipRoundBrackets: Boolean read FSkipRoundBrackets write FSkipRoundBrackets;
   end;
   EJSWriter = class(Exception);
 
@@ -601,7 +603,7 @@ Var
   p, StartP: Integer;
   MinIndent, CurLineIndent, j, Exp, Code: Integer;
   i: SizeInt;
-  D: TJSNumber;
+  D, AsNumber: TJSNumber;
 begin
   if V.CustomValue<>'' then begin
     JS := V.CustomValue;
@@ -647,17 +649,20 @@ begin
       Write(JS);
       exit;
     end;
-    jstNumber:
-      if (Frac(V.AsNumber)=0)
-        and (V.AsNumber>=double(MinSafeIntDouble))
-        and (V.AsNumber<=double(MaxSafeIntDouble))
-      then begin
+    jstNumber: begin
+      AsNumber:=V.AsNumber;
+      if (Frac(AsNumber)=0)
+          and (AsNumber>=double(MinSafeIntDouble))
+          and (AsNumber<=double(MaxSafeIntDouble)) then
+        begin
         {$WARN IMPLICIT_STRING_CAST OFF}
-        Str(Round(V.AsNumber),S);
+        Str(Round(AsNumber),S);
         {$WARN IMPLICIT_STRING_CAST ON}
-      end else begin
+        end
+      else
+        begin
         {$WARN IMPLICIT_STRING_CAST OFF}
-        Str(V.AsNumber,S);
+        Str(AsNumber,S);
         {$WARN IMPLICIT_STRING_CAST ON}
         if S[1]=' ' then Delete(S,1,1);
         i := Pos('E',S);
@@ -676,7 +681,7 @@ begin
               if s[j]='.' then Inc(j);
               S2 := LeftStr(S,j)+copy(S,i,Length(S));
               Val(S2,D,Code);
-              if (Code=0) and (D=V.AsNumber) then
+              if (Code=0) and (D=AsNumber) then
                 S := S2;
               end;
             '9': begin
@@ -710,7 +715,7 @@ begin
                 end;
               until false;
               Val(S2,D,Code);
-              if (Code=0) and (D=V.AsNumber) then
+              if (Code=0) and (D=AsNumber) then
                 S := S2;
             end;
           end;
@@ -769,6 +774,7 @@ begin
           end;
         end;
       end;
+    end;
     jstObject: ;
     jstReference: ;
     jstCompletion: ;
@@ -844,10 +850,14 @@ begin
         and (not (A is TJSSourceElements))
         and (not (A is TJSEmptyBlockStatement))
     then
+      begin
+      if FLastChar<>';' then
+        Write(';');
       if C then
-        Write('; ')
+        Write(' ')
       else
-        Writeln(';');
+        Writeln('');
+      end;
     end;
   Writer.CurElement := LastEl;
   if C then
@@ -1086,17 +1096,15 @@ begin
     Write(S);
     end;
   WriteJS(El.A);
-  if (S='') then
+  S:=El.PostFixOperator;
+  if (S<>'') then
     begin
-    S := El.PostFixOperator;
-    if (S<>'') then
-      begin
-      Writer.CurElement := El;
-      if ((S='-') and (FLastChar='-'))
-          or ((S='+') and (FLastChar='+')) then
-        Write(' ');
-      Write(S);
-      end;
+    Writer.CurElement:=El;
+    case S[1] of
+    '+': if FLastChar='+' then Write(' ');
+    '-': if FLastChar='-' then Write(' ');
+    end;
+    Write(S);
     end;
 end;
 
@@ -1129,10 +1137,12 @@ begin
       begin
       if not (LastEl is TJSStatementList) then
         begin
+        if FLastChar<>';' then
+          Write(';');
         if C then
-          Write('; ')
+          Write(' ')
         else
-          Writeln(';');
+          Writeln('');
         end;
       FSkipCurlyBrackets := True;
       WriteJS(El.B);
@@ -1141,11 +1151,14 @@ begin
     if (not C) and not (LastEl is TJSStatementList) then
       writeln(';');
     end
-  else if Assigned(El.B) then
+  else if Assigned(El.B) and not IsEmptyStatement(El.B) then
     begin
     WriteJS(El.B);
     if (not C) and not (El.B is TJSStatementList) then
-      writeln(';');
+      if FLastChar=';' then
+        writeln('')
+      else
+        writeln(';');
     end;
   if B then
     begin
