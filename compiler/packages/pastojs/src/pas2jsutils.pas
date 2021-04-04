@@ -199,7 +199,7 @@ begin
   if s='' then exit(true);
   p:=PChar(s);
   repeat
-    case p^ of
+    case AnsiChar(p^) of
     #0: if p-PChar(s)=length(s) then exit(true);
     #128..#255: exit(false);
     end;

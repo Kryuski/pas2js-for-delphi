@@ -2096,7 +2096,8 @@ var
   end;
 
 var
-  DestFilename, DestDir, Src, MapFilename: string;
+  DestFilename, DestDir, MapFilename: string;
+  Src: AnsiString;
   aJSWriter: TJSWriter;
   {$IFDEF Pas2js}
   buf: TJSArray;
@@ -2228,7 +2229,7 @@ begin
             // source map comment
             if aFileWriter.SrcMap <> nil then
             begin
-              Src := '//# sourceMappingURL='+ExtractFilename(MapFilename)+LineEnding;
+              Src := AnsiString('//# sourceMappingURL='+ExtractFilename(MapFilename)+LineEnding);
               {$IFDEF Pas2js}
               buf.push(Src);
               {$ELSE}

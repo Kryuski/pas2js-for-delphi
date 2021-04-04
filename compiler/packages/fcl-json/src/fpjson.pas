@@ -1155,12 +1155,15 @@ end;
 procedure TJSONData.DumpJSON(S: TFPJSStream);
 
   procedure W(T: string);
+  var
+    U: UTF8String;
   begin
     if T='' then Exit;
     {$ifdef pas2js}
     S.push(T);
     {$else}
-    S.WriteBuffer(T[1],Length(T)*SizeOf(Char));
+    U := UTF8Encode(T);
+    S.WriteBuffer(U[1],Length(U));
     {$endif}
   end;
 
@@ -1174,10 +1177,11 @@ begin
       W('{');
       var first := True;
       for item in o.FHash do begin
-        if first then begin
+        if not first then
+        begin
           W(',');
-          first := False
         end;
+        first := False;
         W('"');
         W(StringToJSONString(item.Key, False));
         W('":');

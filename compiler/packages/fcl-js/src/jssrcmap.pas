@@ -156,7 +156,7 @@ type
     property Sorted: boolean read FSorted write SetSorted; // Segments are sorted for GeneratedLine/Col
   end;
 
-function DefaultSrcMapHeader: string;
+function DefaultSrcMapHeader: AnsiString;
 
 function EncodeBase64VLQ(i: NativeInt): string; // base64 Variable Length Quantity
 function DecodeBase64VLQ(const s: string): NativeInt; overload; // base64 Variable Length Quantity
@@ -174,7 +174,7 @@ implementation
 uses
   FPCTypes, StrUtils;
 
-function DefaultSrcMapHeader: string;
+function DefaultSrcMapHeader: AnsiString;
 begin
   Result:=')]}''' + LineEnding;
 end;
