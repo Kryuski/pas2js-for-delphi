@@ -2,10 +2,14 @@
 
   Abstract:
     Command line interface for the pas2js compiler.
+	
+  Adaptation for Delphi: 2019-2022 Kryvich
+  https://github.com/Kryuski/pas2js-for-delphi
 }
 program pas2js;
 
 {$APPTYPE CONSOLE}
+
 {$R *.res}
 
 uses
@@ -17,16 +21,7 @@ uses
   Pas2JSFSCompiler in '..\..\packages\pastojs\src\Pas2JSFSCompiler.pas',
   Pas2JSCompilerPP in '..\..\packages\pastojs\src\Pas2JSCompilerPP.pas',
   Pas2JSCompilerCfg in '..\..\packages\pastojs\src\Pas2JSCompilerCfg.pas',
-  PasResolver in '..\..\packages\fcl-passrc\src\PasResolver.pas',
-  pastree in '..\..\packages\fcl-passrc\src\pastree.pas',
-  PScanner in '..\..\packages\fcl-passrc\src\PScanner.pas',
-  PParser in '..\..\packages\fcl-passrc\src\PParser.pas',
-  PasResolveEval in '..\..\packages\fcl-passrc\src\PasResolveEval.pas',
-  FPPas2Js in '..\..\packages\pastojs\src\FPPas2Js.pas',
-  jswriter in '..\..\packages\fcl-js\src\jswriter.pas',
-  fppjssrcmap in '..\..\packages\pastojs\src\fppjssrcmap.pas',
-  Pas2jsFileCache in '..\..\packages\pastojs\src\Pas2jsFileCache.pas',
-  pas2jsuseanalyzer in '..\..\packages\pastojs\src\pas2jsuseanalyzer.pas';
+  FPCTypes in '..\..\packages\FPCTypes.pas';
 
 type
   { TPas2jsCLI }
@@ -74,9 +69,9 @@ end;
 constructor TPas2jsCLI.Create;
 begin
   inherited ;
-  FCompiler := TPas2JSFSCompiler.Create;
-  FCompiler.ConfigSupport := TPas2JSFileConfigSupport.Create(FCompiler);
-  FCompiler.PostProcessorSupport := TPas2JSFSPostProcessorSupport.Create(FCompiler);
+  FCompiler:=TPas2JSFSCompiler.Create;
+  FCompiler.ConfigSupport:=TPas2JSFileConfigSupport.Create(FCompiler);
+  FCompiler.PostProcessorSupport:=TPas2JSFSPostProcessorSupport.Create(FCompiler);
 end;
 
 destructor TPas2jsCLI.Destroy;
@@ -90,6 +85,5 @@ var
 begin
   Application := TPas2jsCLI.Create;
   Application.DoRun;
-  Application.Free;
+    Application.Free;
 end.
-

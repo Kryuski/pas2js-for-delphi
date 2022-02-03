@@ -1,4 +1,4 @@
-{   This unit contains the TTestRunner class, a base class for the console test
+{   This unit contains the TTestRunner class, a base class for the browser test
     runner for fpcunit.
 
     This file is part of the Free Component Library (FCL)
@@ -26,9 +26,7 @@ unit BrowserTestRunner;
 interface
 
 uses
-  CustApp, browserapp, Classes, SysUtils,
-  FPCUnit, TestRegistry,
-  FPCUnitReport, htmlTestReport;
+  CustApp, browserapp, Classes, SysUtils,  FPCUnit, TestRegistry,  FPCUnitReport, htmlTestReport;
 
 const
   Version = '0.9';
@@ -37,14 +35,6 @@ type
 
   { TRunForm }
 
-  TRunForm = class(TComponent)
-  private
-    FOnRun: TNotifyEvent;
-  Public
-    Procedure Initialize; virtual;
-    Property OnRun : TNotifyEvent Read FOnRun Write FOnRun;
-  end;
-  TRunFormClass = class of TRunForm;
   { TTestRunner }
 
   TTestRunner = class(TBrowserApplication)
@@ -86,13 +76,6 @@ type
     procedure StartTestSuite(ATestSuite: TTestSuite); override;
     procedure EndTestSuite(ATestSuite: TTestSuite); override;
   end;
-
-{ TRunForm }
-
-procedure TRunForm.Initialize;
-begin
-  // Do nothing
-end;
 
 procedure TProgressWriter.WriteChar(c: char);
 begin
@@ -181,8 +164,9 @@ begin
     R:=RunFormClass.Create(Self);
     R.OnRun:=@DoRunAgain;
     R.Initialize;
-    end;
-  RunTests;
+    end
+  else
+    RunTests;
   Terminate;
 end;
 

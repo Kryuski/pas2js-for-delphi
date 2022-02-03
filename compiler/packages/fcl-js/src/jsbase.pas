@@ -1,4 +1,4 @@
-{ ********************************************************************* 
+{ *********************************************************************
     This file is part of the Free Component Library (FCL)
     Copyright (c) 2016 Michael Van Canneyt.
        
@@ -15,19 +15,19 @@
                                  
 unit jsbase;
 
-{$I pas2js_defines.inc}
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
-uses
-  {$ifdef pas2js}
-  js,
-  {$endif}
-  Classes, SysUtils;
+{$ifdef pas2js}
+uses js;
+{$endif}
 
 const
-  MinSafeIntDouble = -$fffffffffffff-1; // -4503599627370496
-  MaxSafeIntDouble =  $fffffffffffff; //  4503599627370495
+  MinSafeIntDouble = -$1fffffffffffff; // -9007199254740991 53 bits (52 explicitly stored)
+  MaxSafeIntDouble =  $1fffffffffffff; //  9007199254740991
 Type
   TJSType = (jstUNDEFINED,jstNull,jstBoolean,jstNumber,jstString,jstObject,jstReference,jstCompletion);
 
@@ -73,7 +73,7 @@ Type
     procedure SetIsUndefined(const AValue: Boolean);
   Public
     Constructor Create; overload;
-    Constructor CreateNull;
+    Constructor CreateNull(Dummy: Integer); //!![Kryvich] W1029 Duplicate constructor 'TJSValue.CreateNull' with identical parameters will be inaccessible from C++
     Constructor Create(ANumber : TJSNumber); overload;
     Constructor Create(ABoolean : Boolean); overload;
     Constructor Create(AString: TJSString); overload;
@@ -409,7 +409,7 @@ begin
     ClearValue(jstNull);
 end;
 
-constructor TJSValue.CreateNull;
+constructor TJSValue.CreateNull(Dummy: Integer);
 begin
   IsNull:=True;
 end;

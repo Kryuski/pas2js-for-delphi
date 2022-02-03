@@ -89,7 +89,7 @@ Type
     procedure GetEnvironmentList(List: TStrings; NamesOnly: Boolean); virtual; abstract;
     procedure GetEnvironmentList(List: TStrings); virtual;
     procedure Log(EventType: TEventType; const Msg: String);
-    procedure Log(EventType: TEventType; const Fmt: String; const Args: Array of string);
+    procedure Log(EventType: TEventType; const Fmt: String; const Args: Array of const);
     // Delphi properties
     property ExeName: string read GetExeName;
     property Terminated: Boolean read FTerminated;
@@ -618,7 +618,7 @@ begin
 end;
 
 procedure TCustomApplication.Log(EventType: TEventType; const Fmt: String;
-  const Args: array of string);
+  const Args: array of const);
 begin
   try
     Log(EventType, Format(Fmt, Args));

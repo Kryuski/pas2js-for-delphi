@@ -1,0 +1,97 @@
+
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Convert definitelytyped Typescript module to Pascal</title>
+  <link rel="stylesheet" href="bulma.min.css">
+  <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"> -->
+  <script src="convcgi.cgi/list/"></script>
+  <script src="convert.js"></script>
+</head>
+<body>
+  <div class="section pb-4">
+    <h1 class="title is-3">Convert typescript to Pas2JS import</h1>
+    <div class="columns">
+      <!-- file name input -->
+      <div class="column is-one-quarter">
+        <div>File Name:</div>
+        <div class="dropdown">
+          <div class="dropdown-trigger">
+            <input id="edtfilename" class="input is-info" type="text" placeholder="Enter file name" aria-haspopup="true" aria-controls="file-menu">
+          </div>
+          <button id="btnGo" class="button is-info">Go!</button>
+          <div class="dropdown-menu" id="file-menu" role="menu">
+          </div>
+        </div>
+      </div>
+      <!-- unit name input -->
+      <label class="column is-one-quarter">
+        Unit Name:
+        <input id="edtunitname" class="input is-info" type="text" placeholder="Enter unit name (optional)" aria-haspopup="true" aria-controls="file-menu">
+      </label>
+    </div>
+    <!-- checkboxes -->
+    <div class="block mt-5">
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coGenericArrays"> Use generic arrays
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="coUseNativeTypeAliases"> Use native type aliases
+        </label>
+      </div>
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coLocalArgumentTypes"> Create class local argument types
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="coUntypedTuples"> Use untyped tuples
+        </label>
+      </div>
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coDynamicTuples"> Use dynamic tuples
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="coExternalConst"> Use external consts
+        </label>
+      </div>
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coExpandUnionTypeArgs"> Expand union type arguments
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="coaddOptionsToheader"> Add options to header
+        </label>
+      </div>
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coInterfaceAsClass"> Interface as class
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="coSkipImportStatements"> Skip import statements
+        </label>
+      </div>
+      <div class="columns">
+        <label class="column is-one-quarter checkbox">
+          <input type="checkbox" id="coRaw"> Do not generate unit header
+        </label>
+        <label class="column checkbox">
+          <input type="checkbox" id="cbPrependLog"> Prepend conversion log to unit as comment
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="section pt-5">
+    <h5 class="title is-5">Output</h5>
+    <textarea id="edtSource" rows=40 cols=132></textarea>
+  </div>
+  <script>
+    rtl.showUncaughtExceptions=true;
+    window.addEventListener("load", rtl.run);
+  </script>
+</body>
+</html>

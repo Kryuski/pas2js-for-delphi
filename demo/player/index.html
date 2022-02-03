@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Media player demo</title>
+  <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="tracks.js"></script>
+  <script src="main.js"></script>
+</head>
+<body>
+  <div class="player">
+  
+    <div class="details">
+      <div class="display-text"></div>
+      <div class="now-playing">PLAYING x OF y</div>
+      <div class="track-art"></div>
+      <div class="track-name">Track Name</div>
+      <div class="track-artist">Track Artist</div>
+    </div>
+  
+    <div class="buttons">
+      <div class="prev-track" >
+        <i class="fa fa-step-backward fa-2x"></i>
+      </div>
+      <div class="playpause-track">
+        <i class="fa fa-play-circle fa-5x"></i>
+      </div>
+      <div class="next-track" >
+        <i class="fa fa-step-forward fa-2x"></i>
+      </div>
+    </div>
+  
+    <div class="slider_container">
+      <div class="current-time">00:00</div>
+      <input type="range" min="1" max="100"
+        value="0" class="seek_slider" >
+      <div class="total-duration">00:00</div>
+    </div>
+  
+    <div class="slider_container">
+      <i class="fa fa-volume-down"></i>
+      <input type="range" min="1" max="100"
+        value="99" class="volume_slider">
+      <i class="fa fa-volume-up"></i>
+    </div>
+  </div>
+  <hr>
+  <a href="main.pas">Program sources</a>  &nbsp; <a
+   href="https://www.bensound.com/royalty-free-music/">Royalty-free music from Bensound</a> 
+  <script>
+     window.addEventListener("load",rtl.run)
+  </script>
+</body>
+</html>

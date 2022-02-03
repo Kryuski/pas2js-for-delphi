@@ -12,8 +12,12 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-{$h+}
+
 unit jsonparser;
+
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
@@ -32,22 +36,22 @@ Type
     FValue : TJSONData;
     FKey: TJSONStringType;
     procedure Pop(aType: TJSONType);
-    procedure Push(AValue : TJSONData);
+    Procedure Push(AValue : TJSONData);
     Function NewValue(AValue : TJSONData) : TJSONData;
   Protected
-    procedure KeyValue(Const AKey : TJSONStringType); override;
-    procedure StringValue(Const AValue : TJSONStringType);override;
-    procedure NullValue; override;
-    procedure FloatValue(Const AValue : Double); override;
-    procedure BooleanValue(Const AValue : Boolean); override;
-    procedure NumberValue(Const AValue : TJSONStringType); override;
-    procedure IntegerValue(Const AValue : integer); override;
-    procedure Int64Value(Const AValue : int64); override;
-    procedure QWordValue(Const AValue : QWord); override;
-    procedure StartArray; override;
-    procedure StartObject; override;
-    procedure EndArray; override;
-    procedure EndObject; override;
+    Procedure KeyValue(Const AKey : TJSONStringType); override;
+    Procedure StringValue(Const AValue : TJSONStringType);override;
+    Procedure NullValue; override;
+    Procedure FloatValue(Const AValue : Double); override;
+    Procedure BooleanValue(Const AValue : Boolean); override;
+    Procedure NumberValue(Const AValue : TJSONStringType); override;
+    Procedure IntegerValue(Const AValue : integer); override;
+    Procedure Int64Value(Const AValue : int64); override;
+    Procedure QWordValue(Const AValue : QWord); override;
+    Procedure StartArray; override;
+    Procedure StartObject; override;
+    Procedure EndArray; override;
+    Procedure EndObject; override;
   Public
     function Parse: TJSONData;
   end;
@@ -74,6 +78,26 @@ begin
   if AUseUTF8 then
     Include(AOptions,joUTF8);
   P:=TJSONParser.Create(AStream,AOptions);
+  try
+    Data:=P.Parse;
+  finally
+    P.Free;
+  end;
+end;
+
+procedure DefJSONStringParserHandler(Const S : TJSONStringType; const AUseUTF8: Boolean; out
+  Data: TJSONData);
+
+Var
+  P : TJSONParser;
+  AOptions: TJSONOptions;
+
+begin
+  Data:=Nil;
+  AOptions:=[];
+  if AUseUTF8 then
+    Include(AOptions,joUTF8);
+  P:=TJSONParser.Create(RawByteString(S),AOptions);
   try
     Data:=P.Parse;
   finally
@@ -108,7 +132,17 @@ begin
   // Add to existing structural type
   if (FStruct is TJSONObject) then
     begin
-    TJSONObject(FStruct).Add(FKey,AValue);
+    if (Not (joIgnoreDuplicates in options)) then
+      try
+        TJSONObject(FStruct).Add(FKey,AValue);
+      except
+        AValue.Free;
+        Raise;
+      end
+    else if (TJSONObject(FStruct).IndexOfName(FKey)=-1) then
+      TJSONObject(FStruct).Add(FKey,AValue)
+    else
+      AValue.Free;
     FKey:='';
     end
   else if (FStruct is TJSONArray) then
@@ -218,16 +252,22 @@ end;
 }
 
 
-procedure InitJSONHandler;
+Procedure InitJSONHandler;
+
 begin
   if not Assigned(@GetJSONParserHandler) then
     SetJSONParserHandler(DefJSONParserHandler);
+  if not Assigned(@GetJSONStringParserHandler) then
+    SetJSONStringParserHandler(DefJSONStringParserHandler);
 end;
 
-procedure DoneJSONHandler;
+Procedure DoneJSONHandler;
+
 begin
-  if @GetJSONParserHandler = @DefJSONParserHandler then
-    SetJSONParserHandler(nil);
+  if MethodPointersEqual(GetJSONParserHandler, DefJSONParserHandler) then
+    SetJSONParserHandler(Nil);
+  if MethodPointersEqual(GetJSONStringParserHandler, DefJSONStringParserHandler) then
+    SetJSONStringParserHandler(Nil);
 end;
 
 initialization

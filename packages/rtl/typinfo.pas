@@ -21,59 +21,33 @@ uses
   SysUtils, Types, RTLConsts, JS;
 
 type
-  // if you change the following enumeration type in any way
-  // you also have to change the rtl.js in an appropriate way !
-  TTypeKind = (
-    tkUnknown,  // 0
-    tkInteger,  // 1
-    tkChar,     // 2 in Delphi/FPC tkWChar, tkUChar
-    tkString,   // 3 in Delphi/FPC tkSString, tkWString or tkUString
-    tkEnumeration, // 4
-    tkSet,      // 5
-    tkDouble,   // 6
-    tkBool,     // 7
-    tkProcVar,  // 8
-    tkMethod,   // 9  proc var of object
-    tkArray,    // 10 static array
-    tkDynArray, // 11
-    tkRecord,   // 12
-    tkClass,    // 13
-    tkClassRef, // 14
-    tkPointer,  // 15
-    tkJSValue,  // 16
-    tkRefToProcVar, // 17
-    tkInterface, // 18
-    //tkObject,
-    //tkSString,tkLString,tkAString,tkWString,
-    //tkVariant,
-    //tkWChar,
-    //tkInt64,
-    //tkQWord,
-    //tkInterfaceRaw,
-    //tkUString,tkUChar,
-    tkHelper    // 19
-    //tkFile,
-    );
-  TTypeKinds = set of TTypeKind;
-
   // TCallConv for compatibility with Delphi/FPC, ignored under pas2js
   TCallConv = (ccReg, ccCdecl, ccPascal, ccStdCall, ccSafeCall, ccCppdecl,
     ccFar16, ccOldFPCCall, ccInternProc, ccSysCall, ccSoftFloat, ccMWPascal);
 
-const
-  tkFloat = tkDouble; // for compatibility with Delphi/FPC
-  tkProcedure = tkProcVar; // for compatibility with Delphi
-  tkAny = [Low(TTypeKind)..High(TTypeKind)];
-  tkMethods = [tkMethod];
-  tkProperties = tkAny-tkMethods-[tkUnknown];
 
-type
+  { TSectionRTTI }
+  TSectionRTTI = class external name 'rtl.tSectionRTTI'(TJSObject)
+  end;
+
+  { TTypeInfoModule }
+
+  TTypeInfoModule = class external name 'pasmodule'(TJSObject)
+  public
+    Name: String external name '$name';
+    RTTI: TSectionRTTI external name '$rtti';
+  end;
+
+  TTypeInfoAttributes = type TJSValueDynArray;
+
   { TTypeInfo }
 
   TTypeInfo = class external name 'rtl.tTypeInfo'
   public
     Name: String external name 'name';
     Kind: TTypeKind external name 'kind';
+    Attributes: TTypeInfoAttributes external name 'attr'; // can be nil
+    Module: TTypeInfoModule external name '$module'; // can be nil
   end;
   TTypeInfoClassOf = class of TTypeInfo;
 
@@ -130,7 +104,7 @@ type
 
   TTypeInfoStaticArray = class external name 'rtl.tTypeInfoStaticArray'(TTypeInfo)
   public
-    Dims: TIntegerDynArray;
+    Dims: TIntegerDynArray external name 'dims';
     ElType: TTypeInfo external name 'eltype';
   end;
 
@@ -138,7 +112,6 @@ type
 
   TTypeInfoDynArray = class external name 'rtl.tTypeInfoDynArray'(TTypeInfo)
   public
-    DimCount: NativeInt external name 'dimcount';
     ElType: TTypeInfo external name 'eltype';
   end;
 
@@ -146,8 +119,9 @@ type
     pfVar,     // 2^0 = 1
     pfConst,   // 2^1 = 2
     pfOut,     // 2^2 = 4
-    pfArray    // 2^3 = 8
-    //pfAddress,pfReference,
+    pfArray,   // 2^3 = 8
+    pfAddress, // 2^4 = 16
+    pfReference // 2^5 = 32
     );
   TParamFlags = set of TParamFlag;
 
@@ -165,7 +139,9 @@ type
   TProcedureFlag = (
     pfStatic,   // 2^0 = 1
     pfVarargs,  // 2^1 = 2
-    pfExternal  // 2^2 = 4  name may be an expression
+    pfExternal, // 2^2 = 4  name may be an expression
+    pfSafeCall, // 2^3 = 8
+    pfAsync     // 2^4 = 16
     );
   TProcedureFlags = set of TProcedureFlag;
 
@@ -173,8 +149,8 @@ type
 
   TProcedureSignature = class external name 'anonymous'
   public
-    Params: TProcedureParams external name 'params'; // can be null
-    ResultType: TTypeInfo external name 'resulttype'; // can be null
+    Params: TProcedureParams external name 'params'; // can be nil
+    ResultType: TTypeInfo external name 'resulttype'; // can be nil
     Flags: NativeInt external name 'flags'; // TProcedureFlags as bit vector
   end;
 
@@ -222,6 +198,7 @@ type
   public
     Name: String external name 'name';
     Kind: TTypeMemberKind external name 'kind';
+    Attributes: TTypeInfoAttributes external name 'attr'; // can be nil
   end;
   TTypeMemberDynArray = array of TTypeMember;
 
@@ -257,7 +234,7 @@ type
   public
     TypeInfo: TTypeInfo external name 'typeinfo';
     Flags: NativeInt external name 'flags'; // bit vector, see pf constants above
-    Params: TProcedureParams external name 'params'; // can be null or undefined
+    Params: TProcedureParams external name 'params'; // can be nil
     Index: JSValue external name 'index'; // can be undefined
     Getter: String external name 'getter'; // name of field or function
     Setter: String external name 'setter'; // name of field or function
@@ -308,7 +285,7 @@ type
 
   TTypeInfoRecord = class external name 'rtl.tTypeInfoRecord'(TTypeInfoStruct)
   public
-    RecordType: TJSObject external name 'record';
+    RecordType: TJSObject external name '$record';  // only records with class vars, else jsundefined
   end;
 
   { TTypeInfoClass - Kind = tkClass }
@@ -317,6 +294,13 @@ type
   public
     ClassType: TClass external name 'class';
     Ancestor: TTypeInfoClass external name 'ancestor';
+  end;
+
+  { TTypeInfoExtClass - Kind = tkExtClass }
+
+  TTypeInfoExtClass = class external name 'rtl.tTypeInfoExtClass'(TTypeInfoClass)
+  public
+    JSClassName: String external name 'jsclass';
   end;
 
   { TTypeInfoClassRef - class-of, Kind = tkClassRef }
@@ -352,6 +336,8 @@ type
 
   EPropertyError  = class(Exception);
 
+function GetTypeName(TypeInfo: TTypeInfo): string;
+
 function GetClassMembers(aTIStruct: TTypeInfoStruct): TTypeMemberDynArray;
 function GetClassMember(aTIStruct: TTypeInfoStruct; const aName: String): TTypeMember;
 function GetInstanceMethod(Instance: TObject; const aName: String): Pointer;
@@ -361,6 +347,8 @@ function CreateMethod(Instance: TObject; FuncName: String): Pointer; external na
 function GetInterfaceMembers(aTIInterface: TTypeInfoInterface): TTypeMemberDynArray;
 function GetInterfaceMember(aTIInterface: TTypeInfoInterface; const aName: String): TTypeMember;
 function GetInterfaceMethods(aTIInterface: TTypeInfoInterface): TTypeMemberMethodDynArray;
+
+function GetRTTIAttributes(const Attributes: TTypeInfoAttributes): TCustomAttributeArray;
 
 function GetPropInfos(aTIStruct: TTypeInfoStruct): TTypeMemberPropertyDynArray;
 function GetPropList(aTIStruct: TTypeInfoStruct; TypeKinds: TTypeKinds; Sorted: boolean = true): TTypeMemberPropertyDynArray;
@@ -425,6 +413,11 @@ function GetSetPropArray(Instance: TObject; const PropInfo: TTypeMemberProperty)
 procedure SetSetPropArray(Instance: TObject; const PropName: String; const Arr: TIntegerDynArray); overload;
 procedure SetSetPropArray(Instance: TObject; const PropInfo: TTypeMemberProperty; const Arr: TIntegerDynArray); overload;
 
+function GetBoolProp(Instance: TObject; const PropName: String): boolean;
+function GetBoolProp(Instance: TObject; const PropInfo: TTypeMemberProperty): boolean;
+procedure SetBoolProp(Instance: TObject; const PropName: String; Value: boolean);
+procedure SetBoolProp(Instance: TObject; const PropInfo: TTypeMemberProperty; Value: boolean);
+
 function GetStrProp(Instance: TObject; const PropName: String): String;
 function GetStrProp(Instance: TObject; const PropInfo: TTypeMemberProperty): String;
 procedure SetStrProp(Instance: TObject; const PropName: String; Value: String);
@@ -435,24 +428,39 @@ function GetStringProp(Instance: TObject; const PropInfo: TTypeMemberProperty): 
 procedure SetStringProp(Instance: TObject; const PropName: String; Value: String); deprecated; // use GetStrProp
 procedure SetStringProp(Instance: TObject; const PropInfo: TTypeMemberProperty; Value: String); deprecated; // use GetStrProp
 
-function GetBoolProp(Instance: TObject; const PropName: String): boolean;
-function GetBoolProp(Instance: TObject; const PropInfo: TTypeMemberProperty): boolean;
-procedure SetBoolProp(Instance: TObject; const PropName: String; Value: boolean);
-procedure SetBoolProp(Instance: TObject; const PropInfo: TTypeMemberProperty; Value: boolean);
+function  GetFloatProp(Instance: TObject; const PropName: string): Double;
+function  GetFloatProp(Instance: TObject; PropInfo : TTypeMemberProperty) : Double;
+procedure SetFloatProp(Instance: TObject; const PropName: string; Value: Double);
+procedure SetFloatProp(Instance: TObject; PropInfo : TTypeMemberProperty;  Value : Double);
 
 function GetObjectProp(Instance: TObject; const PropName: String): TObject;
-function GetObjectProp(Instance: TObject; const PropName: String; MinClass : TClass): TObject;
+function GetObjectProp(Instance: TObject; const PropName: String; MinClass: TClass): TObject;
 function GetObjectProp(Instance: TObject; const PropInfo: TTypeMemberProperty):  TObject;
-function GetObjectProp(Instance: TObject; const PropInfo: TTypeMemberProperty; MinClass : TClass):  TObject;
+function GetObjectProp(Instance: TObject; const PropInfo: TTypeMemberProperty; MinClass: TClass):  TObject;
 procedure SetObjectProp(Instance: TObject; const PropName: String; Value: TObject) ;
 procedure SetObjectProp(Instance: TObject; const PropInfo: TTypeMemberProperty; Value: TObject);
 
-Function  GetFloatProp(Instance: TObject; const PropName: string): Double;
-Function  GetFloatProp(Instance: TObject; PropInfo : TTypeMemberProperty) : Double;
-Procedure SetFloatProp(Instance: TObject; const PropName: string; Value: Double);
-Procedure SetFloatProp(Instance: TObject; PropInfo : TTypeMemberProperty;  Value : Double);
+function GetMethodProp(Instance: TObject; PropInfo: TTypeMemberProperty): TMethod;
+function GetMethodProp(Instance: TObject; const PropName: string): TMethod;
+procedure SetMethodProp(Instance: TObject; PropInfo: TTypeMemberProperty;  const Value : TMethod);
+procedure SetMethodProp(Instance: TObject; const PropName: string; const Value: TMethod);
+
+function GetInterfaceProp(Instance: TObject; const PropName: string): IInterface;
+function GetInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty): IInterface;
+procedure SetInterfaceProp(Instance: TObject; const PropName: string; const Value: IInterface);
+procedure SetInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty; const Value: IInterface);
+
+function GetRawInterfaceProp(Instance: TObject; const PropName: string): Pointer;
+function GetRawInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty): Pointer;
+procedure SetRawInterfaceProp(Instance: TObject; const PropName: string; const Value: Pointer);
+procedure SetRawInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty; const Value: Pointer);
 
 implementation
+
+function GetTypeName(TypeInfo: TTypeInfo): string;
+begin
+  Result := TypeInfo.Name;
+end;
 
 function GetClassMembers(aTIStruct: TTypeInfoStruct): TTypeMemberDynArray;
 var
@@ -621,6 +629,42 @@ begin
     end;
     Intf:=Intf.Ancestor;
   end;
+end;
+
+type
+  TCreatorAttribute = class external name 'attr'
+    class function Create(const ProcName: string): TCustomAttribute; overload; external name '$create';
+    class function Create(const ProcName: string; Params: jsvalue): TCustomAttribute; overload; external name '$create';
+  end;
+  TCreatorAttributeClass = class of TCreatorAttribute;
+
+function GetRTTIAttributes(const Attributes: TTypeInfoAttributes
+  ): TCustomAttributeArray;
+var
+  i, len: Integer;
+  AttrClass: TCreatorAttributeClass;
+  ProcName: String;
+  Attr: TCustomAttribute;
+begin
+  Result:=nil;
+  if Attributes=Undefined then exit;
+  i:=0;
+  len:=length(Attributes);
+  while i<len do
+    begin
+    AttrClass:=TCreatorAttributeClass(Attributes[i]);
+    inc(i);
+    ProcName:=String(Attributes[i]);
+    inc(i);
+    if (i<len) and isArray(Attributes[i]) then
+      begin
+      Attr:=AttrClass.Create(ProcName,Attributes[i]);
+      inc(i);
+      end
+    else
+      Attr:=AttrClass.Create(ProcName);
+    Insert(Attr,Result,length(Result));
+    end;
 end;
 
 function GetPropInfos(aTIStruct: TTypeInfoStruct): TTypeMemberPropertyDynArray;
@@ -870,6 +914,7 @@ begin
   else if (pfGetFunction and PropInfo.Flags)>0 then
     begin
     if length(PropInfo.Params)>0 then
+      // array property
       Result:=gkFunctionWithParams
     else
       Result:=gkFunction;
@@ -893,6 +938,7 @@ begin
   else if (pfSetProcedure and PropInfo.Flags)>0 then
     begin
     if length(PropInfo.Params)>0 then
+      // array property
       Result:=skProcedureWithParams
     else
       Result:=skProcedure;
@@ -1028,6 +1074,9 @@ var
   o: TJSObject;
   Key: String;
   n: NativeInt;
+  v : JSValue;
+  vs : TJSString absolute key;
+
 begin
   if PropInfo.TypeInfo.Kind=tkSet then
   begin
@@ -1040,6 +1089,19 @@ begin
       if n<32 then
         Result:=Result+(1 shl n);
     end;
+  end else if PropInfo.TypeInfo.Kind=tkChar then
+  begin
+    v:=GetJSValueProp(Instance,PropInfo);
+    if isNumber(v) then
+      Result:=Longint(V)
+    else
+      begin
+      Key:=String(v);
+      If Key='' then
+        Result:=0
+      else
+        Result:=vs.CharCodeAt(0);
+      end
   end else
     Result:=longint(GetJSValueProp(Instance,PropInfo));
 end;
@@ -1062,7 +1124,9 @@ begin
       if (1 shl i) and Value>0 then
         o[str(i)]:=true;
     SetJSValueProp(Instance,PropInfo,o);
-  end else
+  end else if PropInfo.TypeInfo.Kind=tkChar then
+    SetJSValueProp(Instance,PropInfo,TJSString.fromCharCode(Value))
+  else
     SetJSValueProp(Instance,PropInfo,Value);
 end;
 
@@ -1325,27 +1389,186 @@ begin
   SetJSValueProp(Instance,PropInfo,Value);
 end;
 
+function GetMethodProp(Instance: TObject; PropInfo: TTypeMemberProperty
+  ): TMethod;
+var
+  v, fn: JSValue;
+begin
+  Result.Code:=nil;
+  Result.Data:=nil;
+  v:=GetJSValueProp(Instance,PropInfo);
+  if not isFunction(v) then exit;
+  Result.Data:=Pointer(TJSObject(v)['scope']);
+  fn:=TJSObject(v)['fn'];
+  if isString(fn) then
+    begin
+    if Result.Data<>nil then
+      // named callback
+      Result.Code:=CodePointer(TJSObject(Result.Data)[String(fn)])
+    else
+      // this is not an rtl callback, return the value
+      Result.Code:=CodePointer(v);
+    end
+  else
+    // anonymous callback
+    Result.Code:=CodePointer(fn);
+end;
+
+function GetMethodProp(Instance: TObject; const PropName: string): TMethod;
+begin
+  Result:=GetMethodProp(Instance,FindPropInfo(Instance,PropName));
+end;
+
+function createCallbackPtr(scope: Pointer; fn: CodePointer): TJSFunction; external name 'rtl.createCallback';
+function createCallbackStr(scope: Pointer; fn: string): TJSFunction; external name 'rtl.createCallback';
+
+procedure SetMethodProp(Instance: TObject; PropInfo: TTypeMemberProperty;
+  const Value: TMethod);
+var
+  cb: TJSFunction;
+  Code: Pointer;
+begin
+  // Note: Value.Data=nil is allowed and can be used by designer code
+  Code:=Value.Code;
+  if Code=nil then
+    cb:=nil
+  else if isFunction(Code) then
+    begin
+    if (TJSObject(Code)['scope']=Value.Data)
+        and (isFunction(TJSObject(Code)['fn']) or isString(TJSObject(Code)['fn']))
+      then
+      begin
+      // Value.Code is already the needed callback
+      cb:=TJSFunction(Code);
+      end
+    else if isString(TJSObject(Code)['fn']) then
+      // named callback, different scope
+      cb:=createCallbackStr(Value.Data,string(TJSObject(Code)['fn']))
+    else
+      // normal function
+      cb:=createCallbackPtr(Value.Data,Code);
+    end
+  else
+    // not a valid value -> for compatibility set it anyway
+    cb:=createCallbackPtr(Value.Data,Code);
+  SetJSValueProp(Instance,PropInfo,cb);
+end;
+
+procedure SetMethodProp(Instance: TObject; const PropName: string;
+  const Value: TMethod);
+begin
+  SetMethodProp(Instance,FindPropInfo(Instance,PropName),Value);
+end;
+
+function GetInterfaceProp(Instance: TObject; const PropName: string
+  ): IInterface;
+begin
+  Result:=GetInterfaceProp(Instance,FindPropInfo(Instance,PropName));
+end;
+
+function GetInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty
+  ): IInterface;
+type
+  TGetter = function: IInterface of object;
+  TGetterWithIndex = function(Index: JSValue): IInterface of object;
+var
+  gk: TGetterKind;
+begin
+  if Propinfo.TypeInfo.Kind<>tkInterface then
+    raise Exception.Create('Cannot get RAW interface from IInterface interface');
+  gk:=GetPropGetterKind(PropInfo);
+  case gk of
+    gkNone:
+      raise EPropertyError.CreateFmt(SCantReadPropertyS, [PropInfo.Name]);
+    gkField:
+      Result:=IInterface(TJSObject(Instance)[PropInfo.Getter]);
+    gkFunction:
+      if (pfHasIndex and PropInfo.Flags)>0 then
+        Result:=TGetterWithIndex(TJSObject(Instance)[PropInfo.Getter])(PropInfo.Index)
+      else
+        Result:=TGetter(TJSObject(Instance)[PropInfo.Getter])();
+    gkFunctionWithParams:
+      raise EPropertyError.CreateFmt(SIndexedPropertyNeedsParams, [PropInfo.Name]);
+  end;
+end;
+
+procedure SetInterfaceProp(Instance: TObject; const PropName: string;
+  const Value: IInterface);
+begin
+  SetInterfaceProp(Instance,FindPropInfo(Instance,PropName),Value);
+end;
+
+procedure SetInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty;
+  const Value: IInterface);
+type
+  TSetter = procedure(Value: IInterface) of object;
+  TSetterWithIndex = procedure(Index: JSValue; Value: IInterface) of object;
+procedure setIntfP(Instance: TObject; const PropName: string; value: jsvalue); external name 'rtl.setIntfP';
+var
+  sk: TSetterKind;
+  Setter: String;
+begin
+  if Propinfo.TypeInfo.Kind<>tkInterface then
+    raise Exception.Create('Cannot set RAW interface from IInterface interface');
+  sk:=GetPropSetterKind(PropInfo);
+  Setter:=PropInfo.Setter;
+  case sk of
+    skNone:
+      raise EPropertyError.CreateFmt(SCantWritePropertyS, [PropInfo.Name]);
+    skField:
+      setIntfP(Instance,Setter,Value);
+    skProcedure:
+      if (pfHasIndex and PropInfo.Flags)>0 then
+        TSetterWithIndex(TJSObject(Instance)[Setter])(PropInfo.Index,Value)
+      else
+        TSetter(TJSObject(Instance)[Setter])(Value);
+    skProcedureWithParams:
+      raise EPropertyError.CreateFmt(SIndexedPropertyNeedsParams, [PropInfo.Name]);
+  end;
+end;
+
+function GetRawInterfaceProp(Instance: TObject; const PropName: string
+  ): Pointer;
+begin
+  Result:=GetRawInterfaceProp(Instance,FindPropInfo(Instance,PropName));
+end;
+
+function GetRawInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty
+  ): Pointer;
+begin
+  Result:=Pointer(GetJSValueProp(Instance,PropInfo));
+end;
+
+procedure SetRawInterfaceProp(Instance: TObject; const PropName: string;
+  const Value: Pointer);
+begin
+  SetRawInterfaceProp(Instance,FindPropInfo(Instance,PropName),Value);
+end;
+
+procedure SetRawInterfaceProp(Instance: TObject; PropInfo: TTypeMemberProperty;
+  const Value: Pointer);
+begin
+  SetJSValueProp(Instance,PropInfo,Value);
+end;
+
 function GetFloatProp(Instance: TObject; PropInfo: TTypeMemberProperty): Double;
 begin
   Result:=Double(GetJSValueProp(Instance,PropInfo));
 end;
 
 function GetFloatProp(Instance: TObject; const PropName: string): Double;
-
 begin
   Result:=GetFloatProp(Instance,FindPropInfo(Instance,PropName));
 end;
 
 procedure SetFloatProp(Instance: TObject; const PropName: string; Value: Double
   );
-
 begin
   SetFloatProp(Instance,FindPropInfo(Instance,PropName),Value);
 end;
 
 procedure SetFloatProp(Instance: TObject; PropInfo: TTypeMemberProperty;
   Value: Double);
-
 begin
   SetJSValueProp(Instance,PropInfo,Value);
 end;

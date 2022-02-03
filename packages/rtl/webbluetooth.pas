@@ -6,7 +6,7 @@ Unit webbluetooth;
 
 interface
 
-uses SysUtils, JS,web;
+uses JS,web;
 
 Type
   // Forward class definitions
@@ -137,8 +137,7 @@ Type
   Private
     FreferringDevice : TJSBluetoothDevice; external name 'referringDevice'; 
   Public
-    
-      onavailabilitychanged : TJSEventHandler;
+    onavailabilitychanged : TJSEventHandler;
     function getAvailability: TJSPromise;
     function requestDevice(options : TJSRequestDeviceOptions): TJSPromise; overload;
     function requestDevice: TJSPromise; overload;
@@ -153,7 +152,7 @@ Type
   TJSBluetoothPermissionResult = class external name 'BluetoothPermissionResult'  (TJSOBject)
   Private
   Public
-      devices : TTJSBluetoothDeviceDynArray;
+    devices : TTJSBluetoothDeviceDynArray;
   end;
   
   { --------------------------------------------------------------------
@@ -388,9 +387,9 @@ Type
   
   TJSNavigator = class external name 'Navigator' 
   Private
-    Fbluetooth : TJSBluetooth; external name 'bluetooth'; 
+    Fbluetooth : TJSBluetooth; external name 'bluetooth';
   Public
-    Property bluetooth : TJSBluetooth Read Fbluetooth; 
+    Property bluetooth : TJSBluetooth Read Fbluetooth;
   end;
 
 implementation

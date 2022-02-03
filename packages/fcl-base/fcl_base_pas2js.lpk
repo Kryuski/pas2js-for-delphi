@@ -10,13 +10,21 @@
       <SearchPaths>
         <UnitOutputDirectory Value="."/>
       </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <AllowLabel Value="False"/>
+          <UseAnsiStrings Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+      <Linking>
+        <Debugging>
+          <GenerateDebugInfo Value="False"/>
+        </Debugging>
+      </Linking>
       <Other>
-        <ExecuteBefore>
-          <Command Value="$MakeExe(IDE,pas2js) -O- -Jc -vbq fcl_base_pas2js.pas"/>
-          <ScanForFPCMsgs Value="True"/>
-        </ExecuteBefore>
+        <CustomOptions Value="-Jc"/>
+        <CompilerPath Value="$(pas2js)"/>
       </Other>
-      <SkipCompiler Value="True"/>
     </CompilerOptions>
     <Description Value="Free Pascal Component Library - Base
 Port to pas2js."/>
@@ -40,11 +48,6 @@ Port to pas2js."/>
         <UnitName Value="fpexprpars"/>
       </Item4>
     </Files>
-    <RequiredPkgs Count="1">
-      <Item1>
-        <PackageName Value="pas2js_rtl"/>
-      </Item1>
-    </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>

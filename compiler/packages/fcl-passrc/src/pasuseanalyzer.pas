@@ -39,8 +39,9 @@ Working:
 }
 unit PasUseAnalyzer;
 
-{$inline on}
-{$I pas2js_defines.inc}
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
@@ -50,13 +51,17 @@ uses
   {$else}
   AVL_Tree,
   {$endif}
-  Classes, SysUtils, Types,
+  Classes, SysUtils, Types, contnrs,
   PasTree, PScanner, PasResolveEval, PasResolver;
 
 const
   // non fpc hints
   nPAParameterInOverrideNotUsed = 4501;
   sPAParameterInOverrideNotUsed = 'Parameter "%s" not used';
+  nPAFieldNotUsed = 4502;
+  sPAFieldNotUsed = 'Field "%s" not used';
+  nPAFieldIsAssignedButNeverUsed = 4503;
+  sPAFieldIsAssignedButNeverUsed = 'Field "%s" is assigned but never used';
   // fpc hints: use same IDs as fpc
   nPAUnitNotUsed = 5023;
   sPAUnitNotUsed = 'Unit "%s" not used in %s';
@@ -175,7 +180,7 @@ type
     {$ifdef pas2js}
     constructor Create(const OnItemToName, OnKeyToName: TPASItemToNameProc); reintroduce;
     {$else}
-    constructor Create(const OnCompareMethod: TListSortCompare;
+    constructor Create(const OnCompareProc: TListSortCompare;
       const OnCompareKeyWithData: TListSortCompare);
     {$endif}
     destructor Destroy; override;
@@ -193,7 +198,8 @@ type
 
   TPasAnalyzerOption = (
     paoOnlyExports, // default: use all class members accessible from outside (protected, but not private)
-    paoImplReferences // collect references of top lvl proc implementations, initializationa dn finalization sections
+    paoImplReferences, // collect references of top lvl proc implementations, initializationa and finalization sections
+    paoSkipGenericProc // ignore generic procedure body
     );
   TPasAnalyzerOptions = set of TPasAnalyzerOption;
 
@@ -247,9 +253,12 @@ type
     function ElementVisited(El: TPasElement; Mode: TPAUseMode): boolean; overload;
     function ElementVisited(El: TPasElement; OtherCheck: TPAOtherCheckedEl): boolean; overload;
     procedure MarkImplScopeRef(El, RefEl: TPasElement; Access: TPSRefAccess);
+    function CanSkipGenericType(El: TPasGenericType): boolean;
+    function CanSkipGenericProc(DeclProc: TPasProcedure): boolean;
     procedure UseElement(El: TPasElement; Access: TResolvedRefAccess;
       UseFull: boolean); virtual;
     procedure UseTypeInfo(El: TPasElement); virtual;
+    function UseAttributes(El: TPasElement): boolean; virtual;
     function UseModule(aModule: TPasModule; Mode: TPAUseMode): boolean; virtual;
     procedure UseSection(Section: TPasSection; Mode: TPAUseMode); virtual;
     procedure UseImplBlock(Block: TPasImplBlock; Mark: boolean); virtual;
@@ -258,12 +267,14 @@ type
     procedure UseExprRef(El: TPasElement; Expr: TPasExpr;
       Access: TResolvedRefAccess; UseFull: boolean); virtual;
     procedure UseInheritedExpr(El: TInheritedExpr); virtual;
+    procedure UseInlineSpecializeExpr(El: TInlineSpecializeExpr); virtual;
     procedure UseScopeReferences(Refs: TPasScopeReferences); virtual;
     procedure UseProcedure(Proc: TPasProcedure); virtual;
     procedure UseProcedureType(ProcType: TPasProcedureType); virtual;
     procedure UseType(El: TPasType; Mode: TPAUseMode); virtual;
     procedure UseClassOrRecType(El: TPasMembersType; Mode: TPAUseMode); virtual;
     procedure UseClassConstructor(El: TPasMembersType); virtual;
+    procedure UseSpecializeType(El: TPasSpecializeType; Mode: TPAUseMode); virtual;
     procedure UseVariable(El: TPasVariable; Access: TResolvedRefAccess;
       UseFull: boolean); virtual;
     procedure UseResourcestring(El: TPasResString); virtual;
@@ -276,6 +287,7 @@ type
     procedure EmitTypeHints(El: TPasType); virtual;
     procedure EmitVariableHints(El: TPasVariable); virtual;
     procedure EmitProcedureHints(El: TPasProcedure); virtual;
+    procedure EmitFunctionResultHints(El: TPasFunction); virtual;
   public
     constructor Create;
     destructor Destroy; override;
@@ -292,9 +304,10 @@ type
     function IsExport(El: TPasElement): boolean;
     function IsIdentifier(El: TPasElement): boolean;
     function IsImplBlockEmpty(El: TPasImplBlock): boolean;
+    function IsSpecializedGenericType(El: TPasElement): boolean;
     procedure EmitMessage(Id: TMaxPrecInt; MsgType: TMessageType;
       MsgNumber: integer; Fmt: String;
-      const Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif};
+      const Args: array of const;
       PosEl: TPasElement); overload;
     procedure EmitMessage(Msg: TPAMessage); overload;
     class function GetWarnIdentifierNumbers(Identifier: string;
@@ -316,13 +329,16 @@ function CompareElementWithPAElement(El, Id: Pointer): integer;
 function ComparePAOverrideLists(List1, List2: Pointer): integer;
 function CompareElementWithPAOverrideList(El, List: Pointer): integer;
 {$endif}
+function CreatePasElementSet: TPasAnalyzerKeySet;
 function GetElModName(El: TPasElement): string;
 function dbgs(a: TPAIdentifierAccess): string; overload;
 
 implementation
 
+{$IFNDEF Pas2JS}
 uses
-  FPCTypes, Generics.Collections;
+  Generics.Collections, FPCTypes;
+{$ENDIF}
 
 {$ifdef pas2js}
 function PasElementToHashName(Item: Pointer): String;
@@ -348,12 +364,9 @@ end;
 {$else}
 function ComparePointer(Data1, Data2: Pointer): integer;
 begin
-  if NativeInt(Data1) > NativeInt(Data2) then
-    Result := -1
-  else if NativeInt(Data1) < NativeInt(Data2) then
-    Result := 1
-  else
-    Result := 0;
+  if NativeInt(Data1) > NativeInt(Data2) then Result:=-1
+  else if NativeInt(Data1) < NativeInt(Data2) then Result:=1
+  else Result:=0;
 end;
 
 function ComparePAElements(Identifier1, Identifier2: Pointer): integer;
@@ -387,23 +400,32 @@ begin
 end;
 {$endif}
 
+function CreatePasElementSet: TPasAnalyzerKeySet;
+begin
+  Result:=TPasAnalyzerKeySet.Create(
+            {$ifdef pas2js}
+            @PasElementToHashName
+            {$else}
+            @ComparePointer
+            {$endif}
+            ,nil);
+end;
+
 function GetElModName(El: TPasElement): string;
 var
   aModule: TPasModule;
 begin
-  if El=nil then Exit('nil');
+  if El=nil then exit('nil');
   Result:=El.PathName+':'+El.ClassName;
   aModule:=El.GetModule;
-  if aModule=El then Exit;
+  if aModule=El then exit;
   if aModule=nil then
     Result:='NilModule.'+Result;
 end;
 
 function dbgs(a: TPAIdentifierAccess): string;
 begin
-  {$WARN IMPLICIT_STRING_CAST OFF}
-  str(Byte(a),Result);
-  {$WARN IMPLICIT_STRING_CAST ON}
+  Result := IntToStr(Byte(a));
 end;
 
 { TPasAnalyzerKeySet }
@@ -417,10 +439,10 @@ begin
   FItems:=TJSObject.new;
 end;
 {$else}
-constructor TPasAnalyzerKeySet.Create(const OnCompareMethod: TListSortCompare;
+constructor TPasAnalyzerKeySet.Create(const OnCompareProc: TListSortCompare;
   const OnCompareKeyWithData: TListSortCompare);
 begin
-  FTree:=TAVLTree.Create(OnCompareMethod);
+  FTree:=TAVLTree.Create(OnCompareProc);
   FCompareKeyWithData:=OnCompareKeyWithData;
 end;
 {$endif}
@@ -486,7 +508,7 @@ var
   aName: string;
 begin
   aName:='%'+FItemToName(Item);
-  if not FItems.hasOwnProperty(aName) then Exit;
+  if not FItems.hasOwnProperty(aName) then exit;
   JSDelete(FItems,aName);
   dec(FCount);
 end;
@@ -521,7 +543,7 @@ var
 begin
   aName:='%'+FItemToName(Item);
   if not FItems.hasOwnProperty(aName) then
-    Exit(nil)
+    exit(nil)
   else
     Result:=Pointer(FItems[aName]);
 end;
@@ -544,7 +566,7 @@ var
 begin
   aName:='%'+FKeyToName(Key);
   if not FItems.hasOwnProperty(aName) then
-    Exit(nil)
+    exit(nil)
   else
     Result:=Pointer(FItems[aName]);
 end;
@@ -700,7 +722,7 @@ end;
 procedure TPasAnalyzer.UseElType(El: TPasElement; aType: TPasType;
   Mode: TPAUseMode);
 begin
-  if aType=nil then Exit;
+  if aType=nil then exit;
   MarkImplScopeRef(El,aType,PAUseModeToPSRefAccess[Mode]);
   UseType(aType,Mode);
 end;
@@ -738,7 +760,7 @@ begin
   else
     begin
     if Item.IndexOf(OverrideEl)>=0 then
-      Exit(false);
+      exit(false);
     end;
   // new override
   Item.Add(OverrideEl);
@@ -758,7 +780,7 @@ begin
           begin
           // interface was already used -> use delegation / property implements
           UseVariable(TPasProperty(OverrideEl),rraRead,false);
-          Exit;
+          exit;
           end;
         end;
       RaiseNotSupported(20180328221736,OverrideEl,GetElModName(OverriddenEl));
@@ -831,7 +853,7 @@ var
   s: String;
   E: EPasAnalyzer;
 begin
-  s:='['+IntToStr(Id)+']: Element='+GetElModName(El);
+  s:='['+IntToStr(Id)+']: Element='+GetObjPath(El);
   if Msg<>'' then S:=S+' '+Msg;
   E:=EPasAnalyzer.Create(s);
   E.PasElement:=El;
@@ -907,7 +929,7 @@ function TPasAnalyzer.MarkElementAsUsed(El: TPasElement; aClass: TPAElementClass
   function MarkModule(CurModule: TPasModule): boolean;
   begin
     if PAElementExists(CurModule) then
-      Exit(false);
+      exit(false);
     {$IFDEF VerbosePasAnalyzer}
     writeln('TPasAnalyzer.MarkElement.MarkModule mark "',GetElModName(CurModule),'"');
     {$ENDIF}
@@ -918,12 +940,12 @@ function TPasAnalyzer.MarkElementAsUsed(El: TPasElement; aClass: TPAElementClass
 var
   CurModule: TPasModule;
 begin
-  if El=nil then Exit(false);
+  if El=nil then exit(false);
   CurModule:=El.GetModule;
   if CurModule=nil then
     begin
     if El.ClassType=TPasUnresolvedSymbolRef then
-      Exit(false);
+      exit(false);
     {$IFDEF VerbosePasAnalyzer}
     writeln('TPasAnalyzer.MarkElement GetModule failed for El=',GetElModName(El),' El.Parent=',GetElModName(El.Parent));
     {$ENDIF}
@@ -937,12 +959,12 @@ begin
       // element from another unit
       // -> mark unit as used and do not descend deeper
       MarkModule(CurModule);
-      Exit(false);
+      exit(false);
       end;
     end;
 
   // mark element
-  if PAElementExists(El) then Exit(false);
+  if PAElementExists(El) then exit(false);
   Add(El,false,aClass);
   Result:=true;
 
@@ -960,7 +982,7 @@ function TPasAnalyzer.ElementVisited(El: TPasElement; Mode: TPAUseMode
   ): boolean;
 begin
   if El=nil then
-    Exit(true);
+    exit(true);
   if FModeChecked[Mode].ContainsItem(El) then exit(true);
   Result:=false;
   FModeChecked[Mode].Add(El,false);
@@ -986,12 +1008,14 @@ procedure TPasAnalyzer.MarkImplScopeRef(El, RefEl: TPasElement;
     ElImplScope, RefElImplScope: TPasScope;
   begin
     ElImplScope:=FindTopImplScope(El);
-    if ElImplScope=nil then Exit;
+    if ElImplScope=nil then exit;
     RefElImplScope:=FindTopImplScope(RefEl);
-    if RefElImplScope=ElImplScope then Exit;
+    if RefElImplScope=ElImplScope then exit;
 
     if (RefEl.Name='') and not (RefEl is TInterfaceSection) then
-      Exit; // reference to anonymous type -> not needed
+      exit; // reference to anonymous type -> not needed
+    if RefEl=ElImplScope.Element then
+      exit;
     if ElImplScope is TPasProcedureScope then
       TPasProcedureScope(ElImplScope).AddReference(RefEl,Access)
     else if ElImplScope is TPasInitialFinalizationScope then
@@ -1001,10 +1025,118 @@ procedure TPasAnalyzer.MarkImplScopeRef(El, RefEl: TPasElement;
   end;
 
 begin
-  if RefEl=nil then Exit;
-  if RefEl.Parent=El then Exit; // same scope
+  if RefEl=nil then exit;
+  if RefEl.Parent=El then exit; // same scope
   if paoImplReferences in Options then
     CheckImplRef;
+end;
+
+function TPasAnalyzer.CanSkipGenericType(El: TPasGenericType): boolean;
+
+  procedure RaiseHalfSpecialized;
+  var
+    GenScope: TPasGenericScope;
+    Item: TPRSpecializedItem;
+  begin
+    if (El.GenericTemplateTypes<>nil) and (El.GenericTemplateTypes.Count>0) then
+      RaiseNotSupported(20190817151437,El);
+    if not (El.CustomData is TPasGenericScope) then
+      RaiseNotSupported(20190826141320,El,GetObjName(El.CustomData));
+    GenScope:=TPasGenericScope(El.CustomData);
+    Item:=GenScope.SpecializedFromItem;
+    if Item=nil then
+      RaiseNotSupported(20190826141352,El);
+    if Item.SpecializedEl=nil then
+      RaiseNotSupported(20190826141516,El);
+    if Item.FirstSpecialize=nil then
+      RaiseNotSupported(20190826141649,El);
+    RaiseNotSupported(20190826141540,El,'SpecializedAt:'+GetObjPath(Item.FirstSpecialize)+' '+Resolver.GetElementSourcePosStr(Item.FirstSpecialize));
+  end;
+
+begin
+  Result:=false;
+  if ScopeModule=nil then
+    begin
+    // analyze whole program
+    if not Resolver.IsFullySpecialized(El) then
+      RaiseHalfSpecialized;
+    end
+  else
+    begin
+    // analyze a module
+    if (El.GenericTemplateTypes<>nil) and (El.GenericTemplateTypes.Count>0) then
+      // generic template -> analyze
+    else if not Resolver.IsFullySpecialized(El) then
+      // half specialized -> skip
+      exit(true);
+    end;
+end;
+
+function TPasAnalyzer.CanSkipGenericProc(DeclProc: TPasProcedure): boolean;
+
+  procedure RaiseHalfSpecialized;
+  var
+    Templates: TFPList;
+    ProcScope: TPasProcedureScope;
+    Item: TPRSpecializedItem;
+  begin
+    Templates:=Resolver.GetProcTemplateTypes(DeclProc);
+    if (Templates<>nil) and (Templates.Count>0) then
+      RaiseNotSupported(20191016132828,DeclProc);
+    if not (DeclProc.CustomData is TPasProcedureScope) then
+      RaiseNotSupported(20191016132836,DeclProc,GetObjName(DeclProc.CustomData));
+    ProcScope:=TPasProcedureScope(DeclProc.CustomData);
+    Item:=ProcScope.SpecializedFromItem;
+    if Item=nil then
+      RaiseNotSupported(20191016133013,DeclProc);
+    if Item.SpecializedEl=nil then
+      RaiseNotSupported(20191016133017,DeclProc);
+    if Item.FirstSpecialize=nil then
+      RaiseNotSupported(20191016133019,DeclProc);
+    RaiseNotSupported(20191016133022,DeclProc,'SpecializedAt:'+GetObjPath(Item.FirstSpecialize)+' '+Resolver.GetElementSourcePosStr(Item.FirstSpecialize));
+  end;
+
+var
+  Templates: TFPList;
+  Parent: TPasElement;
+begin
+  Result:=false;
+  if ScopeModule=nil then
+    begin
+    // analyze whole program
+    if not Resolver.IsFullySpecialized(DeclProc) then
+      RaiseHalfSpecialized;
+    end
+  else
+    begin
+    // analyze a module
+    Templates:=Resolver.GetProcTemplateTypes(DeclProc);
+    if (Templates<>nil) and (Templates.Count>0) then
+      begin
+      // generic procedure
+      if paoSkipGenericProc in Options then
+        exit(true); // emit no hints for generic proc
+      // -> analyze
+      end
+    else if not Resolver.IsFullySpecialized(DeclProc) then
+      // half specialized -> skip
+      exit(true)
+    else if paoSkipGenericProc in Options then
+      begin
+      Parent:=DeclProc.Parent;
+      while Parent<>nil do
+        begin
+        if (Parent is TPasGenericType) then
+          begin
+          Templates:=TPasGenericType(Parent).GenericTemplateTypes;
+          if (Templates<>nil) and (Templates.Count>0) then
+            // procedure of a generic parent -> emit no hints
+            exit(true);
+          end;
+        Parent:=Parent.Parent;
+        end;
+      end;
+    end;
 end;
 
 procedure TPasAnalyzer.UseElement(El: TPasElement; Access: TResolvedRefAccess;
@@ -1012,7 +1144,7 @@ procedure TPasAnalyzer.UseElement(El: TPasElement; Access: TResolvedRefAccess;
 var
   C: TClass;
 begin
-  if El=nil then Exit;
+  if El=nil then exit;
   C:=El.ClassType;
   if C.InheritsFrom(TPasType) then
     UseType(TPasType(El),paumElement)
@@ -1039,9 +1171,10 @@ begin
   repeat
     El:=El.Parent;
     if not (El is TPasType) then break;
-    MarkElementAsUsed(El);
-    if El is TPasMembersType then
-      UseClassConstructor(TPasMembersType(El));
+    UseType(TPasType(El),paumElement);
+    //MarkElementAsUsed(El);
+    //if El is TPasMembersType then
+    //  UseClassConstructor(TPasMembersType(El));
   until false;
 end;
 
@@ -1050,7 +1183,7 @@ procedure TPasAnalyzer.UseTypeInfo(El: TPasElement);
 
   procedure UseSubEl(SubEl: TPasElement);
   begin
-    if SubEl=nil then Exit;
+    if SubEl=nil then exit;
     MarkImplScopeRef(El,SubEl,psraTypeInfo);
     UseTypeInfo(SubEl);
   end;
@@ -1059,16 +1192,18 @@ var
   C: TClass;
   Members, Args: TFPList;
   i: Integer;
-  Member: TPasElement;
+  Member, Param: TPasElement;
   MemberResolved: TPasResolverResult;
   Prop: TPasProperty;
   ProcType: TPasProcedureType;
   ClassEl: TPasClassType;
+  ArrType: TPasArrayType;
+  SpecType: TPasSpecializeType;
 begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UsePublished START ',GetObjName(El));
   {$ENDIF}
-  if ElementVisited(El,paumTypeInfo) then Exit;
+  if ElementVisited(El,paumTypeInfo) then exit;
 
   C:=El.ClassType;
   if C=TPasUnresolvedSymbolRef then
@@ -1099,10 +1234,12 @@ begin
   else if C=TPasRangeType then
   else if C=TPasArrayType then
     begin
-    UseSubEl(TPasArrayType(El).ElType);
-    for i:=0 to length(TPasArrayType(El).Ranges)-1 do
+    ArrType:=TPasArrayType(El);
+    if CanSkipGenericType(ArrType) then exit;
+    UseSubEl(ArrType.ElType);
+    for i:=0 to length(ArrType.Ranges)-1 do
       begin
-      Member:=TPasArrayType(El).Ranges[i];
+      Member:=ArrType.Ranges[i];
       Resolver.ComputeElement(Member,MemberResolved,[rcConstant]);
       UseSubEl(MemberResolved.HiTypeEl);
       end;
@@ -1112,6 +1249,7 @@ begin
   else if C=TPasClassType then
     begin
     ClassEl:=TPasClassType(El);
+    if CanSkipGenericType(ClassEl) then exit;
     if ClassEl.ObjKind=okInterface then
       begin
       // mark all used members
@@ -1119,6 +1257,8 @@ begin
       for i:=0 to Members.Count-1 do
         begin
         Member:=TPasElement(Members[i]);
+        if Member.ClassType=TPasAttributes then
+          continue;
         if IsUsed(Member) then
           UseTypeInfo(Member);
         end;
@@ -1128,10 +1268,13 @@ begin
   else if C=TPasRecordType then
     begin
     // published record: use all members
+    if CanSkipGenericType(TPasRecordType(El)) then exit;
     Members:=TPasRecordType(El).Members;
     for i:=0 to Members.Count-1 do
       begin
       Member:=TPasElement(Members[i]);
+      if Member.ClassType=TPasAttributes then
+        continue; // attributes are never used directly
       UseSubEl(Member);
       end;
     end
@@ -1140,10 +1283,29 @@ begin
   else if C.InheritsFrom(TPasProcedureType) then
     begin
     ProcType:=TPasProcedureType(El);
+    if CanSkipGenericType(ProcType) then exit;
     for i:=0 to ProcType.Args.Count-1 do
       UseSubEl(TPasArgument(ProcType.Args[i]).ArgType);
-    if El is TPasFunctionType then
+    if (El is TPasFunctionType) and (TPasFunctionType(El).ResultEl<>nil) then
       UseSubEl(TPasFunctionType(El).ResultEl.ResultType);
+    end
+  else if C=TPasSpecializeType then
+    begin
+    SpecType:=TPasSpecializeType(El);
+    // SpecType.DestType is the generic type, which is never used
+    if SpecType.CustomData is TPasSpecializeTypeData then
+      UseSubEl(TPasSpecializeTypeData(El.CustomData).SpecializedType);
+    for i:=0 to SpecType.Params.Count-1 do
+      begin
+      Param:=TPasElement(SpecType.Params[i]);
+      if Param is TPasGenericTemplateType then continue;
+      UseSubEl(Param);
+      end;
+    end
+  else if C=TPasGenericTemplateType then
+    begin
+    if ScopeModule=nil then
+      RaiseNotSupported(20190817110226,El);
     end
   else
     begin
@@ -1154,6 +1316,22 @@ begin
     end;
 
   UseElement(El,rraNone,true);
+
+  UseAttributes(El);
+
+  if El.Parent is TPasMembersType then
+    UseTypeInfo(El.Parent);
+end;
+
+function TPasAnalyzer.UseAttributes(El: TPasElement): boolean;
+var
+  Calls: TPasExprArray;
+  i: Integer;
+begin
+  Calls:=Resolver.GetAttributeCallsEl(El);
+  Result:=Calls<>nil;
+  for i:=0 to length(Calls)-1 do
+    UseExpr(Calls[i]);
 end;
 
 function TPasAnalyzer.UseModule(aModule: TPasModule; Mode: TPAUseMode): boolean;
@@ -1162,10 +1340,10 @@ function TPasAnalyzer.UseModule(aModule: TPasModule; Mode: TPAUseMode): boolean;
   var
     Scope: TPasInitialFinalizationScope;
   begin
-    if ImplBlock=nil then Exit;
+    if ImplBlock=nil then exit;
     Scope:=TPasInitialFinalizationScope(ImplBlock.CustomData);
     UseScopeReferences(Scope.References);
-    if (Scope.References=nil) and IsImplBlockEmpty(ImplBlock) then Exit;
+    if (Scope.References=nil) and IsImplBlockEmpty(ImplBlock) then exit;
     // this module has an initialization section -> mark module
     if not PAElementExists(aModule) then
       Add(aModule);
@@ -1225,7 +1403,7 @@ begin
   // Section is TProgramSection, TLibrarySection, TInterfaceSection, TImplementationSection
   if Mode=paumElement then
     RaiseInconsistency(20170317172721,'');
-  if ElementVisited(Section,Mode) then Exit;
+  if ElementVisited(Section,Mode) then exit;
 
   OnlyExports:=Mode=paumAllExports;
 
@@ -1283,7 +1461,12 @@ begin
       UseVariable(TPasVariable(Decl),rraNone,true);
       end
     else if C=TPasResString then
-      UseResourcestring(TPasResString(Decl))
+      begin
+      if OnlyExports then continue;
+      UseResourcestring(TPasResString(Decl));
+      end
+    else if C=TPasAttributes then
+      // attributes are never used directly
     else
       RaiseNotSupported(20170306165213,Decl);
     end;
@@ -1294,8 +1477,8 @@ var
   i: Integer;
   El: TPasElement;
 begin
-  if Block=nil then Exit;
-  if Mark and not MarkElementAsUsed(Block) then Exit;
+  if Block=nil then exit;
+  if Mark and not MarkElementAsUsed(Block) then exit;
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UseImplBlock ',GetElModName(Block),' Elements=',Block.Elements.Count);
   {$ENDIF}
@@ -1321,7 +1504,7 @@ var
   ForScope: TPasForLoopScope;
 begin
   // do not mark
-  if El=nil then Exit;
+  if El=nil then exit;
   C:=El.ClassType;
   if C=TPasImplBlock then
     // impl block
@@ -1369,12 +1552,15 @@ begin
     UseExpr(ForLoop.StartExpr);
     UseExpr(ForLoop.EndExpr);
     ForScope:=ForLoop.CustomData as TPasForLoopScope;
-    MarkImplScopeRef(ForLoop,ForScope.GetEnumerator,psraRead);
-    UseProcedure(ForScope.GetEnumerator);
-    MarkImplScopeRef(ForLoop,ForScope.MoveNext,psraRead);
-    UseProcedure(ForScope.MoveNext);
-    MarkImplScopeRef(ForLoop,ForScope.Current,psraRead);
-    UseVariable(ForScope.Current,rraRead,false);
+    if ForScope<>nil then
+      begin
+      MarkImplScopeRef(ForLoop,ForScope.GetEnumerator,psraRead);
+      UseProcedure(ForScope.GetEnumerator);
+      MarkImplScopeRef(ForLoop,ForScope.MoveNext,psraRead);
+      UseProcedure(ForScope.MoveNext);
+      MarkImplScopeRef(ForLoop,ForScope.Current,psraRead);
+      UseVariable(ForScope.Current,rraRead,false);
+      end;
     UseImplElement(ForLoop.Body);
     end
   else if C=TPasImplIfElse then
@@ -1398,7 +1584,7 @@ begin
     begin
     // while-do
     UseExpr(TPasImplWhileDo(El).ConditionExpr);
-    UseImplBlock(TPasImplWhileDo(El),false);
+    UseImplElement(TPasImplWhileDo(El).Body);
     end
   else if C=TPasImplWithDo then
     begin
@@ -1406,7 +1592,7 @@ begin
     WithDo:=TPasImplWithDo(El);
     for i:=0 to WithDo.Expressions.Count-1 do
       UseExpr(TObject(WithDo.Expressions[i]) as TPasExpr);
-    UseImplBlock(WithDo,false);
+    UseImplElement(WithDo.Body);
     end
   else if C=TPasImplExceptOn then
     begin
@@ -1448,27 +1634,104 @@ begin
 end;
 
 procedure TPasAnalyzer.UseExpr(El: TPasExpr);
+
+  procedure UseSystemExit;
+  var
+    Params: TPasExprArray;
+    SubEl: TPasElement;
+    Proc: TPasProcedure;
+    ProcScope: TPasProcedureScope;
+    ParentParams: TPRParentParams;
+  begin
+    Resolver.GetParamsOfNameExpr(El,ParentParams);
+    if ParentParams.Params=nil then exit;
+    Params:=ParentParams.Params.Params;
+    if length(Params)<1 then
+      exit;
+    SubEl:=El.Parent;
+    while (SubEl<>nil) and not (SubEl is TPasProcedure) do
+      SubEl:=SubEl.Parent;
+    if SubEl=nil then exit;
+    Proc:=TPasProcedure(SubEl);
+    if not (Proc.ProcType is TPasFunctionType) then
+      RaiseNotSupported(20190825203504,El);
+    ProcScope:=Proc.CustomData as TPasProcedureScope;
+    if ProcScope.DeclarationProc<>nil then
+      Proc:=ProcScope.DeclarationProc;
+    SubEl:=TPasFunctionType(Proc.ProcType).ResultEl;
+    UseElement(SubEl,rraAssign,false);
+  end;
+
+  procedure UseBuiltInFuncTypeInfo;
+  var
+    ParentParams: TPRParentParams;
+    ParamResolved: TPasResolverResult;
+    SubEl: TPasElement;
+    Params: TPasExprArray;
+    ProcScope: TPasProcedureScope;
+    Proc: TPasProcedure;
+  begin
+    Resolver.GetParamsOfNameExpr(El,ParentParams);
+    if ParentParams.Params=nil then
+      RaiseNotSupported(20190225150136,El);
+    Params:=ParentParams.Params.Params;
+    if length(Params)<>1 then
+      RaiseNotSupported(20180226144217,El.Parent);
+    Resolver.ComputeElement(Params[0],ParamResolved,[rcNoImplicitProc]);
+    {$IFDEF VerbosePasAnalyzer}
+    writeln('TPasAnalyzer.UseExpr typeinfo ',GetResolverResultDbg(ParamResolved));
+    {$ENDIF}
+    if ParamResolved.IdentEl=nil then
+      RaiseNotSupported(20180628155107,Params[0]);
+    if (ParamResolved.IdentEl is TPasProcedure)
+        and (TPasProcedure(ParamResolved.IdentEl).ProcType is TPasFunctionType) then
+      begin
+      Proc:=TPasProcedure(ParamResolved.IdentEl);
+      ProcScope:=Proc.CustomData as TPasProcedureScope;
+      if ProcScope.DeclarationProc<>nil then
+        Proc:=ProcScope.DeclarationProc;
+      SubEl:=TPasFunctionType(Proc.ProcType).ResultEl.ResultType;
+      MarkImplScopeRef(El,SubEl,psraTypeInfo);
+      UseTypeInfo(SubEl);
+      end
+    else
+      begin
+      SubEl:=ParamResolved.IdentEl;
+      MarkImplScopeRef(El,SubEl,psraTypeInfo);
+      UseTypeInfo(SubEl);
+      end;
+    // the parameter is not used otherwise
+  end;
+
 var
   Ref: TResolvedReference;
   C: TClass;
   Params: TPasExprArray;
   i: Integer;
   BuiltInProc: TResElDataBuiltInProc;
-  ParamResolved: TPasResolverResult;
   Decl: TPasElement;
   ModScope: TPasModuleScope;
   Access: TResolvedRefAccess;
-  SubEl: TPasElement;
+  Bin: TBinaryExpr;
+  Left: TPasExpr;
 begin
-  if El=nil then Exit;
+  if El=nil then exit;
   // Note: expression itself is not marked, but it can reference identifiers
-  if El.CustomData is TResolvedReference then begin
+
+  if El.CustomData is TResolvedReference then
+    begin
     // this is a reference -> mark target
     Ref:=TResolvedReference(El.CustomData);
     Decl:=Ref.Declaration;
     Access:=Ref.Access;
     MarkImplScopeRef(El,Decl,ResolvedToPSRefAccess[Access]);
     UseElement(Decl,Access,false);
+
+    if Ref.Context<>nil then
+      begin
+      if Ref.Context.ClassType=TResolvedRefCtxAttrProc then
+        UseProcedure(TResolvedRefCtxAttrProc(Ref.Context).Proc);
+      end;
 
     if Resolver.IsNameExpr(El) then
       begin
@@ -1478,7 +1741,7 @@ begin
           begin
           // a record member was accessed -> access the record too
           UseExprRef(El,Ref.WithExprScope.Expr,Access,false);
-          Exit;
+          exit;
           end;
         end;
       if (Decl is TPasVariable)
@@ -1502,49 +1765,13 @@ begin
         case BuiltInProc.BuiltIn of
         bfExit:
           begin
-          if El.Parent is TParamsExpr then
-            begin
-            Params:=(El.Parent as TParamsExpr).Params;
-            if length(Params)=1 then
-              begin
-              SubEl:=El.Parent;
-              while (SubEl<>nil) and not (SubEl is TPasProcedure) do
-                SubEl:=SubEl.Parent;
-              if (SubEl is TPasProcedure)
-                  and (TPasProcedure(SubEl).ProcType is TPasFunctionType) then
-                begin
-                SubEl:=TPasFunctionType(TPasProcedure(SubEl).ProcType).ResultEl;
-                UseElement(SubEl,rraAssign,false);
-                end;
-              end;
-            end;
+          UseSystemExit;
+          exit;
           end;
         bfTypeInfo:
           begin
-          Params:=(El.Parent as TParamsExpr).Params;
-          if length(Params)<>1 then
-            RaiseNotSupported(20180226144217,El.Parent);
-          Resolver.ComputeElement(Params[0],ParamResolved,[rcNoImplicitProc]);
-          {$IFDEF VerbosePasAnalyzer}
-          writeln('TPasAnalyzer.UseExpr typeinfo ',GetResolverResultDbg(ParamResolved));
-          {$ENDIF}
-          if ParamResolved.IdentEl=nil then
-            RaiseNotSupported(20180628155107,Params[0]);
-          if (ParamResolved.IdentEl is TPasProcedure)
-              and (TPasProcedure(ParamResolved.IdentEl).ProcType is TPasFunctionType) then
-            begin
-            SubEl:=TPasFunctionType(TPasProcedure(ParamResolved.IdentEl).ProcType).ResultEl.ResultType;
-            MarkImplScopeRef(El,SubEl,psraTypeInfo);
-            UseTypeInfo(SubEl);
-            end
-          else
-            begin
-            SubEl:=ParamResolved.IdentEl;
-            MarkImplScopeRef(El,SubEl,psraTypeInfo);
-            UseTypeInfo(SubEl);
-            end;
-          // the parameter is not used otherwise
-          Exit;
+          UseBuiltInFuncTypeInfo;
+          exit;
           end;
         bfAssert:
           begin
@@ -1567,8 +1794,29 @@ begin
     // ok
   else if C=TBinaryExpr then
     begin
-    UseExpr(TBinaryExpr(El).left);
-    UseExpr(TBinaryExpr(El).right);
+    Bin:=TBinaryExpr(El);
+    if Bin.OpCode=eopAdd then
+      begin
+      // handle multi add expressions without stack
+      Left:=Bin;
+      while Left.ClassType=TBinaryExpr do
+        begin
+        Bin:=TBinaryExpr(Left);
+        if Bin.OpCode<>eopAdd then break;
+        Left:=Bin.left;
+        end;
+      UseExpr(Left);
+      repeat
+        Bin:=TBinaryExpr(Left.Parent);
+        UseExpr(Bin.right);
+        Left:=Bin;
+      until Left=El;
+      end
+    else
+      begin
+      UseExpr(Bin.left);
+      UseExpr(Bin.right);
+      end;
     end
   else if C=TUnaryExpr then
     UseExpr(TUnaryExpr(El).Operand)
@@ -1594,6 +1842,8 @@ begin
     UseInheritedExpr(TInheritedExpr(El))
   else if C=TProcedureExpr then
     UseProcedure(TProcedureExpr(El).Proc)
+  else if C=TInlineSpecializeExpr then
+    UseInlineSpecializeExpr(TInlineSpecializeExpr(El))
   else
     RaiseNotSupported(20170307085444,El);
 end;
@@ -1679,7 +1929,7 @@ begin
   if (El.Parent.ClassType=TBinaryExpr)
   and (TBinaryExpr(El.Parent).OpCode=eopNone) then
     // 'inherited Proc...;'
-    Exit;
+    exit;
   // 'inherited;'
   P:=El.Parent;
   while not P.InheritsFrom(TPasProcedure) do
@@ -1703,14 +1953,25 @@ begin
     end;
 end;
 
-procedure TPasAnalyzer.UseScopeReferences(Refs: TPasScopeReferences);
+procedure TPasAnalyzer.UseInlineSpecializeExpr(El: TInlineSpecializeExpr);
 var
-  item: TPair<string, TPasScopeReference>;
+  i: Integer;
 begin
-  if Refs = nil then
-    Exit;
+  for i:=0 to El.Params.Count-1 do
+    UseType(TPasType(El.Params[i]),paumElement);
+  UseExpr(El.NameExpr);
+end;
+
+procedure TPasAnalyzer.UseScopeReferences(Refs: TPasScopeReferences);
+begin
+  if Refs=nil then exit;
+  {$IFDEF Pas2JS}
+  Refs.References.ForEachCall(@OnUseScopeRef,Refs.Scope);
+  {$ELSE}
+  var item: TPair<string, TPasScopeReference>;
   for item in Refs.References do
     OnUseScopeRef(item.Value, Refs.Scope)
+  {$ENDIF}
 end;
 
 procedure TPasAnalyzer.UseProcedure(Proc: TPasProcedure);
@@ -1722,7 +1983,7 @@ procedure TPasAnalyzer.UseProcedure(Proc: TPasProcedure);
     OverrideProc: TPasProcedure;
   begin
     OverrideList:=TPAOverrideList(FOverrideLists.FindKey(CurProc));
-    if OverrideList=nil then Exit;
+    if OverrideList=nil then exit;
     // Note: while traversing the OverrideList it may grow
     i:=0;
     while i<OverrideList.Count do
@@ -1742,19 +2003,23 @@ var
   El: TPasElement;
   ClassEl: TPasClassType;
 begin
-  if Proc=nil then Exit;
+  if Proc=nil then exit;
   // use declaration, not implementation
   ProcScope:=Proc.CustomData as TPasProcedureScope;
   if ProcScope.DeclarationProc<>nil then
-    Exit; // skip implementation, Note:PasResolver always refers the declaration
+    exit; // skip implementation, Note:PasResolver always refers the declaration
+  if CanSkipGenericProc(Proc) then exit;
 
-  if not MarkElementAsUsed(Proc) then Exit;
+  if not MarkElementAsUsed(Proc) then exit;
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UseProcedure ',GetElModName(Proc));
   {$ENDIF}
-  UseScopeReferences(ProcScope.References);
+  if Proc.Parent is TPasMembersType then
+    UseClassOrRecType(TPasMembersType(Proc.Parent),paumElement);
 
   UseProcedureType(Proc.ProcType);
+
+  UseScopeReferences(ProcScope.References);
 
   ImplProc:=Proc;
   if ProcScope.ImplProc<>nil then
@@ -1812,6 +2077,8 @@ begin
   writeln('TPasAnalyzer.UseProcedureType ',GetElModName(ProcType));
   {$ENDIF}
   if not MarkElementAsUsed(ProcType) then exit;
+  if CanSkipGenericType(ProcType) then
+    RaiseNotSupported(20190817151651,ProcType);
 
   for i:=0 to ProcType.Args.Count-1 do
     begin
@@ -1829,8 +2096,9 @@ procedure TPasAnalyzer.UseType(El: TPasType; Mode: TPAUseMode);
 var
   C: TClass;
   i: Integer;
+  ArrType: TPasArrayType;
 begin
-  if El=nil then Exit;
+  if El=nil then exit;
 
   C:=El.ClassType;
   if Mode=paumAllExports then
@@ -1857,43 +2125,51 @@ begin
         or (C=TPasTypeAliasType)
         or (C=TPasClassOfType) then
       begin
-      if not MarkElementAsUsed(El) then Exit;
+      if not MarkElementAsUsed(El) then exit;
       UseElType(El,TPasAliasType(El).DestType,Mode);
       if C=TPasTypeAliasType then
         UseExpr(TPasTypeAliasType(El).Expr);
       end
     else if C=TPasArrayType then
       begin
-      if not MarkElementAsUsed(El) then Exit;
-      for i:=0 to length(TPasArrayType(El).Ranges)-1 do
-        UseExpr(TPasArrayType(El).Ranges[i]);
-      UseElType(El,TPasArrayType(El).ElType,Mode);
+      ArrType:=TPasArrayType(El);
+      if CanSkipGenericType(ArrType) then exit;
+      if not MarkElementAsUsed(ArrType) then exit;
+      for i:=0 to length(ArrType.Ranges)-1 do
+        UseExpr(ArrType.Ranges[i]);
+      UseElType(El,ArrType.ElType,Mode);
       end
     else if (C=TPasRecordType) or (C=TPasClassType) then
       UseClassOrRecType(TPasMembersType(El),Mode)
     else if C=TPasEnumType then
       begin
-      if not MarkElementAsUsed(El) then Exit;
+      if not MarkElementAsUsed(El) then exit;
       for i:=0 to TPasEnumType(El).Values.Count-1 do
         UseElement(TPasEnumValue(TPasEnumType(El).Values[i]),rraRead,false);
       end
     else if C=TPasPointerType then
       begin
-      if not MarkElementAsUsed(El) then Exit;
+      if not MarkElementAsUsed(El) then exit;
       UseElType(El,TPasPointerType(El).DestType,Mode);
       end
     else if C=TPasRangeType then
       begin
-      if not MarkElementAsUsed(El) then Exit;
+      if not MarkElementAsUsed(El) then exit;
       UseExpr(TPasRangeType(El).RangeExpr);
       end
     else if C=TPasSetType then
       begin
-      if not MarkElementAsUsed(El) then Exit;
+      if not MarkElementAsUsed(El) then exit;
       UseElType(El,TPasSetType(El).EnumType,Mode);
       end
     else if C.InheritsFrom(TPasProcedureType) then
-      UseProcedureType(TPasProcedureType(El))
+      begin
+      if CanSkipGenericType(TPasProcedureType(El)) then exit;
+      UseProcedureType(TPasProcedureType(El));
+      end
+    else if C=TPasSpecializeType then
+      UseSpecializeType(TPasSpecializeType(El),Mode)
+    else if C=TPasGenericTemplateType then
     else
       RaiseNotSupported(20170306170315,El);
 
@@ -1912,7 +2188,7 @@ procedure TPasAnalyzer.UseClassOrRecType(El: TPasMembersType; Mode: TPAUseMode);
     Prop: TPasProperty;
   begin
     OverrideList:=TPAOverrideList(FOverrideLists.FindKey(El));
-    if OverrideList=nil then Exit;
+    if OverrideList=nil then exit;
     // Note: while traversing the OverrideList it may grow
     i:=0;
     while i<OverrideList.Count do
@@ -1929,7 +2205,7 @@ procedure TPasAnalyzer.UseClassOrRecType(El: TPasMembersType; Mode: TPAUseMode);
     o: TObject;
     Map: TPasClassIntfMap;
   begin
-    if Scope.Interfaces=nil then Exit;
+    if Scope.Interfaces=nil then exit;
     for i:=0 to Scope.Interfaces.Count-1 do
       begin
       o:=TObject(Scope.Interfaces[i]);
@@ -1965,27 +2241,35 @@ var
   Map: TPasClassIntfMap;
   ImplProc, IntfProc, Proc: TPasProcedure;
   aClass: TPasClassType;
+  loName: string;
 begin
   FirstTime:=true;
   case Mode of
-  paumAllExports: Exit;
+  paumAllExports: exit;
   paumAllPasUsable:
     begin
+    if CanSkipGenericType(El) then exit;
     if MarkElementAsUsed(El) then
       ElementVisited(El,Mode)
     else
       begin
-      if ElementVisited(El,Mode) then Exit;
+      if ElementVisited(El,Mode) then exit;
+      // this class has been used (e.g. paumElement), which marked ancestors
+      // and published members
+      // -> now mark all members paumAllPasUsable
       FirstTime:=false;
       end;
     end;
   paumElement:
-    if not MarkElementAsUsed(El) then Exit;
+    begin
+    if CanSkipGenericType(El) then exit;
+    if not MarkElementAsUsed(El) then exit;
+    end
   else
     RaiseInconsistency(20170414152143,IntToStr(ord(Mode)));
   end;
   {$IFDEF VerbosePasAnalyzer}
-  writeln('TPasAnalyzer.UseClassType ',GetElModName(El),' ',Mode,' First=',FirstTime);
+  writeln('TPasAnalyzer.UseClassOrRecType ',GetElModName(El),' ',Mode,' First=',FirstTime);
   {$ENDIF}
   aClass:=nil;
   ClassScope:=nil;
@@ -1998,12 +2282,10 @@ begin
       begin
       Ref:=aClass.CustomData as TResolvedReference;
       UseClassOrRecType(Ref.Declaration as TPasClassType,Mode);
-      Exit;
+      exit;
       end;
 
     ClassScope:=aClass.CustomData as TPasClassScope;
-    if ClassScope=nil then
-      Exit; // ClassScope can be nil if msIgnoreInterfaces
 
     if FirstTime then
       begin
@@ -2038,26 +2320,33 @@ begin
 
   // members
   AllPublished:=(Mode<>paumAllExports);
-  for i:=0 to El.Members.Count-1 do begin
+  for i:=0 to El.Members.Count-1 do
+    begin
     Member:=TPasElement(El.Members[i]);
-    if FirstTime and (Member is TPasProcedure) then begin
+    if FirstTime and (Member is TPasProcedure) then
+      begin
       Proc:=TPasProcedure(Member);
       ProcScope:=Member.CustomData as TPasProcedureScope;
-      if Proc.IsOverride and (ProcScope.OverriddenProc<>nil) then begin
+      if Proc.IsOverride and (ProcScope.OverriddenProc<>nil) then
+        begin
         // this is an override
         AddOverride(ProcScope.OverriddenProc,Member);
-        if ScopeModule<>nil then begin
+        if ScopeModule<>nil then
+          begin
           // when analyzing a single module, all overrides are assumed to be called
           UseProcedure(Proc);
           continue;
-        end;
-      end else if (Proc.ClassType=TPasClassConstructor)
-          or (Proc.ClassType=TPasClassDestructor) then begin
+          end;
+        end
+      else if (Proc.ClassType=TPasClassConstructor)
+          or (Proc.ClassType=TPasClassDestructor) then
+        begin
         UseProcedure(Proc);
         continue;
-      end;
-      if IsCOMInterfaceRoot then begin
-        const loName = lowercase(Member.Name);
+        end;
+      if IsCOMInterfaceRoot then
+        begin
+        loName := lowercase(Member.Name);
         if loName = 'queryinterface' then begin
           if (Proc.ProcType.Args.Count=2) then begin
             UseProcedure(Proc);
@@ -2075,22 +2364,39 @@ begin
           end;
         end;
         //writeln('TPasAnalyzer.UseClassType ',El.FullName,' ',Mode,' ',Member.Name);
-      end;
-    end;
-    if AllPublished and (Member.Visibility=visPublished) then begin
+        end;
+      if Proc.MessageExpr<>nil then
+        begin
+        UseProcedure(Proc);
+        continue;
+        end;
+      end
+    else if Member.ClassType=TPasAttributes then
+      continue; // attributes are never used directly
+
+    if AllPublished and (Member.Visibility=visPublished) then
+      begin
       // include published
       if not FirstTime then continue;
       UseTypeInfo(Member);
-    end else if Mode=paumElement then
+      end
+    else if Mode=paumElement then
       continue
     else if IsModuleInternal(Member) then
       // private or strict private
       continue
-    else if (Mode=paumAllPasUsable) and FirstTime
-        and ((Member.ClassType=TPasProperty) or (Member is TPasType)) then
+    else if (Mode=paumAllPasUsable) and FirstTime then
       begin
-      // non private property can be used by typeinfo by descendants in other units
-      UseTypeInfo(Member);
+      if Member.ClassType=TPasProperty then
+        begin
+        // non private property can be used by typeinfo by descendants in other units
+        UseTypeInfo(Member);
+        end
+      else if Member is TPasType then
+        begin
+        // non private type can be used by descendants in other units
+        UseType(TPasType(Member),Mode);
+        end
       end
     else
       ; // else: class/record is in unit interface, mark all non private members
@@ -2133,6 +2439,10 @@ begin
           RaiseNotSupported(20180328224632,aClass,GetObjName(o));
         end;
     end;
+
+  if UseAttributes(El) and (El.ClassType=TPasClassType) then
+    UseTypeInfo(El); // class with attributes,
+        // typeinfo can be used at runtime via typeinfo(aClass) -> always mark
 end;
 
 procedure TPasAnalyzer.UseClassConstructor(El: TPasMembersType);
@@ -2147,6 +2457,25 @@ begin
     if (Member.ClassType=TPasClassConstructor) or (Member.ClassType=TPasClassDestructor) then
       UseProcedure(TPasProcedure(Member));
     end;
+end;
+
+procedure TPasAnalyzer.UseSpecializeType(El: TPasSpecializeType;
+  Mode: TPAUseMode);
+var
+  Param: TPasElement;
+  i: Integer;
+begin
+  if not MarkElementAsUsed(El) then exit;
+  // El.DestType is the generic type, which is never used
+  if El.CustomData is TPasSpecializeTypeData then
+    UseElType(El,TPasSpecializeTypeData(El.CustomData).SpecializedType,Mode);
+  for i:=0 to El.Params.Count-1 do
+    begin
+    Param:=TPasElement(El.Params[i]);
+    if Param is TPasGenericTemplateType then continue;
+    UseElement(Param,rraRead,false);
+    end;
+  UseElType(El,El.SubType,Mode);
 end;
 
 procedure TPasAnalyzer.UseVariable(El: TPasVariable;
@@ -2183,7 +2512,7 @@ var
   IsRead, IsWrite, CanRead, CanWrite: Boolean;
   ClassEl: TPasClassType;
 begin
-  if El=nil then Exit;
+  if El=nil then exit;
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UseVariable ',GetElModName(El),' ',Access,' Full=',UseFull);
   {$ENDIF}
@@ -2267,7 +2596,7 @@ begin
     begin
     Usage:=FindElement(El);
     if Usage=nil then
-      Exit; // element outside of scope
+      exit; // element outside of scope
     // var is accessed another time
 
     // first update flags
@@ -2292,7 +2621,7 @@ end;
 
 procedure TPasAnalyzer.UseResourcestring(El: TPasResString);
 begin
-  if not MarkElementAsUsed(El) then Exit;
+  if not MarkElementAsUsed(El) then exit;
   UseExpr(El.Expr);
 end;
 
@@ -2368,7 +2697,7 @@ procedure TPasAnalyzer.EmitElementHints(El: TPasElement);
 var
   C: TClass;
 begin
-  if El=nil then Exit;
+  if El=nil then exit;
 
   C:=El.ClassType;
   if C.InheritsFrom(TPasVariable) then
@@ -2393,6 +2722,7 @@ begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.EmitSectionHints ',GetElModName(Section));
   {$ENDIF}
+  if Section=nil then exit;
   // initialization, program or library sections
   aModule:=Section.GetModule;
   UsesClause:=Section.UsesClause;
@@ -2434,12 +2764,16 @@ begin
       EmitTypeHints(TPasType(Decl))
     else if Decl is TPasProcedure then
       EmitProcedureHints(TPasProcedure(Decl))
+    else if Decl.ClassType=TPasAttributes then
+      // no hints
     else
       begin
       Usage:=FindElement(Decl);
       if Usage=nil then
         begin
         // declaration was never used
+        if IsSpecializedGenericType(Decl) then
+          continue; // no hints for not used specializations
         EmitMessage(20170311231734,mtHint,nPALocalXYNotUsed,
           sPALocalXYNotUsed,[Decl.ElementTypeName,Decl.Name],Decl);
         end;
@@ -2452,7 +2786,10 @@ var
   C: TClass;
   Usage: TPAElement;
   i: Integer;
-  Member: TPasElement;
+  Member, SpecEl: TPasElement;
+  Members: TFPList;
+  GenScope: TPasGenericScope;
+  SpecializedItems: TObjectList;
 begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.EmitTypeHints ',GetElModName(El));
@@ -2461,35 +2798,51 @@ begin
   if Usage=nil then
     begin
     // the whole type was never used
+    if IsSpecializedGenericType(El) then
+      exit; // no hints for not used specializations
+    if (El.CustomData is TPasGenericScope) then
+      begin
+      GenScope:=TPasGenericScope(El.CustomData);
+      SpecializedItems:=GenScope.SpecializedItems;
+      if SpecializedItems<>nil then
+        for i:=0 to SpecializedItems.Count-1 do
+          begin
+          SpecEl:=TPRSpecializedItem(SpecializedItems[i]).SpecializedEl;
+          if FindElement(SpecEl)<>nil then
+            exit; // a specialization of this generic type is used -> the generic is used
+          end;
+      end;
+
     if (El.Visibility in [visPrivate,visStrictPrivate]) then
       EmitMessage(20170312000020,mtHint,nPAPrivateTypeXNeverUsed,
         sPAPrivateTypeXNeverUsed,[El.FullName],El)
     else
       begin
       if (El is TPasClassType) and (TPasClassType(El).ObjKind=okInterface) then
-        Exit;
+        exit;
 
       EmitMessage(20170312000025,mtHint,nPALocalXYNotUsed,
-        sPALocalXYNotUsed,[El.ElementTypeName,El.Name],El);
+        sPALocalXYNotUsed,[El.ElementTypeName,GetElementNameAndParams(El)],El);
       end;
-    Exit;
+    exit;
     end;
   // emit hints for sub elements
+  Members:=nil;
   C:=El.ClassType;
   if C=TPasRecordType then
-    begin
-    for i:=0 to TPasRecordType(El).Members.Count-1 do
-      EmitVariableHints(TObject(TPasRecordType(El).Members[i]) as TPasVariable);
-    end
+    Members:=TPasRecordType(El).Members
   else if C=TPasClassType then
     begin
-    if TPasClassType(El).IsForward then Exit;
-    for i:=0 to TPasClassType(El).Members.Count-1 do
+    if TPasClassType(El).IsForward then exit;
+    Members:=TPasClassType(El).Members;
+    end;
+  if Members<>nil then
+    for i:=0 to Members.Count-1 do
       begin
-      Member:=TPasElement(TPasClassType(El).Members[i]);
+      Member:=TPasElement(Members[i]);
+      if Member.ClassType=TPasAttributes then continue;
       EmitElementHints(Member);
       end;
-    end;
 end;
 
 procedure TPasAnalyzer.EmitVariableHints(El: TPasVariable);
@@ -2516,8 +2869,14 @@ begin
           sPAPrivateFieldIsNeverUsed,[El.FullName],El);
       end
     else if El.ClassType=TPasVariable then
-      EmitMessage(20170311234201,mtHint,nPALocalVariableNotUsed,
-        sPALocalVariableNotUsed,[El.Name],El)
+      begin
+      if El.Parent is TPasMembersType then
+        EmitMessage(20201229033108,mtHint,nPAFieldNotUsed,
+          sPAFieldNotUsed,[El.Name],El)
+      else
+        EmitMessage(20170311234201,mtHint,nPALocalVariableNotUsed,
+          sPALocalVariableNotUsed,[El.Name],El);
+      end
     else
       EmitMessage(20170314221334,mtHint,nPALocalXYNotUsed,
         sPALocalXYNotUsed,[El.ElementTypeName,El.Name],El);
@@ -2526,11 +2885,15 @@ begin
     begin
     // write without read
     if (vmExternal in El.VarModifiers)
-        or ((El.Parent is TPasClassType) and (TPasClassType(El.Parent).IsExternal)) then
-      Exit;
+        or (El.ClassType=TPasProperty)
+        or ((El.Parent is TPasClassType) and TPasClassType(El.Parent).IsExternal) then
+      exit;
     if El.Visibility in [visPrivate,visStrictPrivate] then
       EmitMessage(20170311234159,mtHint,nPAPrivateFieldIsAssignedButNeverUsed,
         sPAPrivateFieldIsAssignedButNeverUsed,[El.FullName],El)
+    else if El.Parent is TPasMembersType then
+      EmitMessage(20201229033618,mtHint,nPAFieldIsAssignedButNeverUsed,
+        sPAFieldIsAssignedButNeverUsed,[El.Name],El)
     else
       EmitMessage(20170311233825,mtHint,nPALocalVariableIsAssignedButNeverUsed,
         sPALocalVariableIsAssignedButNeverUsed,[El.Name],El);
@@ -2544,9 +2907,9 @@ var
   Arg: TPasArgument;
   Usage: TPAElement;
   ProcScope: TPasProcedureScope;
-  PosEl: TPasElement;
   DeclProc, ImplProc: TPasProcedure;
-  FuncType: TPasFunctionType;
+  SpecializedItems: TObjectList;
+  SpecEl: TPasElement;
 begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.EmitProcedureHints ',GetElModName(El));
@@ -2560,28 +2923,43 @@ begin
     ImplProc:=El
   else
     ImplProc:=ProcScope.ImplProc;
+  if (ProcScope.ClassRecScope<>nil)
+      and (ProcScope.ClassRecScope.SpecializedFromItem<>nil) then
+    exit; // no hints for not used specializations
+
   if not PAElementExists(DeclProc) then
     begin
     // procedure never used
-    if ProcScope.DeclarationProc=nil then
-      begin
-      if El.Visibility in [visPrivate,visStrictPrivate] then
-        EmitMessage(20170312093348,mtHint,nPAPrivateMethodIsNeverUsed,
-          sPAPrivateMethodIsNeverUsed,[El.FullName],El)
-      else
-        EmitMessage(20170312093418,mtHint,nPALocalXYNotUsed,
-          sPALocalXYNotUsed,[El.ElementTypeName,El.Name],El);
-      end;
-    Exit;
+    if ProcScope.DeclarationProc<>nil then
+      exit;
+
+    if ProcScope.SpecializedFromItem<>nil then
+      exit; // no hint for not used specialized procedure
+    SpecializedItems:=ProcScope.SpecializedItems;
+    if SpecializedItems<>nil then
+      for i:=0 to SpecializedItems.Count-1 do
+        begin
+        SpecEl:=TPRSpecializedItem(SpecializedItems[i]).SpecializedEl;
+        if FindElement(SpecEl)<>nil then
+          exit; // a specialization of this generic procedure is used
+        end;
+
+    if El.Visibility in [visPrivate,visStrictPrivate] then
+      EmitMessage(20170312093348,mtHint,nPAPrivateMethodIsNeverUsed,
+        sPAPrivateMethodIsNeverUsed,[El.FullName],El)
+    else
+      EmitMessage(20170312093418,mtHint,nPALocalXYNotUsed,
+        sPALocalXYNotUsed,[El.ElementTypeName,El.Name],El);
+    exit;
     end;
 
   // procedure was used
 
-  if [pmAbstract,pmAssembler,pmExternal]*DeclProc.Modifiers<>[] then Exit;
-  if [pmAssembler]*ImplProc.Modifiers<>[] then Exit;
+  if [pmAbstract,pmAssembler,pmExternal]*DeclProc.Modifiers<>[] then exit;
+  if [pmAssembler]*ImplProc.Modifiers<>[] then exit;
   if El.Parent is TPasClassType then
     begin
-    if TPasClassType(El.Parent).ObjKind=okInterface then Exit;
+    if TPasClassType(El.Parent).ObjKind=okInterface then exit;
     end;
 
   if ProcScope.DeclarationProc=nil then
@@ -2613,22 +2991,7 @@ begin
       end;
     // check result
     if (El.ProcType is TPasFunctionType) then
-      begin
-      FuncType:=TPasFunctionType(TPasProcedure(El).ProcType);
-      PosEl:=FuncType.ResultEl;
-      if (ProcScope.ImplProc<>nil)
-          and (TPasFunction(ProcScope.ImplProc).FuncType.ResultEl<>nil) then
-        PosEl:=TPasFunction(ProcScope.ImplProc).FuncType.ResultEl;
-      Usage:=FindElement(FuncType.ResultEl);
-      if (Usage=nil) or (Usage.Access in [paiaNone,paiaRead]) then
-        // result was never used
-        EmitMessage(20170313214038,mtHint,nPAFunctionResultDoesNotSeemToBeSet,
-          sPAFunctionResultDoesNotSeemToBeSet,[],PosEl)
-      else
-        begin
-        // result was used
-        end;
-      end;
+      EmitFunctionResultHints(TPasFunction(El));
     end;
 
   if El.Body<>nil then
@@ -2639,6 +3002,55 @@ begin
     end;
 end;
 
+procedure TPasAnalyzer.EmitFunctionResultHints(El: TPasFunction);
+var
+  FuncType: TPasFunctionType;
+  Usage: TPAElement;
+  TypeEl: TPasType;
+  Members: TFPList;
+  i: Integer;
+  Member: TPasElement;
+  HasFields: Boolean;
+  PosEl: TPasResultElement;
+  ProcScope: TPasProcedureScope;
+begin
+  FuncType:=El.FuncType;
+  Usage:=FindElement(FuncType.ResultEl);
+  if (Usage=nil) or (Usage.Access in [paiaNone,paiaRead]) then
+    begin
+    // result was never set
+    TypeEl:=Resolver.ResolveAliasType(FuncType.ResultEl.ResultType);
+    if TypeEl is TPasRecordType then
+      begin
+      Members:=TPasRecordType(TypeEl).Members;
+      HasFields:=false;
+      for i:=0 to Members.Count-1 do
+        begin
+        Member:=TPasElement(Members[i]);
+        if Member.ClassType=TPasVariable then
+          begin
+          HasFields:=true;
+          break;
+          end;
+        end;
+      if not HasFields then
+        // empty record -> no hint
+        exit;
+      end;
+    PosEl:=FuncType.ResultEl;
+    ProcScope:=El.CustomData as TPasProcedureScope;
+    if (ProcScope.ImplProc<>nil)
+        and (TPasFunction(ProcScope.ImplProc).FuncType.ResultEl<>nil) then
+      PosEl:=TPasFunction(ProcScope.ImplProc).FuncType.ResultEl;
+    EmitMessage(20170313214038,mtHint,nPAFunctionResultDoesNotSeemToBeSet,
+      sPAFunctionResultDoesNotSeemToBeSet,[],PosEl)
+    end
+  else
+    begin
+    // result was used
+    end;
+end;
+
 constructor TPasAnalyzer.Create;
 var
   m: TPAUseMode;
@@ -2646,26 +3058,14 @@ var
 begin
   CreateTree;
   for m := Low(TPAUseMode) to High(TPAUseMode) do
-    FModeChecked[m]:=TPasAnalyzerKeySet.Create(
-      {$ifdef pas2js}
-      @PasElementToHashName
-      {$else}
-      @ComparePointer
-      {$endif}
-      ,nil
-      );
+    FModeChecked[m]:=CreatePasElementSet;
   for oc := Low(TPAOtherCheckedEl) to High(TPAOtherCheckedEl) do
-    FOtherChecked[oc]:=TPasAnalyzerKeySet.Create(
-      {$ifdef pas2js}
-      @PasElementToHashName
-      {$else}
-      @ComparePointer
-      {$endif}
-      ,nil
-      );
+    FOtherChecked[oc]:=CreatePasElementSet;
   FOverrideLists:=TPasAnalyzerKeySet.Create(
-    {$ifdef pas2js}@PAOverrideList_ElToHashName, @PasElementToHashName
-    {$else}ComparePAOverrideLists, CompareElementWithPAOverrideList
+    {$ifdef pas2js}
+    @PAOverrideList_ElToHashName,@PasElementToHashName
+    {$else}
+    @ComparePAOverrideLists,@CompareElementWithPAOverrideList
     {$endif});
 end;
 
@@ -2759,7 +3159,7 @@ function TPasAnalyzer.FindUsedElement(El: TPasElement): TPAElement;
 var
   ProcScope: TPasProcedureScope;
 begin
-  if not IsIdentifier(El) then Exit(nil);
+  if not IsIdentifier(El) then exit(nil);
   if El is TPasProcedure then
     begin
     ProcScope:=El.CustomData as TPasProcedureScope;
@@ -2782,13 +3182,13 @@ end;
 function TPasAnalyzer.IsModuleInternal(El: TPasElement): boolean;
 begin
   if El=nil then
-    Exit(true);
+    exit(true);
   if El.ClassType=TInterfaceSection then
-    Exit(false);
-  if IsExport(El) then Exit(false);
+    exit(false);
+  if IsExport(El) then exit(false);
   case El.Visibility of
-  visPrivate,visStrictPrivate: Exit(true);
-  visPublished: Exit(false);
+  visPrivate,visStrictPrivate: exit(true);
+  visPublished: exit(false);
   end;
   Result:=IsModuleInternal(El.Parent);
 end;
@@ -2819,13 +3219,21 @@ end;
 function TPasAnalyzer.IsImplBlockEmpty(El: TPasImplBlock): boolean;
 begin
   Result:=true;
-  if (El=nil) or (El.Elements.Count=0) then Exit;
+  if (El=nil) or (El.Elements.Count=0) then exit;
+  Result:=false;
+end;
+
+function TPasAnalyzer.IsSpecializedGenericType(El: TPasElement): boolean;
+begin
+  if (El is TPasGenericType) and (El.CustomData is TPasGenericScope)
+      and (TPasGenericScope(El.CustomData).SpecializedFromItem<>nil) then
+    exit(true);
   Result:=false;
 end;
 
 procedure TPasAnalyzer.EmitMessage(Id: TMaxPrecInt; MsgType: TMessageType;
   MsgNumber: integer; Fmt: String;
-  const Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif};
+  const Args: array of const;
   PosEl: TPasElement);
 var
   Msg: TPAMessage;
@@ -2849,9 +3257,9 @@ begin
         if ProcScope.ImplProc<>nil then
           ProcScope:=ProcScope.ImplProc.CustomData as TPasProcedureScope;
         case MsgType of
-        mtHint: if not (bsHints in ProcScope.BoolSwitches) then Exit;
-        mtNote: if not (bsNotes in ProcScope.BoolSwitches) then Exit;
-        mtWarning: if not (bsWarnings in ProcScope.BoolSwitches) then Exit;
+        mtHint: if not (bsHints in ProcScope.BoolSwitches) then exit;
+        mtNote: if not (bsNotes in ProcScope.BoolSwitches) then exit;
+        mtWarning: if not (bsWarnings in ProcScope.BoolSwitches) then exit;
         end;
         break;
         end
@@ -2859,9 +3267,9 @@ begin
         begin
         ModScope:=TPasModule(El).CustomData as TPasModuleScope;
         case MsgType of
-        mtHint: if not (bsHints in ModScope.BoolSwitches) then Exit;
-        mtNote: if not (bsNotes in ModScope.BoolSwitches) then Exit;
-        mtWarning: if not (bsWarnings in ModScope.BoolSwitches) then Exit;
+        mtHint: if not (bsHints in ModScope.BoolSwitches) then exit;
+        mtNote: if not (bsNotes in ModScope.BoolSwitches) then exit;
+        mtWarning: if not (bsWarnings in ModScope.BoolSwitches) then exit;
         end;
         break;
         end;
@@ -2879,7 +3287,7 @@ begin
           {$IFDEF VerbosePasAnalyzer}
           writeln('TPasAnalyzer.EmitMessage ignoring [',Id,'] ',MsgType,': (',MsgNumber,') Fmt={',Fmt,'} PosEl='+GetElModName(PosEl));
           {$ENDIF}
-          Exit;
+          exit;
           end;
         wmsError:
           MsgType:=mtError;
@@ -2905,7 +3313,7 @@ begin
   if not Assigned(OnMessage) then
     begin
     Msg.Release;
-    Exit;
+    exit;
     end;
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.EmitMessage [',Msg.Id,'] ',Msg.MsgType,': (',Msg.MsgNumber,') "',Msg.MsgText,'" at ',Resolver.GetElementSourcePosStr(Msg.PosEl),' ScopeModule=',GetObjName(ScopeModule));
@@ -2931,21 +3339,20 @@ class function TPasAnalyzer.GetWarnIdentifierNumbers(Identifier: string; out
   end;
 
 begin
-  if Identifier='' then
-    Exit(false);
-  if Identifier[1] in ['0'..'9'] then
-    Exit(false);
+  if Identifier='' then exit(false);
+  if Identifier[1] in ['0'..'9'] then exit(false);
+
   Result:=true;
+  // Delphi+FPC
   if UpperCase(Identifier) = 'NO_RETVAL' then
-    // Delphi+FPC
     SetNumber(nPAFunctionResultDoesNotSeemToBeSet) // Function result is not set.
   else
-    Result := false;
+    Result:=false;
 end;
 
 function TPasAnalyzer.GetUsedElements: TFPList;
 begin
-  Result := FUsedElements.GetList;
+  Result:=FUsedElements.GetList;
 end;
 
 end.

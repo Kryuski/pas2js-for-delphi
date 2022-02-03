@@ -1,6 +1,6 @@
 {
     This file is part of the Pas2JS run time library.
-    Copyright (c) 2017-2019 by the Pas2JS development team.
+    Copyright (c) 2017-2020 by the Pas2JS development team.
 
     See the file COPYING.FPC, included in this distribution,
     for details about the copyright.
@@ -21,6 +21,7 @@ interface
 uses Types, JS;
 
 Type
+  TJSEvent = Class;
   // Forward definitions
   TJSWindow = class;
   TJSDOMTokenList = class;
@@ -40,39 +41,38 @@ Type
   TJSPointerEvent = Class;
   TJSUIEvent = class;
   TJSTouchEvent = Class;
-
-  TJSAttr = class external name 'Attr' (TJSObject)
-  Private
-    fLocalName : String; external name 'localName';
-    fNameSpaceURI : String external name 'namespaceURI';
-    fPrefix : string; external name 'prefix';
-    fName : string; external name 'name';
-  public
-    value : JSValue;
-    property localName : String Read fLocalName;
-    property namespaceURI : string Read fNameSpaceURI;
-    property prefix : string read fPrefix;
-    property name : string Read fName;
-  end;
-
+  TJSBlob = class;
+  TJSPermissions = class;
+  TJSFileSystemFileHandle = class;
+  TJSFileSystemFileHandleArray = array of TJSFileSystemFileHandle;
+  TJSFileSystemDirectoryHandle = class;
+  TJSFileSystemDirectoryHandleArray = array of TJSFileSystemDirectoryHandle;
+  TJSShowOpenFilePickerOptions = class;
+  TJSShowSaveFilePickerOptions = class;
 
   { TEventListenerEvent }
 
-  TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
+(*
+TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
   private
     FTarget: TJSEventTarget; external name 'target';
   public
     Property target: TJSEventTarget Read FTarget;
   end;
+*)
+  TEventListenerEvent = TJSEvent;
 
-  TJSEventHandler = reference to function(Event: TEventListenerEvent): boolean;
+  TJSEventHandler = reference to function(Event: TEventListenerEvent): boolean; safecall;
+  TJSRawEventHandler = reference to Procedure(Event: TJSEvent); safecall;
 
   TJSEventTarget = class external name 'EventTarget' (TJSObject)
   public
     procedure addEventListener(aname : string; aListener : TJSEventHandler);
+    procedure addEventListener(aname : string; aListener : TJSRawEventHandler);
     procedure addEventListener(aname : string; aListener : JSValue);
     function dispatchEvent(event : JSValue) : Boolean;
     procedure removeEventListener(aname : string; aListener : TJSEventHandler);
+    procedure removeEventListener(aname : string; aListener : TJSRawEventHandler);
     procedure removeEventListener(aname : string; aListener : JSValue);
   end;
 
@@ -134,6 +134,7 @@ Type
     property previousSibling : TJSNode Read FPreviousSibling;
   end;
 
+
   TJSNodeListCallBack = procedure (currentValue : TJSNode; currentIndex: NativeInt; list : TJSNodeList);
   TJSNodeListEvent = procedure (currentValue : TJSNode; currentIndex: NativeInt; list : TJSNodeList) of object;
   
@@ -147,7 +148,24 @@ Type
     Property length : NativeInt Read FLength;
     Property Nodes [aIndex : NativeInt] : TJSNode Read item; default;
   end;
-  
+
+  TJSAttr = class external name 'Attr' (TJSNode)
+  Private
+    fLocalName : String; external name 'localName';
+    fNameSpaceURI : String external name 'namespaceURI';
+    fPrefix : string; external name 'prefix';
+    fName : string; external name 'name';
+    fSpecified : Boolean; external name 'specified';
+  public
+    value : JSValue;
+    property localName : String Read fLocalName;
+    property namespaceURI : string Read fNameSpaceURI;
+    property prefix : string read fPrefix;
+    property name : string Read fName;
+    property specified : boolean Read fSpecified; // Useless, always true
+  end;
+
+
   TJSNamedNodeMap = class external name 'NamedNodeMap'  (TJSObject)
   Public
     function getNamedItem(aName : string) : TJSAttr;
@@ -256,6 +274,7 @@ Type
     function matches(aSelectorString : String) : Boolean;
     function querySelector(aSelectors : String) : TJSElement;
     function querySelectorAll(aSelectors : String) : TJSNodeList;
+    procedure remove; overload;
     procedure releasePointerCapture(evID : JSValue);
     procedure removeAttribute(aName: string);
     procedure removeAttributeNS(aNameSpace,aName: string);
@@ -316,7 +335,7 @@ Type
 
   TJSLocation = class external name 'Location'  (TJSObject)
   Private
-    FOrigin : string;
+    FOrigin : string; external name 'origin';
   Public
     hash : string;
     host : string;
@@ -334,6 +353,8 @@ Type
     property origin : string read FOrigin;
   end;
   
+  TJSCSSStyleDeclaration = class; // forward
+
   TJSStyleSheet = class external name 'StyleSheet' (TJSEventTarget)
   Private
     FHRef : String; external name 'href';
@@ -350,7 +371,6 @@ Type
     property _type : String read FType;
   end;
 
-
   TJSCSSRule = class external name 'CSSRule'  (TJSObject)
   Private
     FCSSText : String; external name 'cssText';
@@ -360,6 +380,14 @@ Type
     property cssText : String Read FCSSText;
     property parentRule : TJSCSSRule read FparentRule;
     property parentStyleSheet : TJSCSSStyleSheet Read FParentStyleSheet;
+  end;
+
+  TJSCSSStyleRule = class external name 'CSSStyleRule' (TJSCSSRule)
+  private
+    FStyle: TJSCSSStyleDeclaration; external name 'style';
+  public
+    selectorText: String;
+    property style: TJSCSSStyleDeclaration read FStyle;
   end;
   
   TJSCSSRuleList = Class external name 'CSSRuleList'  (TJSObject)
@@ -420,10 +448,12 @@ Type
     FBubbles : Boolean; external name 'bubbles';
     FCancelable : Boolean; external name 'cancelable';
     FComposed : Boolean; external name 'composed';
-    FCurrentTarget : TJSElement; external name 'currentTarget';
+    FCurrentTarget : TJSEventTarget; external name 'currentTarget';
+    FCurrentTargetElement : TJSElement; external name 'currentTarget';
     FdefaultPrevented : Boolean; external name 'defaultPrevented';
     FEventPhase : NativeInt; external name 'eventPhase';
-    FTarget : TJSElement; external name 'target';
+    FTarget : TJSEventTarget; external name 'target';
+    FTargetElement : TJSElement; external name 'target';
     FTimeStamp : NativeInt; external name 'timestamp';
     FType : String; external name 'type';
     FIsTrusted : Boolean; external name 'isTrusted';
@@ -436,16 +466,19 @@ Type
   public    
     cancelBubble : Boolean;
     constructor new (aType : String; const aInit : TJSEventInit); overload;
+    constructor new (aType : String); overload;
     procedure preventDefault;
     procedure stopImmediatePropagation;
     procedure stopPropagation;
     Property bubbles : Boolean Read FBubbles;
     Property cancelable : Boolean Read FCancelable;
     Property composed : Boolean Read FComposed;
-    property currentTarget : TJSElement Read FCurrentTarget;
+    property currentTarget : TJSEventTarget Read FCurrentTarget;
+    property currentTargetElement : TJSElement Read FCurrentTargetElement;
     property defaultPrevented : Boolean Read FdefaultPrevented;
     property eventPhase : NativeInt Read FEventPhase;
-    property target : TJSElement Read FTarget;
+    property target : TJSEventTarget Read FTarget;
+    property targetElement : TJSElement Read FTargetElement;
     Property timestamp : NativeInt Read FTimeStamp;
     property _type : string read FType;
     property isTrusted : Boolean Read FIsTrusted;
@@ -473,6 +506,7 @@ Type
     property nextElementSibling : TJSElement read FnextElementSibling;
     property previousElementSibling : TJSElement read FpreviousElementSibling;
   end;
+
 
   TJSProcessingInstruction = class external name 'ProcessingInstruction' (TJSCharacterData);
 
@@ -620,7 +654,7 @@ Type
 
   { TJSDataTransferItem }
 
-  TJSDataTransferItemCallBack = reference to Procedure(aData : String);
+  TJSDataTransferItemCallBack = reference to Procedure(aData : String); safecall;
 
   TJSDataTransferItem = class external name 'DataTransferItem'  (TJSObject)
   private
@@ -696,20 +730,25 @@ Type
     Property metaKey  : Boolean Read FmetaKey;
     property dataTransfer : TJSDataTransfer Read FDataTransfer;
   end;
-  TJSDragDropEventHandler = reference to function(aEvent: TJSDragEvent) : Boolean;
-  THTMLClickEventHandler = reference to function(aEvent : TJSMouseEvent) : boolean;
+  TJSDragDropEventHandler = reference to function(aEvent: TJSDragEvent) : Boolean; safecall;
+  THTMLClickEventHandler = reference to function(aEvent : TJSMouseEvent) : boolean; safecall;
+
+  TJSClipBoardEvent = Class external name 'ClipboardEvent' (TJSEvent)
+  Private
+    FClipboardData: TJSDataTransfer external name 'clipboardData';
+  Public
+    Property ClipBoardData : TJSDataTransfer Read FClipBoardData;
+  end;
+
   { Various events }
 
-{$IFNDEF FIREFOX}
-  TJSFocusEvent = TJSEvent;
-{$ELSE}
   TJSFocusEvent = Class(TJSEvent)
   private
     FrelatedTarget : TJSElement external name 'relatedTarget';
   public
     property relatedTarget : TJSElement Read FrelatedTarget;
   end;
-{$ENDIF}
+
   TJSAnimationEvent = Class(TJSEvent);
   TJSLoadEvent = Class(TJSEvent);
 
@@ -775,21 +814,32 @@ Type
     property Total : NativeUINT Read FTotal;
   end;
 
-  TJSPageTransitionEventHandler = reference to function(aEvent : TJsPageTransitionEvent) : boolean;
-  TJSHashChangeEventhandler = reference to function(aEvent : TJSHashChangeEvent) : boolean;
-  TJSMouseWheelEventHandler = reference to function(aEvent : TJSWheelEvent) : boolean;
-  TJSMouseEventHandler = reference to function(aEvent : TJSMouseEvent) : boolean;
-  THTMLAnimationEventHandler = reference to function(aEvent : TJSAnimationEvent) : boolean;
-  TJSErrorEventHandler = reference to function(aEvent : TJSErrorEvent) : boolean;
-  TJSFocusEventHandler = reference to function(aEvent : TJSFocusEvent) : boolean;
-  TJSKeyEventhandler = reference to function (aEvent : TJSKeyBoardEvent) : boolean;
-  TJSLoadEventhandler = reference to function (aEvent : TJSLoadEvent) : boolean;
-  TJSPointerEventHandler = reference to function(aEvent : TJSPointerEvent) : boolean;
-  TJSUIEventHandler = reference to function(aEvent : TJSUIEvent) : Boolean;
-  TJSPopStateEventHandler = reference to function(aEvent : TJSPopStateEvent) : Boolean;
-  TJSStorageEventHandler = reference to function(aEvent : TJSStorageEvent) : Boolean;
-  TJSProgressEventhandler =  reference to function(aEvent : TJSProgressEvent) : Boolean;
-  TJSTouchEventHandler = reference to function(aEvent : TJSTouchEvent) : boolean;
+  TJSCloseEvent = class external name 'CloseEvent' (TJSEvent)
+  private
+    fcode: Word; external name 'code';
+    freason: TJSDOMString; external name 'reason';
+    fwasClean: Boolean; external name 'wasClean';
+  public
+    property code: Word read fcode;
+    property reason: TJSDOMString read freason;
+    property wasClean: Boolean read fwasClean;
+  end; 
+
+  TJSPageTransitionEventHandler = reference to function(aEvent : TJsPageTransitionEvent) : boolean; safecall;
+  TJSHashChangeEventhandler = reference to function(aEvent : TJSHashChangeEvent) : boolean; safecall;
+  TJSMouseWheelEventHandler = reference to function(aEvent : TJSWheelEvent) : boolean; safecall;
+  TJSMouseEventHandler = reference to function(aEvent : TJSMouseEvent) : boolean; safecall;
+  THTMLAnimationEventHandler = reference to function(aEvent : TJSAnimationEvent) : boolean; safecall;
+  TJSErrorEventHandler = reference to function(aEvent : TJSErrorEvent) : boolean; safecall;
+  TJSFocusEventHandler = reference to function(aEvent : TJSFocusEvent) : boolean; safecall;
+  TJSKeyEventhandler = reference to function (aEvent : TJSKeyBoardEvent) : boolean; safecall;
+  TJSLoadEventhandler = reference to function (aEvent : TJSLoadEvent) : boolean; safecall;
+  TJSPointerEventHandler = reference to function(aEvent : TJSPointerEvent) : boolean; safecall;
+  TJSUIEventHandler = reference to function(aEvent : TJSUIEvent) : Boolean; safecall;
+  TJSPopStateEventHandler = reference to function(aEvent : TJSPopStateEvent) : Boolean; safecall;
+  TJSStorageEventHandler = reference to function(aEvent : TJSStorageEvent) : Boolean; safecall;
+  TJSProgressEventhandler =  reference to function(aEvent : TJSProgressEvent) : Boolean; safecall;
+  TJSTouchEventHandler = reference to function(aEvent : TJSTouchEvent) : boolean; safecall;
 
   TJSDocument = class external name 'Document' (TJSNode)
   Private
@@ -867,6 +917,7 @@ Type
     procedure writeln(aLine : String);
   Public
     body : TJSElement;
+    cookie: TJSString;
     designMode : string;
     dir : string;
     domain : string;
@@ -987,14 +1038,15 @@ Type
     Procedure clear;  
     procedure count; overload;
     procedure count(aCounter : String);
-    procedure error(Obj1 : JSValue); varargs;
+    procedure debug(Obj1 : JSValue); varargs of JSValue;
+    procedure error(Obj1 : JSValue); varargs of JSValue;
     procedure group; overload;
     procedure group(aLabel : String); overload;
     procedure groupCollapsed; overload;
     procedure groupCollapsed(aLabel : String);overload;
     procedure groupEnd;
-    procedure info(Obj1 : JSValue); varargs;
-    procedure log(Obj1 : JSValue); varargs;
+    procedure info(Obj1 : JSValue); varargs of JSValue;
+    procedure log(Obj1 : JSValue); varargs of JSValue;
     procedure table(args: array of JSValue); overload;
     procedure table(args: array of JSValue; Columns : Array of string);
     procedure table(args: TJSObject); overload;
@@ -1002,56 +1054,303 @@ Type
     procedure time(aName : string);
     procedure timeEnd(aName : string);
     procedure trace;
-    procedure warn(Obj1 : JSValue); varargs;
+    procedure warn(Obj1 : JSValue); varargs of JSValue;
   end;
-
-  { TJSCryptoKey }
-
-  TJSCryptoKey = class external name 'CryptoKey'  (TJSObject)
-  private
-    FAlgorithm: JSValue; external name 'algorithm';
-    FExtractable: Boolean; external name 'extractable';
-    FType: string; external name 'type';
-    FUsages: TStringDynArray; external name 'usages';
-  Public
-    property _type : string read FType;
-    property extractable: Boolean read FExtractable;
-    property algorithm : JSValue read FAlgorithm;
-    property usages : TStringDynArray Read FUsages;
-  end;
-  
-  { TJSSubtleCrypto }
 
 //  TJSBufferSource = class external name 'BufferSource' end;
 //  TJSTypedArray = class external name 'TypedArray' end;
 
-  TJSSubtleCrypto = class external name 'SubtleCrypto'  (TJSObject)
-  Public
-    function decrypt(algorithm : JSValue; aKey : TJSCryptoKey; aData : TJSBufferSource) : TJSPromise;
-    function deriveKey(algorithm : JSValue; aMasterKey : TJSCryptoKey; aDerivedAlgo : JSValue; extractable : Boolean; Usages : TStringDynArray) : TJSPromise;
-    function digest(algorithm : string; Buffer : TJSArrayBuffer) : TJSPromise; overload;
-    function digest(algorithm : string; Buffer : TJSTypedArray) : TJSPromise; overload;
-    function encrypt(algorithm : JSValue; aKey : TJSCryptoKey; aData : TJSBufferSource) : TJSPromise;
-    function exportKey(algorithm : String; AKey : TJSCryptoKey) : TJSPromise;
-    function generateKey(algorithm : JSValue; extractable : Boolean; Usages : TStringDynArray) : TJSPromise;
-    function importKey(format : String; KeyData : TJSArrayBuffer; algorithm : String; extractable : Boolean; Usages : TStringDynArray) : TJSPromise;
-    function sign(algorithm : string; Key : TJSCryptoKey; aText : TJSArrayBuffer) : TJSPromise; overload;
-    function unwrapKey(algorithm : string; wrappedKey : TJSArrayBuffer; Key: TJSCryptoKey;
-                       unwrapAlgo : string; unwrappedKeyAlgo : string; 
-                       extractable : Boolean; Usages : TStringDynArray) : TJSPromise;
-   function verify(algorithm : String; key : TJSCryptoKey; Signature : TJSArrayBuffer; 
-                   textToVerify : TJSArrayBuffer): TJSPromise;
-   function wrapKey(aFormat : string; Key,WrappingKey : TJSCryptoKey; WrapAlgorithm : String) : TJSPromise;                   
+  // Forward class definitions
+  TJSCryptoKey = Class;
+  TJSSubtleCrypto = Class;
+  KeyType = String;
+  KeyUsage = String;
+  NamedCurve = String;
+  BigInteger = TJSUint8Array;
+  KeyFormat = String;
+  // Union of object, DOMString
+  AlgorithmIdentifier = JSValue; 
+  
+  { --------------------------------------------------------------------
+    Algorithm
+    --------------------------------------------------------------------}
+  
+  Algorithm = record
+    name : String;
   end;
   
+  { --------------------------------------------------------------------
+    AesCbcParams
+    --------------------------------------------------------------------}
+  
+  AesCbcParams = record
+    iv : TJSBufferSource;
+  end;
+  
+  { --------------------------------------------------------------------
+    AesCtrParams
+    --------------------------------------------------------------------}
+  
+  AesCtrParams = record
+    counter : TJSBufferSource;
+    length_ : Byte;external name 'length';
+  end;
+  
+  { --------------------------------------------------------------------
+    AesGcmParams
+    --------------------------------------------------------------------}
+  
+  AesGcmParams = record
+    iv : TJSBufferSource;
+    additionalData : TJSBufferSource;
+    tagLength : Byte;
+  end;
+  
+  { --------------------------------------------------------------------
+    HmacImportParams
+    --------------------------------------------------------------------}
+  
+  HmacImportParams = record
+    hash : AlgorithmIdentifier;
+  end;
+  
+  { --------------------------------------------------------------------
+    Pbkdf2Params
+    --------------------------------------------------------------------}
+  
+  Pbkdf2Params = record
+    salt : TJSBufferSource;
+    iterations : NativeInt;
+    hash : AlgorithmIdentifier;
+  end;
+  
+  { --------------------------------------------------------------------
+    RsaHashedImportParams
+    --------------------------------------------------------------------}
+  
+  RsaHashedImportParams = record
+    hash : AlgorithmIdentifier;
+  end;
+  
+  { --------------------------------------------------------------------
+    AesKeyGenParams
+    --------------------------------------------------------------------}
+  
+  AesKeyGenParams = record
+    length_ : Integer;external name 'length';
+  end;
+  
+  { --------------------------------------------------------------------
+    HmacKeyGenParams
+    --------------------------------------------------------------------}
+  
+  HmacKeyGenParams = record
+    hash : AlgorithmIdentifier;
+    length_ : Integer;external name 'length';
+  end;
+  
+  { --------------------------------------------------------------------
+    RsaHashedKeyGenParams
+    --------------------------------------------------------------------}
+  
+  RsaHashedKeyGenParams = record
+    modulusLength : Integer;
+    publicExponent : BigInteger;
+    hash : AlgorithmIdentifier;
+  end;
+  
+  { --------------------------------------------------------------------
+    RsaOaepParams
+    --------------------------------------------------------------------}
+  
+  RsaOaepParams = record
+    label_ : TJSBufferSource;external name 'label';
+  end;
+  
+  { --------------------------------------------------------------------
+    RsaPssParams
+    --------------------------------------------------------------------}
+  
+  RsaPssParams = record
+    saltLength : Integer;
+  end;
+  
+  { --------------------------------------------------------------------
+    DhKeyGenParams
+    --------------------------------------------------------------------}
+  
+  DhKeyGenParams = record
+    prime : BigInteger;
+    generator : BigInteger;
+  end;
+  
+  { --------------------------------------------------------------------
+    EcKeyGenParams
+    --------------------------------------------------------------------}
+  
+  EcKeyGenParams = record
+    _namedCurve : NamedCurve;external name 'namedCurve';
+  end;
+  
+  { --------------------------------------------------------------------
+    AesDerivedKeyParams
+    --------------------------------------------------------------------}
+  
+  AesDerivedKeyParams = record
+    length_ : Integer;external name 'length';
+  end;
+  
+  { --------------------------------------------------------------------
+    HmacDerivedKeyParams
+    --------------------------------------------------------------------}
+  
+  HmacDerivedKeyParams = record
+    length_ : Integer;external name 'length';
+  end;
+  
+  { --------------------------------------------------------------------
+    EcdhKeyDeriveParams
+    --------------------------------------------------------------------}
+  
+  EcdhKeyDeriveParams = record
+    public_ : TJSCryptoKey; external name 'public';
+  end;
+  
+  { --------------------------------------------------------------------
+    DhKeyDeriveParams
+    --------------------------------------------------------------------}
+  
+  DhKeyDeriveParams = record
+    public_ : TJSCryptoKey;  external name 'public';
+  end;
+  
+  { --------------------------------------------------------------------
+    DhImportKeyParams
+    --------------------------------------------------------------------}
+  
+  DhImportKeyParams = record
+    prime : BigInteger;
+    generator : BigInteger;
+  end;
+  
+  { --------------------------------------------------------------------
+    EcdsaParams
+    --------------------------------------------------------------------}
+  
+  EcdsaParams = record
+    hash : AlgorithmIdentifier;
+  end;
+  
+  { --------------------------------------------------------------------
+    EcKeyImportParams
+    --------------------------------------------------------------------}
+  
+  EcKeyImportParams = record
+    _namedCurve : NamedCurve;external name 'namedCurve';
+  end;
+  
+  { --------------------------------------------------------------------
+    HkdfParams
+    --------------------------------------------------------------------}
+  
+  HkdfParams = record
+    hash : AlgorithmIdentifier;
+    salt : TJSBufferSource;
+    info : TJSBufferSource;
+  end;
+  
+  { --------------------------------------------------------------------
+    RsaOtherPrimesInfo
+    --------------------------------------------------------------------}
+  
+  RsaOtherPrimesInfo = record
+    r : String;
+    d : String;
+    t : String;
+  end;
+  
+  { --------------------------------------------------------------------
+    JsonWebKey
+    --------------------------------------------------------------------}
+  
+  TRsaOtherPrimesInfoDynArray = Array of RsaOtherPrimesInfo;
+  JsonWebKey = record
+    kty : String;
+    use : String;
+    key_ops : TStringDynArray;
+    alg : String;
+    ext : boolean;
+    crv : String;
+    x : String;
+    y : String;
+    d : String;
+    n : String;
+    e : String;
+    p : String;
+    q : String;
+    dp : String;
+    dq : String;
+    qi : String;
+    oth : TRsaOtherPrimesInfoDynArray;
+    k : String;
+  end;
+  
+  { --------------------------------------------------------------------
+    CryptoKeyPair
+    --------------------------------------------------------------------}
+  
+  CryptoKeyPair = record
+    publicKey : TJSCryptoKey;
+    privateKey : TJSCryptoKey;
+  end;
+  
+  { --------------------------------------------------------------------
+    TJSCryptoKey
+    --------------------------------------------------------------------}
+  
+  TKeyUsageDynArray = Array of KeyUsage;
+  TJSCryptoKey = class external name 'CryptoKey' 
+  Private
+    Ftype_ : KeyType; external name 'type'; 
+    Fextractable : boolean; external name 'extractable'; 
+    Falgorithm : TJSObject; external name 'algorithm'; 
+    Fusages : TKeyUsageDynArray; external name 'usages'; 
+  Public
+    
+    Property type_ : KeyType Read Ftype_; 
+    Property extractable : boolean Read Fextractable; 
+    Property algorithm : TJSObject Read Falgorithm; 
+    Property usages : TKeyUsageDynArray Read Fusages; 
+  end;
+  
+  { --------------------------------------------------------------------
+    TJSSubtleCrypto
+    --------------------------------------------------------------------}
+  
+  TJSSubtleCrypto = class external name 'SubtleCrypto' 
+  Private
+  Public
+    function encrypt(algorithm : AlgorithmIdentifier; key : TJSCryptoKey; data : TJSBufferSource): TJSPromise;
+    function decrypt(algorithm : AlgorithmIdentifier; key : TJSCryptoKey; data : TJSBufferSource): TJSPromise;
+    function sign(algorithm : AlgorithmIdentifier; key : TJSCryptoKey; data : TJSBufferSource): TJSPromise;
+    function verify(algorithm : AlgorithmIdentifier; key : TJSCryptoKey; signature : TJSBufferSource; data : TJSBufferSource): TJSPromise;
+    function digest(algorithm : AlgorithmIdentifier; data : TJSBufferSource): TJSPromise;
+    function generateKey(algorithm : AlgorithmIdentifier; extractable : boolean; keyUsages : TKeyUsageDynArray): TJSPromise;
+    function deriveKey(algorithm : AlgorithmIdentifier; baseKey : TJSCryptoKey; derivedKeyType : AlgorithmIdentifier; extractable : boolean; keyUsages : TKeyUsageDynArray): TJSPromise;
+    function deriveBits(algorithm : AlgorithmIdentifier; baseKey : TJSCryptoKey; length_ : NativeInt): TJSPromise;
+    function importKey(format : KeyFormat; keyData : TJSObject; algorithm : AlgorithmIdentifier; extractable : boolean; keyUsages : TKeyUsageDynArray): TJSPromise;
+    function exportKey(format : KeyFormat; key : TJSCryptoKey): TJSPromise;
+    function wrapKey(format : KeyFormat; key : TJSCryptoKey; wrappingKey : TJSCryptoKey; wrapAlgorithm : AlgorithmIdentifier): TJSPromise;
+    function unwrapKey(format : KeyFormat; wrappedKey : TJSBufferSource; unwrappingKey : TJSCryptoKey; unwrapAlgorithm : AlgorithmIdentifier; unwrappedKeyAlgorithm : AlgorithmIdentifier; extractable : boolean; keyUsages : TKeyUsageDynArray): TJSPromise;
+  end;
   { TJSCrypto }
 
   TJSCrypto = class external name 'Crypto'  (TJSObject)
   private
-    FsubtleCrypto: TJSSubtleCrypto;
+    Fsubtle: TJSSubtleCrypto; external name 'subtle';
   Public
     procedure getRandomValues (anArray : TJSTypedArray);
-    property subtleCrypto : TJSSubtleCrypto Read FsubtleCrypto;
+    property subtle : TJSSubtleCrypto Read Fsubtle;
   end;
   
   { TJSHistory }
@@ -1399,6 +1698,9 @@ Type
     procedure clearWatch(AID : NativeInt);
   end;
 
+  TJSMediaStreamTrack = class external name 'MediaStreamTrack' (TJSEventTarget)
+  end;
+
   TJSMediaDevices = class external name 'MediaDevices' (TJSEventTarget)
   end;
 
@@ -1407,7 +1709,6 @@ Type
     constructor new(aURL : string);
     procedure postMessage(aValue : JSValue);
     procedure postMessage(aValue : JSValue; aList : TJSValueDynArray);
-    procedure terminate;
   end;
 
   TJSMessagePort = class external name 'MessagePort' (TJSEventTarget)
@@ -1477,6 +1778,22 @@ Type
     property ready : TJSPromise read FReady;
   end;
 
+  TJSClipboardItemOptions = Class external name 'Object' (TJSObject)
+    presentationStyle : String;
+  end;
+
+  TJSClipBoardItem = Class external name 'ClipboardItem' (TJSObject)
+    constructor new(aData : TJSObject; aOptions : TJSOBject); overload;
+    constructor new(aData : TJSObject; aOptions : TJSClipboardItemOptions); overload;
+    constructor new(aData : TJSObject); overload;
+  end;
+
+  TJSClipBoard = class external name 'Clipboard' (TJSEventTarget)
+    Function read : TJSPromise;
+    Function readText : TJSPromise;
+    Function write(Data : Array of TJSClipBoardItem) : TJSPromise;
+    Function writeText(aText : String) : TJSPromise;
+  end;
 
   { TJSNavigator }
 
@@ -1497,6 +1814,8 @@ Type
     FPlatform: string; external name 'platform';
     FServiceWorker: TJSServiceWorkerContainer; external name 'serviceWorker';
     FUserAgent: string; external name 'userAgent';
+    fClipBoard : TJSClipBoard; external name 'clipboard';
+    FPermissions: TJSPermissions; external name 'permissions';
   public
     function getBattery : TJSPromise;
     function requestMediaKeySystemAccess(aKeySystem : String; supportedConfigurations : TJSValueDynArray) : TJSPromise;
@@ -1519,6 +1838,8 @@ Type
     property platform : string read FPlatform;
     property userAgent : string read FUserAgent;
     property serviceWorker : TJSServiceWorkerContainer read FServiceWorker;
+    property ClipBoard : TJSClipBoard Read FCLipboard;
+    property permissions: TJSPermissions read FPermissions;
   end;
 
   { TJSTouchEvent }
@@ -1578,11 +1899,67 @@ Type
   end;
 
 
-  TJSURL = class external name 'URL' (TJSObject);
-  
-  TJSCSSStyleDeclaration = class; // forward
+  TJSParamEnumCallBack = reference to procedure (const aKey,aValue : string);
+  TJSURLSearchParams = class external name 'URLSearchParams' (TJSObject)
+  Public
+    constructor new(aQuery : String);
+    Procedure append(const aName,aValue : string);
+    Procedure delete(const aName : string);
+    Function entries : TJSIterator;
+    Procedure foreach(aEnumCallBack : TJSParamEnumCallBack);
+    function get(const aName : string) : JSValue;
+    // If you're sure the value exists...
+    function getString(const aName : string) : string; external name 'get';
+    function getAll(const aName : string) : TStringDynArray;
+    function has(const aName : string) : Boolean;
+    Function keys : TJSIterator; reintroduce;
+    Procedure set_(const aName,aValue : string); external name 'set';
+    Procedure sort;
+    Function values : TJSIterator; reintroduce;
+  end;
 
-  TJSTimerCallBack = reference to procedure;
+  TJSURL = class external name 'URL' (TJSObject)
+  Private
+    FOrigin : String; external name 'origin';
+    FSearchParams : TJSURLSearchParams; external name 'searchParams';
+  public
+    hash : string;
+    host : string;
+    hostname : string;
+    href : string;
+    password : string;
+    pathname : string;
+    port : string;
+    protocol : string;
+    search : string;
+    username : string;
+    constructor new(aURL : String);
+    constructor new(aURL,aBase : String);
+    class function createObjectURL(const v: JSValue): string;
+    class function revokeObjectURL(const S : String): string;
+    function toJSON : String;
+    Property Origin : String Read FOrigin;
+    property SearchParams : TJSURLSearchParams read FSearchParams;
+  end;
+
+  TJSTimerCallBack = reference to procedure; safecall;
+  Theader = Array [0..1] of String;
+  THeaderArray = Array of Theader;
+
+  TJSHTMLHeaders = Class external name 'Headers' (TJSObject)
+  Public
+    constructor new(values : THeaderArray); overload;
+    procedure append(aName, aValue : String);
+    procedure delete(aName : String);
+    function entries : TJSIterator;
+    Function get(aName: String): string;
+    Function has(aName: String): Boolean;
+    function keys : TJSIterator; reintroduce;
+    function values : TJSIterator; reintroduce;
+    procedure set_(aName, aValue : String);
+    Property Headers[aName : string] : string Read Get Write Set_;
+  end;
+
 
   { TJSMediaQueryList }
 
@@ -1595,11 +1972,101 @@ Type
     Property media : String Read FMedia;
   end;
 
-  { TJSWindow }
+  TJSReadableStream = class external name 'ReadableStream' (TJSObject)
+  private
+    flocked: Boolean; external name 'locked';
+  public
+    property locked: Boolean read flocked;
+    constructor new(underlyingSource: TJSObject);
+    constructor new(underlyingSource, queueingStrategy: TJSObject);
+    function cancel(reason: TJSDOMString): TJSPromise;
+    function getReader(): TJSObject; overload;
+    function getReader(mode: TJSObject): TJSObject; overload;
+    function pipeThrough(transformStream: TJSObject): TJSReadableStream; overload;
+    function pipeThrough(transformStream, options: TJSObject): TJSReadableStream; overload;
+    function pipeTo(destination: TJSObject): TJSPromise; overload;
+    function pipeTo(destination, options: TJSObject): TJSPromise; overload;
+    function tee(): TJSArray; // array containing two TJSReadableStream instances
+  end;
+
+  TJSWritableStream = class external name 'WritableStream' (TJSObject)
+  private
+    FLocked: Boolean; external name 'locked';
+  public
+    function abort(reason: String): TJSPromise;
+    function close: TJSPromise;
+    function getWriter: TJSObject;
+    property locked: Boolean read FLocked;
+  end;
+
+  TJSBody = class external name 'Body' (TJSObject)
+  private
+    fbody: TJSReadableStream; external name 'body';
+    fbodyUsed: Boolean; external name 'bodyUsed';
+  public
+    property body: TJSReadableStream read fbody;
+    property bodyUsed: Boolean read fbodyUsed;
+    function arrayBuffer(): TJSPromise; // resolves to TJSArrayBuffer
+    //function blob(): TJSPromise; // resolves to TJSBlob
+    function blob: TJSBlob; {$IFNDEF SkipAsync}async;{$ENDIF}
+    function json(): TJSPromise; // resolves to JSON / TJSValue
+    //function text(): TJSPromise; // resolves to USVString, always decoded using UTF-8
+    function text(): string; {$IFNDEF SkipAsync}async;{$ENDIF}
+  end;
+
+  TJSResponse = class external name 'Response' (TJSBody)
+  private
+    fheaders: TJSObject;external name 'headers';
+    fok: Boolean; external name 'ok';
+    fredirected: Boolean; external name 'redirected';
+    fstatus: NativeInt; external name 'status';
+    fstatusText: String; external name 'statusText';
+    ftype: String; external name 'type';
+    furl: String; external name 'url';
+    fuseFinalUrl: Boolean; external name 'useFinalUrl';
+  public
+    property headers: TJSObject read fheaders; //
+    property ok: Boolean read fok;
+    property redirected: Boolean read fredirected;
+    property status: NativeInt read fstatus;
+    property statusText: String read fstatusText; //
+    property type_: String read ftype; //
+    property url: String read furl; //
+    property useFinalUrl: Boolean read fuseFinalUrl write fuseFinalUrl;
+    constructor new(body: TJSObject; init: TJSObject); varargs; external name 'new';
+    function clone(): TJSResponse;
+    function error(): TJSResponse;
+    function redirect(url: String; Status: NativeInt): TJSResponse;
+  end;
+
   TJSDOMHighResTimeStamp = Double;
-  TFrameRequestCallback = procedure (aTime: TJSDOMHighResTimeStamp);
+  TFrameRequestCallback = reference to procedure (aTime: TJSDOMHighResTimeStamp);
+
+  TJSPostMessageOptions = class external name 'Object' (TJSObject)
+    targetOrigin : string;
+    transfer : TJSValueDynArray;
+  end;
+
+  TJSIdleCallbackOptions = class
+  public
+    timeout: Cardinal;
+  end;
+
+  TJSIdleDeadline = class external name 'IdleDeadline'
+  private
+    FDidTimeout: Boolean; external name 'didTimeout';
+  public
+    function timeRemaining: TJSDOMHighResTimeStamp;
+
+    property didTimeout: Boolean read FDidTimeout;
+  end;
+
+  TIdleCallbackProc = reference to procedure(idleDeadline: TJSIdleDeadline);
 
   TJSWindowArray = Array of TJSWindow;
+
+  { TJSWindow }
+
   TJSWindow = class external name 'Window' (TJSObject)
   Private
     FClosed: boolean; external name 'closed';
@@ -1689,6 +2156,7 @@ Type
     onprogress : TJSProgressEventhandler;
     onpopstate : TJSPopStateEventHandler;
     onreset : TJSUIEventHandler;
+    onresize : TJSUIEventHandler;
     onscroll : TJSUIEventHandler;
     onselect : TJSEventHandler;
     onselectionchange : TJSEventHandler;
@@ -1700,6 +2168,7 @@ Type
     touchmove : TJSTouchEventHandler;
     touchcancel : TJSTouchEventHandler;
     procedure addEventListener(aname : string; aListener : TJSEventHandler);
+    procedure addEventListener(aname : string; aListener : TJSRawEventHandler);
     procedure addEventListener(aname : string; aListener : JSValue);
     Procedure alert(Const Msg : String);
     Function atob(Const aValue : string) : string;
@@ -1710,6 +2179,14 @@ Type
     procedure cancelAnimationFrame(aHandle: Integer);
     Procedure close;
     Function confirm(Const aMsg : String) :  boolean;
+    function fetch(resource: String; init: TJSObject): TJSPromise; overload; external name 'fetch';
+    //function fetch(resource: String): TJSPromise; overload; external name 'fetch';
+    function fetch(resource: String): TJSResponse; {$IFNDEF SkipAsync}async;{$ENDIF} overload; external name 'fetch';
+    function fetch(resource: TJSObject; init: TJSObject): TJSPromise; overload; external name 'fetch';
+    function fetch(resource: TJSObject): TJSPromise; overload; external name 'fetch';
+    function asyncfetch(resource: String): TJSResponse; {$IFNDEF SkipAsync}async;{$ENDIF} overload; external name 'fetch';
+    function asyncfetch(resource: TJSObject; init: TJSObject): TJSResponse; {$IFNDEF SkipAsync} async;{$ENDIF} overload; external name 'fetch';
+    function asyncfetch(resource: TJSObject): TJSResponse;  {$IFNDEF SkipAsync}async;{$ENDIF}  overload;external name 'fetch';
     procedure focus;
     Function getComputedStyle(aElement : TJSElement) : TJSCSSStyleDeclaration; overload;
     Function getComputedStyle(aElement,aPseudoElement : TJSElement) : TJSCSSStyleDeclaration; overload;
@@ -1720,6 +2197,11 @@ Type
     function open(Const aURL : String) : TJSWindow; overload;
     function open(Const aURL,aTarget : String) : TJSWindow; overload;
     function open(Const aURL,aTarget : String; AOptions : TJSObject) : TJSWindow; overload;
+    procedure postMessage(aMessage : JSValue);
+    procedure postMessage(aMessage : JSValue; aOptions : TJSPostMessageOptions);
+    procedure postMessage(aMessage : JSValue; aTransfer : TJSValueDynArray);
+    procedure postMessage(aMessage : JSValue; aTarget : string);
+    procedure postMessage(aMessage : JSValue; aTarget : string; aTransfer : TJSValueDynArray);
     procedure print;
     function prompt(const aMessage : String) : String; overload;
     function prompt(const aMessage,aDefault : String) : String; overload;
@@ -1734,7 +2216,15 @@ Type
     Function setTimeout(ahandler : TJSTimerCallBack; aTimeout : NativeUInt) : NativeInt; varargs;
     Function setTimeout(ahandler : TJSTimerCallBack) : NativeInt;
     procedure stop;
-    { public methods }
+    procedure cancelIdleCallback(handle: NativeInt);
+    function requestIdleCallback(handler: TIdleCallbackProc): NativeInt; overload;
+    function requestIdleCallback(handler: TIdleCallbackProc; options: TJSIdleCallbackOptions): NativeInt; overload;
+    function showOpenFilePicker: TJSFileSystemFileHandleArray; async; overload;
+    function showOpenFilePicker(options: TJSShowOpenFilePickerOptions): TJSFileSystemFileHandleArray; async; overload;
+    function showSaveFilePicker: TJSFileSystemFileHandle; async; overload;
+    function showSaveFilePicker(options: TJSShowSaveFilePickerOptions): TJSFileSystemFileHandle; async; overload;
+    function FileSystemDirectoryHandle: TJSFileSystemDirectoryHandleArray; async;
+    { public properties }
     property console : TJSConsole Read FConsole;
     property closed : boolean read FClosed;
     property crypto : TJSCrypto Read FCrypto;
@@ -1747,7 +2237,7 @@ Type
     Property innerHeight : NativeInt Read FInnerheight;
     Property innerWidth : NativeInt Read FInnerWidth;
     Property length : NativeInt Read FLength;
-    Property localStorage : TJSStorage Read FLocalStorage; 
+    Property localStorage : TJSStorage Read FLocalStorage;
     property location : TJSLocation Read FLocation;
     Property locationString : String read FLocationString write FLocationString;
     property locationbar : TJSLocationBar Read FLocationBar;
@@ -1766,10 +2256,10 @@ Type
     property scrollX : NativeInt read FScrollX;
     Property scrollY : NativeInt read FScrollY;
     Property _Self : TJSWindow read FSelf;
-    Property sessionStorage : TJSStorage Read FSessionStorage; 
+    Property sessionStorage : TJSStorage Read FSessionStorage;
     property toolbar : TJSToolBar Read FToolBar;
     property top : TJSWindow Read FTop;
-    property URL : TJSURL Read FURL; 
+    property URL : TJSURL Read FURL;
   end;
 
   { TJSCSSStyleDeclaration }
@@ -1790,12 +2280,16 @@ Type
     property parentRule : TJSCSSRule read FParentRule;
   end;
 
-
-
+  TJSScrollIntoViewOptions = class external name 'Object'  (TJSObject)
+    behaviour : string;
+    block : string;
+    inline_ : string; external name 'inline';
+  end;
 
 
   { TJSHTMLElement }
-  TJSHTMLElement = class external name 'HTMLELement' (TJSElement)
+
+  TJSHTMLElement = class external name 'HTMLElement' (TJSElement)
   private
     FDataset: TJSObject ; external name 'dataset';
     FIsContentEditable: Boolean ; external name 'isContentEditable';
@@ -1896,6 +2390,10 @@ Type
     Procedure blur;
     Procedure focus;
     Procedure click;
+    procedure scrollIntoView; overload;
+    procedure scrollIntoView(alignToTop : Boolean);
+    procedure scrollIntoView(aObj : TJSObject);
+    procedure scrollIntoView(Opts: TJSScrollIntoViewOptions);
     property dataset : TJSObject read FDataset;
     property isContentEditable : Boolean read FIsContentEditable;
     property offsetHeight : Double Read FOffsetHeight;
@@ -1903,6 +2401,9 @@ Type
     property offsetTop : Double Read FOffsetTop;
     property offsetWidth : Double Read FOffsetWidth;
     property offsetParent : TJSElement Read FOffsetParent;
+  end;
+
+  TJSHTMLDivElement = class external name 'HTMLDivElement' (TJSHTMLElement)
   end;
 
   TJSHTMLFormControlsCollection = class external name 'HTMLFormControlsCollection' (TJSHTMLCollection)
@@ -1918,6 +2419,10 @@ Type
     FElements: TJSHTMLFormControlsCollection; external name 'elements';
     FLength: NativeInt; external name 'length';
   Public
+    Procedure reset;
+    function reportValidity : Boolean;
+    function checkValidity : Boolean;
+    procedure submit;
     method : string;
     target : string;
     action : string;
@@ -1971,10 +2476,11 @@ Type
     function slice(aStart : NativeInt) : TJSBlob; overload;
     function slice(aStart,aEnd : NativeInt) : TJSBlob; overload;
     function slice(aStart,aEnd : NativeInt; AContentType : String) : TJSBlob; overload;
+    function arrayBuffer : TJSPromise;
     property size : NativeInt read FSize;
-    property _type : string read FType;
+    property _type : string read FType; deprecated;
+    property type_ : string read FType;
   end;
-
 
   { TJSHTMLFile }
 
@@ -1983,10 +2489,10 @@ Type
     FLastModified: NativeInt; external name 'lastModified';
     FLastModifiedDate: TJSDate; external name 'lastModifiedDate';
     FName: string; external name 'name';
-  Public
-    property name : string read FName;
-    property lastModified : NativeInt read FLastModified;
-    property lastModifiedDate : TJSDate read FLastModifiedDate;
+  public
+    property lastModified: NativeInt read FLastModified;
+    property lastModifiedDate : TJSDate read FLastModifiedDate; deprecated;
+    property name: String read FName;
   end;
 
   { TJSHTMLFileList }
@@ -2072,9 +2578,42 @@ Type
     property validity : TJSValidityState read FValidity;
   end;
 
+  TJSDOMSettableTokenList = class external name 'DOMSettableTokenList' (TJSDOMTokenList)
+  private
+    fvalue: TJSDOMString; external name 'value';
+  public
+    property value: TJSDOMString read fvalue; // readonly
+  end;
+
+  TJSHTMLOutputElement = class external name 'HTMLOutputElement' (TJSHTMLElement)
+  private
+    flabels: TJSNodeList; external name 'labels';
+    fform: TJSHTMLFormElement; external name 'form';
+    ftype: TJSDOMString; external name 'type';
+    fdefaultValue: TJSDOMString; external name 'defaultValue';
+    fvalue: TJSDOMString; external name 'value';
+    fwillValidate: Boolean; external name 'willValidate';
+    fvalidity: TJSValidityState; external name 'validity';
+    fvalidationMessage: TJSDOMString; external name 'validationMessage';
+  public
+    htmlFor: TJSDOMSettableTokenList;
+    function checkValidity: Boolean;
+    function reportValidity: Boolean;
+    procedure setCustomValidity(error: TJSDOMString);
+  public
+    property labels: TJSNodeList read flabels;
+    property form: TJSHTMLFormElement read fform;
+    property type_: TJSDOMString read ftype;
+    property defaultValue: TJSDOMString read fdefaultValue;
+    property value: TJSDOMString read fvalue write fvalue;
+    property willValidate: Boolean read fwillValidate;
+    property validity: TJSValidityState read fvalidity;
+    property validationMessage: TJSDOMString read fvalidationMessage;
+  end;
+
   { TJSHTMLImageElement }
 
-  TJSHTMLImageElement = class external name 'HTMLImageElement' (TJSHTMLElement)
+  TJSHTMLImageElement = class external name 'Image' (TJSHTMLElement)
   Private
     FComplete: boolean; external name 'complete';
     FCurrentSrc: String; external name 'currentSrc';
@@ -2083,6 +2622,7 @@ Type
     FX: NativeInt; external name 'x';
     FY: NativeInt; external name 'y';
   Public
+    constructor New(x,y : Cardinal); overload;
     alt: String;
     crossOrigin: String;
     decoding: String;
@@ -2101,6 +2641,57 @@ Type
     property naturalWidth: NativeUInt read FNaturalWidth;
     property x: NativeInt read FX;
     property y: NativeInt read FY;
+  end;
+
+  TJSHTMLLinkElement = class external name 'HTMLLinkElement'(TJSHTMLElement)
+  Private
+    frelList: TJSDOMTokenList; external name 'relList';
+    fsizes: TJSDOMSettableTokenList {TJSDOMTokenList}; external name 'sizes';
+  Public
+    href: string;
+    crossOrigin: string;
+    rel: string;
+    as_: string; external name 'as';
+    media: string;
+    integrity: string;
+    hreflang: string;
+    type_: string external name 'type';
+    imageSrcset: string;
+    imageSizes: string;
+    referrerPolicy: string;
+    disabled: string;
+    charset: string deprecated; // obsolete
+    rev: string deprecated; // obsolete property
+    target: string deprecated; // obsolete property
+    Property relList: TJSDOMTokenList read frelList;
+    Property sizes: TJSDOMSettableTokenList{TJSDOMTokenList} read fsizes;
+  end;
+
+  { TJSHTMLAnchorElement }
+
+  TJSHTMLAnchorElement = class external name 'HTMLAnchorElement' (TJSHTMLElement)
+  Private
+    FOrigin: string;external name 'origin';
+    frelList: TJSDOMTokenList; external name 'relList';
+  Public
+    href: string;
+    download: string;
+    hash: string;
+    host: string;
+    hostname: string;
+    hreflang: string;
+    media: string ;
+    password: string;
+    Protocol: string;
+    referrerPolicy : string;
+    rel: string ;
+    rev: string deprecated; // obsolete property
+    target: string ;
+    text : string;
+    type_ : string external name 'type';
+    username : string;
+    Property relList: TJSDOMTokenList read frelList;
+    Property origin: string Read FOrigin;
   end;
 
   { TJSHTMLMenuElement }
@@ -2127,12 +2718,55 @@ Type
     formTarget : String;
     menu: TJSHTMLMenuElement;
     _type : String; external name 'type';
+    value : string;
   Public
     property form : TJSHTMLFormElement Read FForm;
     property labels : TJSNodeList Read FLabels;
     property validationMessage : String Read FValidationmMessage;
     property validity : TJSValidityState Read FValidity;
     property willValidate : boolean read FWillValidate;
+  end;
+
+  TJSHTMLLabelElement = class external name 'HTMLLabelElement' (TJSHTMLElement)
+  Private
+    FForm: TJSHTMLFormElement; external name 'form';
+    FControl : TJSHTMLElement; external name 'control';
+  Public
+    For_ : String; external name 'htmlFor';
+    property Control : TJSHTMLElement Read FControl;
+    property Form : TJSHTMLFormElement read FForm;
+  end;
+
+  { TJSHTMLTextAreaElement }
+
+  TJSHTMLTextAreaElement = class external name 'HTMLTextAreaElement' (TJSHTMLElement)
+  private
+    FForm: TJSHTMLFormElement; external name 'form';
+    FTextLength: NativeInt; external name 'textKength';
+    FType: String; external name 'type';
+    FValidationMessage: String; external name 'validationMessage';
+    FValidity: TJSValidityState;  external name 'validity';
+    FWillValidate: boolean; external name 'willValidate';
+  Public
+    defaultValue : string;
+    value : string;
+    rows : cardinal;
+    cols : cardinal;
+    autofocus : boolean;
+    disabled : boolean;
+    maxLength : nativeInt;
+    readOnly : Boolean;
+    required : Boolean;
+    selectionStart : Cardinal;
+    selectionEnd : Cardinal;
+    selectionDirection : String;
+    wrap : string;
+    Property Form : TJSHTMLFormElement Read FForm;
+    Property Type_: String Read FType;
+    Property textLength : NativeInt Read FTextLength;
+    Property validity : TJSValidityState Read FValidity;
+    property willValidate : boolean read FWillValidate;
+    property validationMessage : String Read FValidationMessage;
   end;
 
   { TJSHTMLEmbedElement }
@@ -2192,10 +2826,12 @@ Type
     Procedure add(anItem, before : TJSHTMLOptionElement); overload;
     function item(aIndex : NativeInt): TJSHTMLOptionElement;
     function namedItem(aName : String): TJSHTMLOptionElement;
-    procedure remove(aIndex : NativeInt);
+    procedure remove(aIndex : NativeInt); overload;
     procedure checkValidity;
     procedure setCustomValidity(aMessage : String);
   Public
+    autofocus : Boolean;
+    disabled : Boolean;
     multiple : boolean;
     required: boolean;
     selectedIndex : NativeInt;
@@ -2310,7 +2946,7 @@ Type
     property ch: String read Fch write Fch;
     property chOff: String read FchOff write FchOff;
     property colSpan: Integer read FcolSpan write FcolSpan;
-    property headers: String read Fheaders write Fheaders;
+    property headers: String read Fheaders;
     property height: String read Fheight write Fheight;
     property noWrap: Boolean read FnoWrap write FnoWrap;
     property rowSpan: Integer read FrowSpan write FrowSpan;
@@ -2359,7 +2995,7 @@ Type
 
   TJSCanvasRenderingContext2D = Class;
 
-  THTMLCanvasToBlobCallback = Reference to function (aBlob : TJSBlob) : boolean;
+  THTMLCanvasToBlobCallback = Reference to function (aBlob : TJSBlob) : boolean; safecall;
 
   TJSHTMLCanvasElement = Class external name 'HTMLCanvasElement' (TJSHTMLElement)
   Public
@@ -2386,6 +3022,53 @@ Type
     property position: Double read Fposition;
     property labels: TJSNodeList read Flabels;
   end;
+  Type
+
+  { TJSDOMException }
+
+  TJSDOMException = class external name 'DOMException' (TJSObject)
+  private
+    FCode: Integer; external name 'code';
+    FMessage: String; external name 'message';
+    FName: string; external name 'name';
+  Public
+    Property code : Integer Read FCode;
+    Property Message : String Read FMessage;
+    Property name : string Read FName;
+  end;
+
+  { TJSFileReader }
+
+  TJSFileReader = class external name 'FileReader' (TJSEventTarget)
+  private
+    FError: TJSDOMException; external name 'error';
+    fReadyState: Integer; external name 'readyState';
+    FResult: JSValue; external name 'result';
+  Public
+    Const EMPTY : Integer;
+    Const LOADING : Integer;
+    Const DONE : Integer;
+  Public
+    onabort : TJSEventHandler;
+    onerror : TJSEventHandler;
+    onload : TJSEventHandler;
+    onloadstart : TJSEventHandler;
+    onloadend : TJSEventHandler;
+    onprogress : TJSEventHandler;
+  Public
+    constructor new;
+    Procedure abort;
+    procedure readAsArrayBuffer(Blob: TJSBlob);
+    procedure readAsBinaryString(Blob: TJSBlob);
+    procedure readAsDataURL(Blob: TJSBlob);
+    procedure readAsText(Blob: TJSBlob; encoding : string);
+    procedure readAsText(Blob: TJSBlob);
+    property Error : TJSDOMException read FError;
+    Property readyState : Integer Read fReadyState;
+    property Result : JSValue Read FResult;
+  end;
+
+  TCanvasCoordType = double; // Is in fact a number.
 
   // Opaque objects
   TJSCanvasGradient = class external name 'CanvasGradient'  (TJSObject)
@@ -2395,6 +3078,22 @@ Type
   end;
 
   TJSPath2D = class external name 'Path2D'  (TJSObject)
+  Public
+    constructor new; overload;
+    constructor new(aPath : TJSPath2D); overload;
+    constructor new(SVGPath : String); overload;
+    Procedure addPath(aPath : TJSPath2D);
+    procedure arc(x,y, radius,startAngle,endAngle : TCanvasCoordType); overload;
+    procedure arc(x,y, radius,startAngle,endAngle : TCanvasCoordType; antiClockWise : boolean); overload;
+    procedure arcTo(x1,y1,x2,y2,radius : TCanvasCoordType); overload;
+    procedure bezierCurveTo(cp1x,cp1y,cp2x,cp2y,x,y : TCanvasCoordType); overload;
+    Procedure closePath;
+    procedure ellipse(x, y, radiusX, radiusY : TCanvasCoordType; rotation, startAngle, endAngle : Double); overload;
+    procedure ellipse(x, y, radiusX, radiusY : TCanvasCoordType; rotation, startAngle, endAngle : Double; anticlockwise : Boolean); overload;
+    Procedure lineTo(X,Y : TCanvasCoordType);
+    Procedure moveTo(X,Y : TCanvasCoordType);
+    procedure quadraticCurveTo(cpx,cpy,x,y : TCanvasCoordType);
+    procedure rect(x,y,awidth,aheight: TCanvasCoordType); overload;
   end;
 
   { TJSImageData }
@@ -2412,9 +3111,8 @@ Type
     property width : Integer Read FWidth;
   end;
 
-  TCanvasCoordType = double; // Is in fact a number.
 
-  TJSTextMetrics = record
+  TJSTextMetrics = class external name 'TextMetrics' (TJSObject)
     width : TCanvasCoordType;
     actualBoundingBoxLeft : TCanvasCoordType;
     actualBoundingBoxRight : TCanvasCoordType;
@@ -2436,6 +3134,7 @@ Type
     FfillStyleColor: String; external name 'fillStyle';
     FfillStyleGradient: TJSCanvasGradient; external name 'fillStyle';
     FfillStylePattern: TJSCanvasPattern; external name 'fillStyle';
+    FimageSmoothingEnabled: Boolean; external name 'imageSmoothingEnabled';
     FstrokeStyleColor: String; external name 'strokeStyle';
     FstrokeStyleGradient: TJSCanvasGradient; external name 'strokeStyle';
     FstrokeStylePattern: TJSCanvasPattern; external name 'strokeStyle';
@@ -2476,6 +3175,8 @@ Type
     procedure drawImage(image : TJSObject; dx,dy : TCanvasCoordType); overload;
     procedure drawImage(image : TJSObject; dx,dy,dwidth,dheight : TCanvasCoordType); overload;
     procedure drawImage(image : TJSObject; sx,sy,sWidth,sHeight,dx,dy,dwidth,dheight : TCanvasCoordType); overload;
+    procedure ellipse(x, y, radiusX, radiusY : TCanvasCoordType; rotation, startAngle, endAngle : Double); overload;
+    procedure ellipse(x, y, radiusX, radiusY : TCanvasCoordType; rotation, startAngle, endAngle : Double; anticlockwise : Boolean); overload;
     procedure fill; overload;
     procedure fill(aRule : String); overload;
     procedure fill(aPath : TJSPath2D); overload;
@@ -2517,6 +3218,7 @@ Type
     property fillStyleAsColor : String Read FfillStyleColor Write FfillStyleColor;
     property fillStyleAsGradient : TJSCanvasGradient Read FfillStyleGradient Write FfillStyleGradient;
     property fillStyleAsPattern : TJSCanvasPattern Read FfillStylePattern Write FfillStylePattern;
+    property imageSmoothingEnabled : Boolean Read FimageSmoothingEnabled Write FimageSmoothingEnabled;
     property strokeStyleAsColor : String Read FstrokeStyleColor Write FstrokeStyleColor;
     property strokeStyleAsGradient : TJSCanvasGradient Read FstrokeStyleGradient Write FstrokeStyleGradient;
     property strokeStyleAsPattern : TJSCanvasPattern Read FstrokeStylePattern Write FstrokeStylePattern;
@@ -2543,14 +3245,18 @@ Type
 
   TJSHTMLScriptElement = Class external name 'HTMLScriptElement' (TJSHTMLElement)
   Public
-    type_ : String;
+    type_ : String external name 'type';
     src : String;
     charset : string;
+    integrity : string;
     async : boolean;
     defer : boolean;
     text : string;
+    crossOrigin : string;
+    referrerPolicy : string;
     noModule : boolean;
   end;
+
 
 
 
@@ -2561,7 +3267,7 @@ Type
   end;
 
   { TJSXMLHttpRequest }
-  TJSOnReadyStateChangeHandler = reference to procedure;
+  TJSOnReadyStateChangeHandler = reference to procedure; safecall;
 
   TJSXMLHttpRequest = class external name 'XMLHttpRequest' (TJSXMLHttpRequestEventTarget)
   private
@@ -2602,7 +3308,7 @@ Type
     property ResponseHeaders[aName : string] : string Read getResponseHeader;
     property responseXML : TJSDocument read FresponseXML;
     property responseURL : string read FresponseURL;
-    property responseType : string read FResponseType;
+    property responseType : string read FResponseType Write FResponseType;
     property response : JSValue Read FResponse;
     property responseText : string read FResponseText;
     property Status : integer read FStatus;
@@ -2733,7 +3439,7 @@ Type
     SymbolLock = 'SymbolLock';
     Enter = 'Enter';
     Tab = 'Tab';
-    Space = ' ';
+    Space = 'Space';
     ArrowDown = 'ArrowDown';
     ArrowLeft = 'ArrowLeft';
     ArrowRight = 'ArrowRight';
@@ -2910,7 +3616,7 @@ Type
   end;
 
   TJSMutationRecordArray = array of TJSMutationRecord;
-  TJSMutationCallback = reference to procedure(mutations: TJSMutationRecordArray; observer: TJSMutationObserver);
+  TJSMutationCallback = reference to procedure(mutations: TJSMutationRecordArray; observer: TJSMutationObserver); safecall;
 
   TJSMutationObserverInit = record
     attributes: boolean;
@@ -2938,6 +3644,23 @@ Type
     TJSWebSocket
     --------------------------------------------------------------------}
 
+  TJSMessagePortArray = Array of TJSMessagePort;
+
+  { TJSMessageEvent }
+
+  TJSMessageEvent = class external name 'MessageEvent' (TEventListenerEvent)
+  private
+    FData: JSValue; external name 'data';
+    FLastEventID: String; external name 'lastEventID';
+    FOrigin: String;  external name 'origin';
+    FPorts: TJSMessagePortArray; external name 'ports';
+  Public
+    Property Data : JSValue Read FData;
+    Property LastEventID : String Read FLastEventID;
+    Property Origin : String Read FOrigin;
+    Property Ports : TJSMessagePortArray Read FPorts;
+  end;
+
   TJSWebSocket = class external name 'WebSocket'  (TJSEventTarget)
   Private
     Furl : String; external name 'url';
@@ -2957,6 +3680,9 @@ Type
     onclose : TJSEventHandler;
     onmessage : TJSEventHandler;
     binaryType : String;
+    constructor new(url : String); overload;
+    constructor new(url : String; protocol: String); overload;
+    constructor new(url : String; protocols: array of String); overload;
     Procedure close; overload;
     Procedure close(code : Cardinal); overload;
     Procedure close(code : Cardinal; reason : String); overload;
@@ -2971,11 +3697,290 @@ Type
     Property protocol : String Read Fprotocol;
   end;
 
+  TJSHTMLAudioTrack = class external name 'AudioTrack' (TJSObject)
+  end;
+
+  TJSHTMLAudioTrackList = class external name 'AudioTrackList' (TJSObject)
+    FLength : Integer; external name 'length';
+    function getitem(aIndex : nativeInt) : TJSHTMLAudioTrack ; external name '[]';
+  Public
+    onaddtrack : TJSEventHandler;
+    onchange : TJSEventHandler;
+    onremovetrack : TJSEventHandler;
+    Property Length : Integer Read FLength;
+    Property tracks [aIndex : NativeInt] : TJSHTMLAudioTrack read Getitem;
+  end;
+
+  TJSHTMLVideoTrack = class external name 'VideoTrack' (TJSObject)
+  end;
+
+  TJSHTMLVideoTrackList = class external name 'VideoTrackList' (TJSObject)
+    FLength : Integer; external name 'length';
+    function getitem(aIndex : nativeInt) : TJSHTMLVideoTrack ; external name '[]';
+  Public
+    onaddtrack : TJSEventHandler;
+    onchange : TJSEventHandler;
+    onremovetrack : TJSEventHandler;
+    Property Length : Integer Read FLength;
+    Property tracks [aIndex : NativeInt] : TJSHTMLVideoTrack read Getitem;
+  end;
+
+  TJSHTMLTextTrack = class external name 'TextTrack' (TJSObject)
+  end;
+
+  TJSHTMLTextTrackList = class external name 'TextTrackList' (TJSObject)
+    FLength : Integer; external name 'length';
+    function getitem(aIndex : nativeInt) : TJSHTMLTextTrack ; external name '[]';
+  Public
+    onaddtrack : TJSEventHandler;
+    onchange : TJSEventHandler;
+    onremovetrack : TJSEventHandler;
+    Property Length : Integer Read FLength;
+    Property tracks [aIndex : NativeInt] : TJSHTMLTextTrack read Getitem;
+  end;
+
+
+  { TJSHTMLMediaElement }
+  TJSMEdiaError = class external name 'MediaError' (TJSObject)
+    code : NativeInt;
+    message : string;
+  end;
+
+  TJSHTMLMediaStream = class external name 'MediaStream' (TJSObject);
+
+  TJSHTMLMediaController = class external name 'MediaController' (TJSObject);
+
+  TJSHTMLMediaElement = Class external name 'HTMLMediaElement' (TJSHTMLElement)
+  private
+    FAudioTracks: TJSHTMLAudioTrackList; external name 'audioTracks';
+    FVideoTracks: TJSHTMLVideoTrackList; external name 'videoTracks';
+    FTextTracks: TJSHTMLTextTrackList; external name 'textTracks';
+    FControlsList: TJSDOMTokenList; external name 'controlslist';
+    FCurrentSrc: String; external name 'currentSrc';
+    FDuration: Double; external name 'duration';
+    FEnded: Boolean;external name 'ended';
+    FError: TJSMEdiaError; external name 'error';
+    FNetworkState: NativeInt; external name 'networkState';
+    FPaused: boolean; external name 'paused';
+    FReadyState: NativeInt; external name 'readyState';
+    FSeeking: boolean; external name 'seeking';
+    FSinkID: string; external name 'sinkId';
+  Public
+    autoplay : Boolean;
+    buffered : Boolean;
+    controls : Boolean;
+    controller : TJSHTMLMediaController;
+    crossOrigin : String;
+    currentTime : Double;
+    defaultMuted : boolean;
+    defaultPlaybackRate : Double;
+    disableRemotePlayback : Boolean;
+    loop : boolean;
+    mediaGroup : string;
+    muted : boolean;
+    preload : string;
+    preservesPitch : boolean;
+    src : string;
+    srcObject : TJSHTMLMediaStream;
+    volume : double;
+    onencrypted : TJSEventHandler;
+    onwaitingforkey : TJSEventHandler;
+    function canPlayType(aType : String) : String;
+    Function captureStream : TJSHTMLMediaStream;
+    Procedure play;
+    Procedure load;
+    Procedure pause;
+
+    Property AudioTracks : TJSHTMLAudioTrackList Read FAudioTracks;
+    Property Controlslist : TJSDOMTokenList Read FControlsList;
+    Property CurrentSrc : String Read FCurrentSrc;
+    Property Duration : Double read FDuration;
+    Property Ended : Boolean read FEnded;
+    Property Error : TJSMEdiaError read FError;
+    property networkState : NativeInt read FNetworkState;
+    property paused : boolean read FPaused;
+    property readyState : NativeInt read FReadyState;
+    property seeking : boolean read FSeeking;
+    property sinkID : string read FSinkID;
+    Property TextTracks : TJSHTMLTextTrackList Read FTextTracks;
+    Property VideoTracks : TJSHTMLVideoTrackList Read FVideoTracks;
+  end;
+
+  TJSHTMLAudioElement = Class external name 'HTMLAudioElement' (TJSHTMLMediaElement)
+
+  end;
+
+  TJSHTMLVideoElement = Class external name 'HTMLVideoElement' (TJSHTMLMediaElement)
+  end;
+
+  { TJSHTMLStyleElement }
+
+  TJSHTMLStyleElement = class external name 'HTMLStyleElement' (TJSHTMLElement)
+  private
+    FSheet: TJSStyleSheet; external name 'sheet';
+  public
+    media : string;
+    type_ : string; external name 'style';
+    disabled : boolean;
+    property sheet : TJSStyleSheet read FSheet;
+  end;
+
+
+  TJSFormDataEntryValue = String;
+  TJSFormDataEntryValueArray = Array of TJSFormDataEntryValue;
+
+  TJSFormData = Class external name 'FormData' (TJSObject)
+    constructor new;
+    constructor new(aForm : TJSHTMLElement);
+    Procedure append(const aName,aValue : String);
+    Procedure append(const aName : String; aBlob : TJSBlob);
+    Procedure delete(const aName : String);
+    Function entries : TJSFormDataEntryValueArray;
+    Function get(const aName : String): TJSFormDataEntryValue;
+    function has(const aName : String): Boolean;
+    Function keys : TStringDynArray; reintroduce;
+    Procedure set_(const aName,aValue : String); external name 'set';
+    Procedure set_(const aName : String; aBlob : TJSBlob); external name 'set';
+    Function getAll(const aName : String) : TJSFormDataEntryValueArray;
+    Function values : TJSValueDynArray; reintroduce;
+    Property Entry[const aIndex : String] : TJSFormDataEntryValue read Get;
+  end;
+
+  TJSHTMLTemplateElement = class external name 'HTMLTemplateElement' (TJSHTMLElement)
+    content : TJSHTMLElement;
+  end;
+
+    TJSHTMLOrXMLDocument = Class external name 'Document' (TJSDocument)
+  end;
+
+  TJSHTMLDocument = Class external name 'HTMLDocument' (TJSHTMLOrXMLDocument)
+  end;
+
+  TJSXMLDocument = Class external name 'HTMLDocument' (TJSHTMLOrXMLDocument)
+  end;
+
+  TDOMParser = Class external name 'DOMParser' (TJSObject)
+  Public
+    Function parseFromString (aString,aMimetype : String): TJSHTMLOrXMLDocument;
+  end;
+
+
+  TOnChangeProcedure = reference to procedure;
+
+  TJSPermissionDescriptor = class external name 'Object' (TJSObject)
+  public
+    name: String;
+    userVisibleOnly: Boolean;
+    sysex: Boolean;
+  end;
+
+  TJSPermissionStatus = class external name 'PermissionStatus' (TJSObject)
+  private
+    FState: String; external name 'state';
+  public
+    onchange: TOnChangeProcedure;
+    property state: String read FState;
+  end;
+
+  TJSPermissions = class external name 'Permissions' (TJSObject)
+  public
+    function query(descriptor: TJSPermissionDescriptor): TJSPermissionStatus; async;
+  end;
+
+  TJSFileSystemHandlePermissionDescriptor = class external name 'Object' (TJSObject)
+  public
+    mode: String;
+  end;
+
+  TJSFileSystemCreateWritableOptions = class external name 'Object' (TJSObject)
+  public
+    keepExistingData: Boolean;
+  end;
+
+  TJSFileSystemWritableFileStream = class;
+
+  TJSFileSystemHandle = class external name 'FileSystemHandle' (TJSObject)
+  private
+    FKind: String; external name 'kind';
+    FName: String; external name 'name';
+  public
+    function isSameEntry(const Handle: TJSFileSystemHandle): Boolean;
+    function queryPermission(descriptor: TJSFileSystemHandlePermissionDescriptor): String;
+    function requestPermission(descriptor: TJSFileSystemHandlePermissionDescriptor): String;
+
+    property kind: String read FKind;
+    property name: String read FName;
+  end;
+
+  TJSFileSystemFileHandle = class external name 'FileSystemFileHandle' (TJSFileSystemHandle)
+  public
+    function getFile: TJSHTMLFile; async;
+    function createWritable: TJSFileSystemWritableFileStream; overload;
+    function createWritable(options: TJSFileSystemCreateWritableOptions): TJSFileSystemWritableFileStream; overload;
+  end;
+
+  TJSGetFileHandleOptions = class external name 'Object'
+  public
+    create: Boolean;
+
+    constructor new;
+  end;
+
+  TJSRemoveEntryOptions = class external name 'Object' (TJSObject)
+    recursive: Boolean;
+  end;
+
+  TJSFileSystemDirectoryHandle = class external name 'FileSystemDirectoryHandle' (TJSFileSystemHandle)
+  public
+    function entries: TJSObject;
+    function getDirectoryHandle(name: String): TJSFileSystemDirectoryHandle; async; overload;
+    function getDirectoryHandle(name: String; options: TJSGetFileHandleOptions): TJSFileSystemDirectoryHandle; async; overload;
+    function getFileHandle(name: String): TJSFileSystemFileHandle; async; overload;
+    function getFileHandle(name: String; options: TJSGetFileHandleOptions): TJSFileSystemFileHandle; async; overload;
+    function keys: TJSFileSystemDirectoryHandleArray; reintroduce; //!![Kryvich]
+    function removeEntry(name: String): TJSPromise;
+    function removeEntry(name: String; options: TJSRemoveEntryOptions): TJSPromise;
+    function resolve(possibleDescendant: String): TStringDynArray; async;
+    function values(possibleDescendant: String): TJSFileSystemDirectoryHandleArray; async; reintroduce; //!![Kryvich]
+  end;
+
+  TJSFileSystemWritableFileStream = class external name 'FileSystemWritableFileStream' (TJSWritableStream)
+  public
+    function seek(position: NativeInt): TJSPromise;
+    function write(data: JSValue): TJSPromise;
+    function truncate(size: NativeInt): TJSPromise;
+  end;
+
+  TJSShowOpenFilePickerTypeOptions = class external name 'Object' (TJSObject)
+  public
+    description: String;
+    accept: TJSObject;
+  end;
+
+  TJSShowOpenFilePickerOptions = class external name 'Object' (TJSObject)
+  public
+    multiple: Boolean;
+    excludeAcceptAllOption: Boolean;
+    types: array of TJSShowOpenFilePickerTypeOptions;
+  end;
+
+  TJSShowSaveFilePickerOptionsAccept = class external name 'Object' (TJSObject)
+  public
+    description: String;
+    accept: TStringDynArray;
+  end;
+
+  TJSShowSaveFilePickerOptions = class external name 'Object' (TJSObject)
+  public
+    excludeAcceptAllOption: Boolean;
+    accept: array of TJSShowSaveFilePickerOptionsAccept;
+  end;
+
 var
   document : TJSDocument; external name 'document';
   window : TJSWindow; external name 'window';
   console : TJSConsole; external name 'window.console';
-  
+
 implementation
     
 end.

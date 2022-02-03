@@ -118,7 +118,7 @@ Var
 
 begin
   Result:=true;
-  tid:=aEvent.CurrentTarget.id;
+  tid:=TJSElement(aEvent.CurrentTarget).id;
   ActivateTab(tid);
   If (tid='navpdf') then
     Activate(PPDFOptions)

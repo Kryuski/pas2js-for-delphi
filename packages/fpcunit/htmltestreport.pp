@@ -180,7 +180,7 @@ begin
     for I:=0 to aSuite.GetChildTestCount-1 do
       begin
       T:=asuite.GetChildTest(i);
-      Writeln('Examining ',T.TestSuiteName,'.',T.TestName,' (',t.className,')');
+//      Writeln('Examining ',T.TestSuiteName,'.',T.TestName,' (',t.className,')');
       if T is TTestSuite then
         AppendSuite(SU,t as TTestSuite, alevel+1)
       else

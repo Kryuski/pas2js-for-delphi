@@ -1,0 +1,25 @@
+{
+    "name": "pas2jsdemoextension",
+    "description": "Minimal HelloWorld pas2js example for VS Code",
+    "version": "0.0.1",
+    "publisher": "pas2js team",
+    "engines": {
+        "vscode": "^1.32.0"
+    },
+    "activationEvents": [
+        "onCommand:pas2jsdemoextension.helloWorld"
+    ],
+    "main": "js/packageglue.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "pas2jsdemoextension.helloWorld",
+                "title": "Pas2js Extension Hello World"
+            }
+        ]
+    },
+    "scripts": {},
+    "devDependencies": {
+        "@types/vscode": "^1.32.0"
+    }
+}

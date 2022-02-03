@@ -50,6 +50,14 @@ const
                                Base types
 *****************************************************************************}
 type
+  HRESULT = Longint; // For Delphi compatibility
+  Int8 = ShortInt;
+  UInt8 = Byte;
+  Int16 = SmallInt;
+  UInt16 = Word;
+  Int32 = Longint;
+  UInt32 = LongWord;
+
   Integer = LongInt;
   Cardinal = LongWord;
   DWord = LongWord;
@@ -59,6 +67,7 @@ type
   PtrUInt = NativeUInt;
   ValSInt = NativeInt;
   ValUInt = NativeUInt;
+  CodePointer = Pointer;
   ValReal = Double;
   Real = type Double;
   Extended = type Double;
@@ -66,6 +75,7 @@ type
   TDateTime = type double;
   TTime = type TDateTime;
   TDate = type TDateTime;
+
 
   Int64 = type NativeInt unimplemented; // only 53 bits at runtime
   UInt64 = type NativeUInt unimplemented; // only 52 bits at runtime
@@ -75,13 +85,18 @@ type
   NativeLargeInt = NativeInt;
   NativeLargeUInt = NativeUInt;
 
-  UnicodeString = type String;
   WideString = type String;
-  WideChar = char;
   UnicodeChar = char;
 
   TDynArrayIndex = NativeInt;
   TTextLineBreakStyle = (tlbsLF,tlbsCRLF,tlbsCR);
+
+  TCompareOption = ({coLingIgnoreCase, coLingIgnoreDiacritic, }coIgnoreCase{,
+                    coIgnoreKanaType, coIgnoreNonSpace, coIgnoreSymbols, coIgnoreWidth,
+                    coLingCasing, coDigitAsNumbers, coStringSort});
+  TCompareOptions = set of TCompareOption;
+
+  generic TArray<T> = array of T;
 
 {*****************************************************************************
             TObject, TClass, IUnknown, IInterface, TInterfacedObject
@@ -95,10 +110,18 @@ type
   end;
   TGUIDString = type string;
 
+  PMethod = ^TMethod;
+  TMethod = record
+    Code : CodePointer;
+    Data : Pointer;
+  end;
+
   TClass = class of TObject;
 
   { TObject }
 
+  {$DispatchField Msg} // enable checking message methods for record field name "Msg"
+  {$DispatchStrField MsgStr}
   TObject = class
   private
     class var FClassName: String; external name '$classname';
@@ -121,9 +144,20 @@ type
     class property ClassParent: TClass read FClassParent;
     class function InheritsFrom(aClass: TClass): boolean; assembler;
     class property UnitName: String read FUnitName;
+    Class function MethodName(aCode : Pointer) : String;
+    Class function MethodAddress(aName : String) : Pointer;
+    Class Function FieldAddress(aName : String) : Pointer;
+    Class Function ClassInfo : Pointer;
+    class function QualifiedClassName: String;
 
     procedure AfterConstruction; virtual;
     procedure BeforeDestruction; virtual;
+
+    // message handling routines
+    procedure Dispatch(var aMessage); virtual;
+    procedure DispatchStr(var aMessage); virtual;
+    procedure DefaultHandler(var aMessage); virtual;
+    procedure DefaultHandlerStr(var aMessage); virtual;
 
     function GetInterface(const iid: TGuid; out obj): boolean;
     function GetInterface(const iidstr: String; out obj): boolean; inline;
@@ -133,6 +167,12 @@ type
     function Equals(Obj: TObject): boolean; virtual;
     function ToString: String; virtual;
   end;
+
+  { TCustomAttribute - base class of all user defined attributes. }
+
+  TCustomAttribute = class
+  end;
+  TCustomAttributeArray = array of TCustomAttribute;
 
 const
   { IInterface }
@@ -212,6 +252,53 @@ const
   IObjectInstance: TGuid = '{D91C9AF4-3C93-420F-A303-BF5BA82BFD23}';
 
 function GUIDToString(const GUID: TGUID): string; external name 'rtl.guidrToStr';
+
+{*****************************************************************************
+                                  RTTI support
+*****************************************************************************}
+type
+  // if you change the following enumeration type in any way
+  // you also have to change the rtl.js in an appropriate way !
+  TTypeKind = (
+    tkUnknown,  // 0
+    tkInteger,  // 1
+    tkChar,     // 2 in Delphi/FPC tkWChar, tkUChar
+    tkString,   // 3 in Delphi/FPC tkSString, tkWString or tkUString
+    tkEnumeration, // 4
+    tkSet,      // 5
+    tkDouble,   // 6
+    tkBool,     // 7
+    tkProcVar,  // 8  function or procedure
+    tkMethod,   // 9  proc var of object
+    tkArray,    // 10 static array
+    tkDynArray, // 11
+    tkRecord,   // 12
+    tkClass,    // 13
+    tkClassRef, // 14
+    tkPointer,  // 15
+    tkJSValue,  // 16
+    tkRefToProcVar, // 17  variable of procedure type
+    tkInterface, // 18
+    //tkObject,
+    //tkSString,tkLString,tkAString,tkWString,
+    //tkVariant,
+    //tkWChar,
+    //tkInt64,
+    //tkQWord,
+    //tkInterfaceRaw,
+    //tkUString,tkUChar,
+    tkHelper,   // 19
+    //tkFile,
+    tkExtClass  // 20
+    );
+  TTypeKinds = set of TTypeKind;
+
+const
+  tkFloat = tkDouble; // for compatibility with Delphi/FPC
+  tkProcedure = tkProcVar; // for compatibility with Delphi
+  tkAny = [Low(TTypeKind)..High(TTypeKind)];
+  tkMethods = [tkMethod];
+  tkProperties = tkAny-tkMethods-[tkUnknown];
 
 {*****************************************************************************
                               Array of const support
@@ -296,7 +383,8 @@ const
 function Abs(const A: integer): integer; overload; external name 'Math.abs';
 function Abs(const A: NativeInt): integer; overload; external name 'Math.abs';
 function Abs(const A: Double): Double; overload; external name 'Math.abs';
-function ArcTan(const A, B: Double): Double; external name 'Math.atan';
+function ArcTan(const A: Double): Double; external name 'Math.atan';
+function ArcTan2(const A,B: Double): Double; external name 'Math.atan2';
 function Cos(const A: Double): Double; external name 'Math.cos';
 function Exp(const A: Double): Double; external name 'Math.exp';
 function Frac(const A: Double): Double; assembler;
@@ -320,12 +408,13 @@ const
 function Int(const A: Double): double;
 function Copy(const S: string; Index, Size: Integer): String; assembler; overload;
 function Copy(const S: string; Index: Integer): String; assembler; overload;
-procedure Delete(var S: String; Index, Size: Integer); assembler; overload;
+procedure Delete(var S: String; Index, Size: Integer); overload;
 function Pos(const Search, InString: String): Integer; assembler; overload;
 function Pos(const Search, InString: String; StartAt : Integer): Integer; assembler; overload;
 procedure Insert(const Insertion: String; var Target: String; Index: Integer); overload;
 function upcase(c : char) : char; assembler;
 function HexStr(Val: NativeInt; cnt: byte): string; external name 'rtl.hexStr'; overload;
+function binstr(val : NativeUInt; cnt : byte) : string;
 
 procedure val(const S: String; out NI : NativeInt; out Code: Integer); overload;
 procedure val(const S: String; out NI : NativeUInt; out Code: Integer); overload;
@@ -387,7 +476,9 @@ type
 var
   JSArguments: TJSArguments; external name 'arguments';
 
-// function parseInt(s: String; Radix: NativeInt): NativeInt; external name 'parseInt'; // may result NaN
+function isNumber(const v: JSValue): boolean; external name 'rtl.isNumber';
+function isObject(const v: JSValue): boolean; external name 'rtl.isObject'; // true if not null and a JS Object
+function isString(const v: JSValue): boolean; external name 'rtl.isString';
 function isNaN(i: JSValue): boolean; external name 'isNaN'; // may result NaN
 
 // needed by ClassNameIs, the real SameText is in SysUtils
@@ -574,6 +665,11 @@ function valint(const S: String; MinVal, MaxVal: NativeInt; out Code: Integer): 
 var
   x: double;
 begin
+  if S='' then
+    begin
+    code:=1;
+    exit;
+    end;
   x:=Number(S);
   if isNaN(x) then
     case copy(s,1,1) of
@@ -604,6 +700,11 @@ procedure val(const S: String; out NI: NativeUInt; out Code: Integer);
 var
   x : double;
 begin
+  if S='' then
+    begin
+    code:=1;
+    exit;
+    end;
   x:=Number(S);
   if isNaN(x) or (X<>Int(X)) or (X<0) then
     Code:=1
@@ -648,6 +749,11 @@ procedure val(const S : String; out d : double; out Code : Integer);
 Var
   x: double;
 begin
+  if S='' then
+    begin
+    code:=1;
+    exit;
+    end;
   x:=Number(S);
   if isNaN(x) then
     Code:=1
@@ -672,6 +778,18 @@ begin
     end
   else
     Code:=1;
+end;
+
+function binstr(val : NativeUInt;cnt : byte) : string;
+var
+  i : Integer;
+begin
+  SetLength(Result,cnt);
+  for i:=cnt downto 1 do
+   begin
+     Result[i]:=char(48+val and 1);
+     val:=val shr 1;
+   end;
 end;
 
 function upcase(c : char) : char; assembler;
@@ -808,6 +926,92 @@ asm
   return (aClass!=null) && ((this==aClass) || aClass.isPrototypeOf(this));
 end;
 
+Class function TObject.MethodName(aCode : Pointer) : String;
+
+begin
+  Result:='';
+  if aCode=Nil then
+    exit;
+asm
+  if (typeof(aCode)!=='function') return "";
+  var i = 0;
+  var TI = this.$rtti;
+  if (rtl.isObject(aCode.scope)){
+    // callback
+    if (typeof aCode.fn === "string") return aCode.fn;
+    aCode = aCode.fn;
+  }
+  // Not a callback, check rtti
+  while ((Result === "") && (TI != null)) {
+    i = 0;
+    while ((Result === "") && (i < TI.methods.length)) {
+      if (this[TI.getMethod(i).name] === aCode)
+        Result=TI.getMethod(i).name;
+      i += 1;
+    };
+    if (Result === "") TI = TI.ancestor;
+  };
+  // return Result;
+end;
+end;
+
+Class function TObject.MethodAddress(aName : String) : Pointer;
+
+// We must do this in asm, because the typinfo unit is not available.
+begin
+  Result:=Nil;
+  if AName='' then
+    exit;
+asm
+  var i = 0;
+  var TI = this.$rtti;
+  var N = "";
+  var MN = "";
+  N = aName.toLowerCase();
+  while ((MN === "") && (TI != null)) {
+    i = 0;
+    while ((MN === "") && (i < TI.methods.length)) {
+      if (TI.getMethod(i).name.toLowerCase() === N) MN = TI.getMethod(i).name;
+      i += 1;
+    };
+    if (MN === "") TI = TI.ancestor;
+  };
+  if (MN !== "") Result = this[MN];
+//  return Result;
+end;
+end;
+
+class function TObject.FieldAddress(aName: String): Pointer;
+
+begin
+  Result:=Nil;
+  if aName='' then exit;
+  asm
+    var aClass = this.$class;
+    var ClassTI = null;
+    var myName = aName.toLowerCase();
+    var MemberTI = null;
+    while (aClass !== null) {
+      ClassTI = aClass.$rtti;
+      for (var i = 0, $end2 = ClassTI.fields.length - 1; i <= $end2; i++) {
+        MemberTI = ClassTI.getField(i);
+        if (MemberTI.name.toLowerCase() === myName) {
+           return MemberTI;
+        };
+      };
+      aClass = aClass.$ancestor ? aClass.$ancestor : null;
+    };
+  end;
+end;
+
+Class Function TObject.ClassInfo : Pointer;
+
+begin
+  // This works different from FPC/Delphi.
+  // We get the actual type info.
+  Result:=TypeInfo(Self);
+end;
+
 procedure TObject.AfterConstruction;
 begin
 
@@ -816,6 +1020,66 @@ end;
 procedure TObject.BeforeDestruction;
 begin
 
+end;
+
+procedure TObject.Dispatch(var aMessage);
+// aMessage is a record with an integer field 'Msg'
+var
+  aClass: TClass;
+  Msg: TJSObj absolute aMessage;
+  Id: jsvalue;
+begin
+  if not isObject(Msg) then exit;
+  Id:=Msg['Msg'];
+  if not isNumber(Id) then exit;
+  aClass:=ClassType;
+  while aClass<>nil do
+    begin
+    asm
+      var Handlers = aClass.$msgint;
+      if (rtl.isObject(Handlers) && Handlers.hasOwnProperty(Id)){
+        this[Handlers[Id]](aMessage);
+        return;
+      }
+    end;
+    aClass:=aClass.ClassParent;
+    end;
+  DefaultHandler(aMessage);
+end;
+
+procedure TObject.DispatchStr(var aMessage);
+// aMessage is a record with a string field 'MsgStr'
+var
+  aClass: TClass;
+  Msg: TJSObj absolute aMessage;
+  Id: jsvalue;
+begin
+  if not isObject(Msg) then exit;
+  Id:=Msg['MsgStr'];
+  if not isString(Id) then exit;
+  aClass:=ClassType;
+  while (aClass<>Nil) do
+    begin
+    asm
+      var Handlers = aClass.$msgstr;
+      if (rtl.isObject(Handlers) && Handlers.hasOwnProperty(Id)){
+        this[Handlers[Id]](aMessage);
+        return;
+      }
+    end;
+    aClass:=aClass.ClassParent;
+    end;
+  DefaultHandlerStr(aMessage);
+end;
+
+procedure TObject.DefaultHandler(var aMessage);
+begin
+  if jsvalue(TMethod(aMessage)) then ;
+end;
+
+procedure TObject.DefaultHandlerStr(var aMessage);
+begin
+  if jsvalue(TMethod(aMessage)) then ;
 end;
 
 function TObject.GetInterface(const iid: TGuid; out obj): boolean;
@@ -841,6 +1105,7 @@ end;
 
 function TObject.GetInterfaceByStr(const iidstr: String; out obj): boolean;
 begin
+  Result:=false;
   if not TJSObj(IObjectInstance)['$str'] then
     TJSObj(IObjectInstance)['$str']:=GUIDToString(IObjectInstance);
   if iidstr = TJSObj(IObjectInstance)['$str'] then
@@ -851,9 +1116,8 @@ begin
   asm
     var i = rtl.getIntfG(this,iidstr,2);
     obj.set(i);
-    return i!==null;
+    Result=(i!==null);
   end;
-  Result:=false;
 end;
 
 function TObject.GetInterfaceWeak(const iid: TGuid; out obj): boolean;
@@ -879,6 +1143,10 @@ begin
   Result:=ClassName;
 end;
 
+class function TObject.QualifiedClassName: String;
+begin
+  Result := UnitName + '.' + ClassName;
+end;
 
 initialization
   ExitCode:=0; // set it here, so that WPO does not remove it

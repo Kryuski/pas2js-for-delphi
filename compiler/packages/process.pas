@@ -13,18 +13,22 @@
 {$h+}
 unit process;
 
-{$I pas2js_defines.inc}
+{$I delphi_defines.inc}
 
 interface
 
-Uses Classes, pipes, SysUtils, Types;
+Uses Classes,
+     pipes,
+     SysUtils,
+     Types;
 
 Type
   TProcessOption = (poRunSuspended,poWaitOnExit,
                     poUsePipes,poStderrToOutPut,
                     poNoConsole,poNewConsole,
                     poDefaultErrorMode,poNewProcessGroup,
-                    poDebugProcess,poDebugOnlyThisProcess);
+                    poDebugProcess,poDebugOnlyThisProcess,poDetached,
+                    poPassInput,poRunIdle);
 
   TShowWindowOptions = (swoNone,swoHIDE,swoMaximize,swoMinimize,swoRestore,swoShow,
                         swoShowDefault,swoShowMaximized,swoShowMinimized,
@@ -33,36 +37,60 @@ Type
   TStartupOption = (suoUseShowWindow,suoUseSize,suoUsePosition,
                     suoUseCountChars,suoUseFillAttribute);
 
-  TProcessPriority = (ppHigh,ppIdle,ppNormal,ppRealTime);
+  // only win32/64 and wince uses this. wince doesn't have the constants in the headers for the latter two.
+  // unix defines them (as nice levels?), but doesn't use them.
+  TProcessPriority = (ppHigh,ppIdle,ppNormal,ppRealTime{$ifndef wince},ppBelowNormal,ppAboveNormal{$endif});
 
   TProcessOptions = set of TProcessOption;
   TStartupOptions = set of TStartupOption;
+  TRunCommandEventCode = (RunCommandIdle,RunCommandReadOutputString,RunCommandReadOutputStream,RunCommandFinished,RunCommandException);
+  TRunCommandEventCodeSet = set of TRunCommandEventCode;
+  TOnRunCommandEvent = procedure(Sender,Context : TObject;Status:TRunCommandEventCode;const Message:string) of object;
+  EProcess = Class(Exception);
 
-
-Type
   {$ifdef UNIX}
   TProcessForkEvent = procedure(Sender : TObject) of object;
   {$endif UNIX}
+
+Type
+   TProcessString = Unicodestring;
+   TprocessChar   = WideChar;
+
+   { TProcessStrings }
+
+   TProcessStrings = Class(TPersistent)
+                private
+                   name   : array of unicodestring;
+                   function getcount: Integer;
+                   function getname( index: integer): Unicodestring;
+                public
+                   procedure AssignTo(Dest: TPersistent); override;
+                   procedure add(const s : Unicodestring);
+                   procedure Clear;
+                   procedure Delete(i:integer);
+
+                   property Names[ index:integer]:Unicodestring read getname; default;
+                   property Count : Integer read getcount;
+   end;
+   TProcessStringList = TProcessStrings;
 
   { TProcess }
 
   TProcess = Class (TComponent)
   Private
+    FOnRunCommandEvent: TOnRunCommandEvent;
     FProcessOptions : TProcessOptions;
+    FRunCommandSleepTime: Integer;
     FStartupOptions : TStartupOptions;
-    FProcessID : Integer;
-    FThreadID : Integer;
-    FProcessHandle : Thandle;
-    FThreadHandle : Thandle;
     FFillAttribute : Cardinal;
-    FApplicationName : string;
-    FConsoleTitle : String;
-    FCommandLine : String;
-    FCurrentDirectory : String;
+    FApplicationName : TProcessString;
+    FConsoleTitle : TProcessString;
+    FCommandLine : TProcessString;
+    FCurrentDirectory : TProcessString;
     FDesktop : String;
-    FEnvironment : Tstrings;
-    FExecutable : String;
-    FParameters : TStrings;
+    FEnvironment : TProcessStrings;
+    FExecutable : TProcessString;
+    FParameters : TProcessStrings;
     FShowWindow : TShowWindowOptions;
     FInherithandles : Boolean;
     {$ifdef UNIX}
@@ -82,8 +110,8 @@ Type
     Function  GetExitCode : Integer;
     Function  GetRunning : Boolean;
     Function  GetWindowRect : TRect;
-    procedure SetCommandLine(const AValue: String);
-    procedure SetParameters(const AValue: TStrings);
+    procedure SetCommandLine(const AValue: TProcessString); // deprecated;
+    procedure SetParameters(const AValue: TProcessStrings);
     Procedure SetWindowRect (Value : TRect);
     Procedure SetShowWindow (Value : TShowWindowOptions);
     Procedure SetWindowColumns (Value : Cardinal);
@@ -92,17 +120,23 @@ Type
     Procedure SetWindowRows (Value : Cardinal);
     Procedure SetWindowTop (Value : Cardinal);
     Procedure SetWindowWidth (Value : Cardinal);
+    procedure SetApplicationName(const Value: TProcessString);
     procedure SetProcessOptions(const Value: TProcessOptions);
     procedure SetActive(const Value: Boolean);
-    procedure SetEnvironment(const Value: TStrings);
+    procedure SetEnvironment(const Value: TProcessStrings);
     Procedure ConvertCommandLine;
     function  PeekExitStatus: Boolean;
+    Procedure IntOnIdleSleep(Sender,Context : TObject;Status:TRunCommandEventCode;const Message:String);
   Protected
     FRunning : Boolean;
     FExitCode : Cardinal;
     FInputStream  : TOutputPipeStream;
     FOutputStream : TInputPipeStream;
     FStderrStream : TInputPipeStream;
+    FProcessID : Integer;
+    FThreadID : Integer;
+    FProcessHandle : Thandle;
+    FThreadHandle : Thandle;
     procedure CloseProcessHandles; virtual;
     Procedure CreateStreams(InHandle,OutHandle,ErrHandle : Longint);virtual;
     procedure FreeStream(var AStream: THandleStream);
@@ -117,7 +151,12 @@ Type
     Function Resume : Integer; virtual;
     Function Suspend : Integer; virtual;
     Function Terminate (AExitCode : Integer): Boolean; virtual;
-    Function WaitOnExit : Boolean;
+    Function WaitOnExit : Boolean; overload;
+    Function WaitOnExit(Timeout : DWord) : Boolean; overload;
+    function ReadInputStream(p:TInputPipeStream;var BytesRead:integer;var DataLength:integer;var Data:string;MaxLoops:integer=10):boolean; overload; virtual;
+    function ReadInputStream(p:TInputPipeStream;data:TStream;MaxLoops:integer=10):boolean; overload; virtual;
+    function RunCommandLoop(out outputstring:string;out stderrstring:string; out anexitstatus:integer):integer; virtual;
+
     Property WindowRect : Trect Read GetWindowRect Write SetWindowRect;
     Property Handle : THandle Read FProcessHandle;
     Property ProcessHandle : THandle Read FProcessHandle;
@@ -130,18 +169,22 @@ Type
     Property ExitStatus : Integer Read GetExitStatus;
     Property ExitCode : Integer Read GetExitCode;
     Property InheritHandles : Boolean Read FInheritHandles Write FInheritHandles;
+    Property OnRunCommandEvent : TOnRunCommandEvent Read FOnRunCommandEvent Write FOnRunCommandEvent;
+    Property RunCommandSleepTime : Integer read FRunCommandSleepTime write FRunCommandSleepTime;
     {$ifdef UNIX}
     property OnForkEvent : TProcessForkEvent Read FForkEvent Write FForkEvent;
     {$endif UNIX}
   Published
     property PipeBufferSize : cardinal read FPipeBufferSize write FPipeBufferSize default 1024;
     Property Active : Boolean Read GetRunning Write SetActive;
-    Property Executable : String Read FExecutable Write FExecutable;
-    Property Parameters : TStrings Read FParameters Write SetParameters;
-    Property ConsoleTitle : String Read FConsoleTitle Write FConsoleTitle;
-    Property CurrentDirectory : String Read FCurrentDirectory Write FCurrentDirectory;
+    Property ApplicationName : TProcessString Read FApplicationName Write SetApplicationName; //deprecated;
+    Property CommandLine : TProcessString Read FCommandLine Write SetCommandLine ; //deprecated;
+    Property Executable : TProcessString Read FExecutable Write FExecutable;
+    Property Parameters : TProcessStrings Read FParameters Write SetParameters;
+    Property ConsoleTitle : TProcessString Read FConsoleTitle Write FConsoleTitle;
+    Property CurrentDirectory : TProcessString Read FCurrentDirectory Write FCurrentDirectory;
     Property Desktop : String Read FDesktop Write FDesktop;
-    Property Environment : TStrings Read FEnvironment Write SetEnvironment;
+    Property Environment : TProcessStrings Read FEnvironment Write SetEnvironment;
     Property Options : TProcessOptions Read FProcessOptions Write SetProcessOptions;
     Property Priority : TProcessPriority Read FProcessPriority Write FProcessPriority;
     Property StartupOptions : TStartupOptions Read FStartupOptions Write FStartupOptions;
@@ -157,9 +200,9 @@ Type
     Property XTermProgram : String Read FXTermProgram Write FXTermProgram;
   end;
 
-  EProcess = Class(Exception);
+  TProcessClass = Class of TProcess;
 
-Procedure CommandToList(S : String; List : TStrings);
+Procedure CommandToList(S : TProcessString; List : TProcessStrings);
 
 {$ifdef unix}
 Var
@@ -168,22 +211,24 @@ Var
   Function DetectXTerm : String;
 {$endif unix}
 
-function RunCommandIndir(const curdir:string;const exename:string;const commands:array of string;out outputstring:string; out exitstatus:integer; Options : TProcessOptions = []):integer; overload;
-function RunCommandIndir(const curdir:string;const exename:string;const commands:array of string;out outputstring:string; Options : TProcessOptions = []):boolean; overload;
-function RunCommand(const exename:string;const commands:array of string;out outputstring:string; Options : TProcessOptions = []):boolean; overload;
+function RunCommandIndir(const curdir:TProcessString;const exename:TProcessString;const commands:array of TProcessString;out outputstring:string; out exitstatus:integer; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):integer; overload;
+function RunCommandIndir(const curdir:TProcessString;const exename:TProcessString;const commands:array of TProcessString;out outputstring:string; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):boolean; overload;
+function RunCommand(const exename:TProcessString;const commands:array of TProcessString;out outputstring:string; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):boolean; overload;
 
+function RunCommandInDir(const curdir,cmdline:TProcessString;out outputstring:string):boolean; overload; deprecated;
+function RunCommand(const cmdline:TProcessString;out outputstring:string):boolean; overload; deprecated;
 
-function RunCommandInDir(const curdir,cmdline:string;out outputstring:string):boolean; deprecated; overload;
-function RunCommand(const cmdline:string;out outputstring:string):boolean; deprecated; overload;
+// Allows override of the class instantiated for RunCommand*.
 
+var DefaultTProcess : TProcessClass = TProcess;
 
 implementation
 
 {$i process.inc}
 
-Procedure CommandToList(S : String; List : TStrings);
+Procedure CommandToList(S : TProcessString; List : TProcessStrings);
 
-  Function GetNextWord : String;
+  Function GetNextWord : TProcessString;
 
   Const
     WhiteSpace = [' ',#9,#10,#13];
@@ -192,18 +237,18 @@ Procedure CommandToList(S : String; List : TStrings);
   Var
     Wstart,wend : Integer;
     InLiteral : Boolean;
-    LastLiteral : char;
+    LastLiteral : TProcessChar;
 
   begin
     WStart:=1;
-    While (WStart<=Length(S)) and (S[WStart] in WhiteSpace) do
+    While (WStart<=Length(S)) and charinset(S[WStart],WhiteSpace) do
       Inc(WStart);
     WEnd:=WStart;
     InLiteral:=False;
     LastLiteral:=#0;
-    While (Wend<=Length(S)) and (Not (S[Wend] in WhiteSpace) or InLiteral) do
+    While (Wend<=Length(S)) and (Not charinset(S[Wend],WhiteSpace) or InLiteral) do
       begin
-      if S[Wend] in Literals then
+      if charinset(S[Wend],Literals) then
         If InLiteral then
           InLiteral:=Not (S[Wend]=LastLiteral)
         else
@@ -228,7 +273,7 @@ Procedure CommandToList(S : String; List : TStrings);
   end;
 
 Var
-  W : String;
+  W : TProcessString;
 
 begin
   While Length(S)>0 do
@@ -249,8 +294,10 @@ begin
   FForkEvent:=nil;
   {$endif UNIX}
   FPipeBufferSize := 1024;
-  FEnvironment:=TStringList.Create;
-  FParameters:=TStringList.Create;
+  FEnvironment:=TProcessStringList.Create;
+  FParameters:=TProcessStringList.Create;
+  FRunCommandSleepTime:=100;
+  FOnRunCommandEvent:=IntOnIdleSleep;
 end;
 
 Destructor TProcess.Destroy;
@@ -388,7 +435,7 @@ begin
     end;
 end;
 
-procedure TProcess.SetCommandLine(const AValue: String);
+procedure TProcess.SetCommandLine(const AValue: TProcessString);
 begin
   if FCommandLine=AValue then exit;
   FCommandLine:=AValue;
@@ -396,7 +443,7 @@ begin
     ConvertCommandLine;
 end;
 
-procedure TProcess.SetParameters(const AValue: TStrings);
+procedure TProcess.SetParameters(const AValue: TProcessStrings);
 begin
   FParameters.Assign(AValue);
 end;
@@ -423,6 +470,14 @@ begin
   dwYCountChars:=Value;
 end;
 
+procedure TProcess.SetApplicationName(const Value: TProcessString);
+begin
+  FApplicationName := Value;
+  If (csDesigning in ComponentState) and
+     (FCommandLine='') then
+    FCommandLine:=Value;
+end;
+
 procedure TProcess.SetProcessOptions(const Value: TProcessOptions);
 begin
   FProcessOptions := Value;
@@ -441,7 +496,7 @@ begin
       Terminate(0);
 end;
 
-procedure TProcess.SetEnvironment(const Value: TStrings);
+procedure TProcess.SetEnvironment(const Value: TProcessStrings);
 begin
   FEnvironment.Assign(Value);
 end;
@@ -457,184 +512,297 @@ begin
     end;
 end;
 
+function max(a, b: longint): longint; inline;
+begin
+  if a > b then
+    max := a
+  else
+    max := b;
+end;
+
+function min(a, b: longint): longint;  inline;
+begin
+  if a < b then
+    min:=a
+  else
+    min:=b;
+end;
+
 Const
   READ_BYTES = 65536; // not too small to avoid fragmentation when reading large files.
+
+function TProcess.ReadInputStream(p:TInputPipeStream;var BytesRead:integer;var DataLength:integer;var data:string;MaxLoops:integer=10):boolean;
+var Available, NumBytes: integer;
+begin
+    Available:=P.NumBytesAvailable;
+    result:=Available>0;
+    if not result then
+     exit;
+    while (available > 0) and (MaxLoops>0) do
+      begin
+        if (BytesRead + available > DataLength) then
+          begin
+            DataLength:=BytesRead + max(READ_BYTES,available);
+            Setlength(Data,DataLength);
+          end;
+        NumBytes := p.Read(data[1+BytesRead], Available);
+        if NumBytes > 0 then
+          Inc(BytesRead, NumBytes);
+        Available:=P.NumBytesAvailable;
+        dec(MaxLoops);
+      end;
+end;
+
+function TProcess.ReadInputStream(p:TInputPipeStream;data:TStream;MaxLoops:integer=10):boolean;
+const
+  BufSize = 4096;
+var
+  Buffer: array[0..BufSize - 1] of byte;
+  ReadBytes: integer;
+  Available : integer;
+begin
+  Available:=P.NumBytesAvailable;
+  result:=Available>0;
+  if not result then
+    Exit;
+  while (available > 0) and (MaxLoops>0) do
+  begin
+    ReadBytes := Output.Read({%H-}Buffer, min(BufSize,Available));
+    data.Write(Buffer, ReadBytes);
+    Available:=P.NumBytesAvailable;
+    dec(MaxLoops);
+  end;
+end;
+
+procedure TProcess.IntOnIdleSleep(Sender,Context : TObject;status:TRunCommandEventCode;const message:string);
+begin
+  if status=RunCommandIdle then
+    sleep(FRunCommandSleepTime);
+end;
 
 // helperfunction that does the bulk of the work.
 // We need to also collect stderr output in order to avoid
 // lock out if the stderr pipe is full.
-function internalRuncommand(p:TProcess;out outputstring:string;
-                            out stderrstring:string; out exitstatus:integer):integer;
+function TProcess.RunCommandLoop(out outputstring:string;
+                            out stderrstring:string; out anexitstatus:integer):integer;
 var
-    numbytes,bytesread,available : integer;
+    bytesread : integer;
     outputlength, stderrlength : integer;
-    stderrnumbytes,stderrbytesread : integer;
+    stderrbytesread : integer;
+    gotoutput,gotoutputstderr : boolean;
 begin
-  try
-    bytesread:=0;
     try
-      p.Options := p.Options + [poUsePipes];
-      outputlength:=0;
-      stderrbytesread:=0;
-      stderrlength:=0;
-      p.Execute;
-      while p.Running do begin
+    Options := Options + [poUsePipes];
+    bytesread:=0;
+    outputlength:=0;
+    stderrbytesread:=0;
+    stderrlength:=0;
+    Execute;
+    while Running do
+      begin
         // Only call ReadFromStream if Data from corresponding stream
         // is already available, otherwise, on  linux, the read call
         // is blocking, and thus it is not possible to be sure to handle
         // big data amounts bboth on output and stderr pipes. PM.
-        available:=P.Output.NumBytesAvailable;
-        if  available > 0 then
-          begin
-            if (BytesRead + available > outputlength) then
-              begin
-                outputlength:=BytesRead + READ_BYTES;
-                Setlength(outputstring,outputlength);
-              end;
-            NumBytes := p.Output.Read(outputstring[1+bytesread], available);
-            if NumBytes > 0 then
-              Inc(BytesRead, NumBytes);
-          end
+        gotoutput:=ReadInputStream(output,BytesRead,OutputLength,OutputString,1);
         // The check for assigned(P.stderr) is mainly here so that
         // if we use poStderrToOutput in p.Options, we do not access invalid memory.
-        else if assigned(P.stderr) and (P.StdErr.NumBytesAvailable > 0) then
-          begin
-            available:=P.StdErr.NumBytesAvailable;
-            if (StderrBytesRead + available > stderrlength) then
-              begin
-                stderrlength:=StderrBytesRead + READ_BYTES;
-                Setlength(stderrstring,stderrlength);
-              end;
-            StderrNumBytes := p.StdErr.Read(stderrstring[1+StderrBytesRead], available);
-            if StderrNumBytes > 0 then
-              Inc(StderrBytesRead, StderrNumBytes);
-          end
-        else
-          Sleep(100);
+        gotoutputstderr:=false;
+        if assigned(stderr) then
+            gotoutputstderr:=ReadInputStream(StdErr,StdErrBytesRead,StdErrLength,StdErrString,1);
+
+        if (porunidle in options) and not gotoutput and not gotoutputstderr and Assigned(FOnRunCommandEvent) Then
+          FOnRunCommandEvent(self,Nil,RunCommandIdle,'');
       end;
-      // Get left output after end of execution
-      available:=P.Output.NumBytesAvailable;
-      while available > 0 do begin
-        if (BytesRead + available > outputlength) then begin
-          outputlength:=BytesRead + READ_BYTES;
-          Setlength(outputstring,outputlength);
-        end;
-        NumBytes := p.Output.Read(outputstring[1+bytesread], available);
-        if NumBytes > 0 then
-          Inc(BytesRead, NumBytes);
-        available:=P.Output.NumBytesAvailable;
-      end;
-      setlength(outputstring,BytesRead);
-      while assigned(P.stderr) and (P.Stderr.NumBytesAvailable > 0) do begin
-        available:=P.Stderr.NumBytesAvailable;
-        if (StderrBytesRead + available > stderrlength) then begin
-          stderrlength:=StderrBytesRead + READ_BYTES;
-          Setlength(stderrstring,stderrlength);
-        end;
-        StderrNumBytes := p.StdErr.Read(stderrstring[1+StderrBytesRead], available);
-        if StderrNumBytes > 0 then
-          Inc(StderrBytesRead, StderrNumBytes);
-      end;
-      setlength(stderrstring,StderrBytesRead);
-      exitstatus:=p.exitstatus;
-      result:=0; // we came to here, document that.
+    // Get left output after end of execution
+    ReadInputStream(output,BytesRead,OutputLength,OutputString,250);
+    setlength(outputstring,BytesRead);
+    if assigned(stderr) then
+      ReadInputStream(StdErr,StdErrBytesRead,StdErrLength,StdErrString,250);
+    setlength(stderrstring,StderrBytesRead);
+    anexitstatus:=exitstatus;
+    result:=0; // we came to here, document that.
+    if Assigned(FOnRunCommandEvent) then          // allow external apps to react to that and finish GUI
+      FOnRunCommandEvent(self,Nil,RunCommandFinished,'');
+
     except
-      on e : Exception do begin
-        result:=1;
-        setlength(outputstring,BytesRead);
-      end;
-    end;
-  finally
-    p.free;
-  end;
+      on e : Exception do
+         begin
+           result:=1;
+           setlength(outputstring,BytesRead);
+           setlength(stderrstring,StderrBytesRead);
+           if Assigned(FOnRunCommandEvent) then
+             FOnRunCommandEvent(self,Nil,RunCommandException,e.Message);
+         end;
+     end;
 end;
 
 { Functions without StderrString }
 
-const
+Const
   ForbiddenOptions = [poRunSuspended,poWaitOnExit];
 
-function RunCommandIndir(const curdir:string;const exename:string;const commands:array of string;out outputstring:string;out exitstatus:integer; Options : TProcessOptions = []):integer;
+function RunCommandIndir(const curdir:TProcessString;const exename:TProcessString;const commands:array of TProcessString;out outputstring:string;out exitstatus:integer; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):integer;
 Var
     p : TProcess;
     i : integer;
     ErrorString : String;
 begin
-  p:=TProcess.create(nil);
+  p:=DefaultTProcess.create(nil);
   if Options<>[] then
     P.Options:=Options - ForbiddenOptions;
+  P.ShowWindow:=SwOptions;
   p.Executable:=exename;
   if curdir<>'' then
     p.CurrentDirectory:=curdir;
   if high(commands)>=0 then
    for i:=low(commands) to high(commands) do
      p.Parameters.add(commands[i]);
-  result:=internalruncommand(p,outputstring,errorstring,exitstatus);
+  try
+    result:=p.RunCommandLoop(outputstring,errorstring,exitstatus);
+  finally
+    p.free;
+  end;
 end;
 
-function RunCommandInDir(const curdir,cmdline:string;out outputstring:string):boolean; deprecated;
+function RunCommandInDir(const curdir,cmdline:TProcessString;out outputstring:string):boolean; deprecated;
 Var
     p : TProcess;
     exitstatus : integer;
     ErrorString : String;
 begin
-  p:=TProcess.create(nil);
+  p:=DefaultTProcess.create(nil);
   p.setcommandline(cmdline);
   if curdir<>'' then
     p.CurrentDirectory:=curdir;
-  result:=internalruncommand(p,outputstring,errorstring,exitstatus)=0;
+  try
+    result:=p.RunCommandLoop(outputstring,errorstring,exitstatus)=0;
+  finally
+    p.free;
+  end;
   if exitstatus<>0 then result:=false;
 end;
 
-function RunCommandIndir(const curdir:string;const exename:string;const commands:array of string;out outputstring:string; Options : TProcessOptions = []):boolean;
+function RunCommandIndir(const curdir:TProcessString;const exename:TProcessString;const commands:array of TProcessString;out outputstring:string; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):boolean;
 Var
     p : TProcess;
     i,
     exitstatus : integer;
     ErrorString : String;
 begin
-  p:=TProcess.create(nil);
+  p:=DefaultTProcess.create(nil);
   if Options<>[] then
     P.Options:=Options - ForbiddenOptions;
+  P.ShowWindow:=SwOptions;
   p.Executable:=exename;
   if curdir<>'' then
     p.CurrentDirectory:=curdir;
   if high(commands)>=0 then
    for i:=low(commands) to high(commands) do
      p.Parameters.add(commands[i]);
-  result:=internalruncommand(p,outputstring,errorstring,exitstatus)=0;
+  try
+    result:=p.RunCommandLoop(outputstring,errorstring,exitstatus)=0;
+  finally
+    p.free;
+  end;
   if exitstatus<>0 then result:=false;
 end;
 
-function RunCommand(const cmdline:string;out outputstring:string):boolean; deprecated;
+function RunCommand(const cmdline:TProcessString;out outputstring:String):boolean; deprecated;
 Var
     p : TProcess;
     exitstatus : integer;
     ErrorString : String;
 begin
-  p:=TProcess.create(nil);
+  p:=DefaultTProcess.create(nil);
   p.setcommandline(cmdline);
-  result:=internalruncommand(p,outputstring,errorstring,exitstatus)=0;
+  try
+    result:=p.RunCommandLoop(outputstring,errorstring,exitstatus)=0;
+  finally
+    p.free;
+  end;
   if exitstatus<>0 then result:=false;
 end;
 
-function RunCommand(const exename:string;const commands:array of string;out outputstring:string; Options : TProcessOptions = []):boolean;
+function RunCommand(const exename:TProcessString;const commands:array of TProcessString;out outputstring:string; Options : TProcessOptions = [];SWOptions:TShowWindowOptions=swoNone):boolean;
 Var
     p : TProcess;
     i,
     exitstatus : integer;
     ErrorString : String;
 begin
-  p:=TProcess.create(nil);
+  p:=DefaultTProcess.create(nil);
   if Options<>[] then
     P.Options:=Options - ForbiddenOptions;
+  P.ShowWindow:=SwOptions;
   p.Executable:=exename;
   if high(commands)>=0 then
    for i:=low(commands) to high(commands) do
      p.Parameters.add(commands[i]);
-  result:=internalruncommand(p,outputstring,errorstring,exitstatus)=0;
+  try
+    result:=p.RunCommandLoop(outputstring,errorstring,exitstatus)=0;
+  finally
+    p.free;
+  end;
   if exitstatus<>0 then result:=false;
 end;
 
+// dummy subset of tstrings.
+{ TProcessStrings }
+
+function TProcessStrings.getname( index: integer): Unicodestring;
+begin
+  if index<length(name) then
+     result:=name[index]
+  else
+     result:='';
+end;
+
+function TProcessStrings.getcount: Integer;
+begin
+  result:=length(name);
+end;
+
+procedure TProcessStrings.AssignTo(Dest: TPersistent);
+var i : integer;
+begin
+  inherited assign(dest);
+  if dest is TStrings then
+    begin
+      setlength(name,tstrings(dest).count);
+      for i:=0 to length(name)-1 do
+        name[i]:=tstrings(dest)[i];
+    end;
+  if dest is tprocessstrings then
+     name:=copy(tprocessstrings(dest).name);
+end;
+
+procedure TProcessStrings.add(const s: Unicodestring);
+var len : integer;
+begin
+  len:=length(name);
+  setlength(name, len+1);
+  name[len]:=s;
+end;
+
+procedure TProcessStrings.Clear;
+begin
+ setlength(name,0);
+end;
+
+procedure TProcessStrings.Delete(i: integer);
+var len,j : integer;
+begin
+  len:=length(name);
+  if len=0 then exit;
+  if (i<>len-1) and (len<>1) then
+     begin
+       for j:=i+1 to len-1 do
+         name[j-1]:=name[j];
+       setlength(name,len-1)
+     end
+  else
+    setlength(name,len-1)
+end;
 
 end.

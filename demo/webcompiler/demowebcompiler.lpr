@@ -3,7 +3,7 @@ program demowebcompiler;
 {$mode objfpc}
 
 uses
-  JS, Classes, SysUtils, Web, webfilecache, pas2jswebcompiler;
+  Classes, SysUtils, Web, webfilecache, pas2jswebcompiler;
 
 Type
 
@@ -103,8 +103,8 @@ constructor TWebCompilerDemo.Create(aOwner : TComponent);
 begin
   Inherited;
   FCompiler:=TPas2JSWebCompiler.Create;
-  FCompiler.Log.OnLog:=@DoLog;
-  FCompiler.WebFS.LoadBaseURL:='sources';
+  Compiler.Log.OnLog:=@DoLog;
+  Compiler.WebFS.LoadBaseURL:='sources';
 end;
 
 function TWebCompilerDemo.RunClick(aEvent: TJSMouseEvent): boolean;
@@ -113,7 +113,8 @@ Var
   Src : String;
 
 begin
-  Src:=FCompiler.WebFS.GetFileContent('main.js');
+  Result:=True;
+  Src:=Compiler.WebFS.GetFileContent('main.js');
   if Src='' then
     begin
     Window.Alert('No source available');
@@ -131,13 +132,13 @@ end;
 function TWebCompilerDemo.LoadDefaultsClick(aEvent: TJSMouseEvent): boolean;
 begin
   Result:=False;
-  FCompiler.WebFS.LoadFiles(['rtl.js','system.pas','sysutils.pas','types.pas','typinfo.pas','classes.pas','rtlconsts.pas','js.pas','web.pas','browserconsole.pas'],@OnUnitLoaded);
+  Compiler.WebFS.LoadFiles(['rtl.js','system.pas','sysutils.pas','types.pas','typinfo.pas','classes.pas','rtlconsts.pas','js.pas','web.pas','browserconsole.pas'],@OnUnitLoaded);
 end;
 
 function TWebCompilerDemo.LoadSingleUnitClick(aEvent: TJSMouseEvent): boolean;
 begin
   Result:=False;
-  FCompiler.WebFS.LoadFile(EUnitName.Value,@OnUnitLoaded);
+  Compiler.WebFS.LoadFile(EUnitName.Value,@OnUnitLoaded);
 end;
 
 
@@ -183,17 +184,6 @@ function TWebCompilerDemo.CompileClick(aEvent: TJSMouseEvent): boolean;
     PResult.appendChild(E);
   end;
 
-  Procedure ShowSuccess;
-  Var
-    E : TJSHTMLElement;
-
-  begin
-    E:=TJSHTMLElement(document.createElement('div'));
-    E['class']:='alert alert-success alert-dismissible fade in';
-    E.innerHTML:='<strong>Succes!</strong> program compiled succesfully';
-    PResult.appendChild(E);
-  end;
-
 Var
   args : TStrings;
   Res : Boolean;
@@ -203,7 +193,7 @@ begin
   BRun['disabled']:='disabled';
   ClearResult;
   MLog.Value:='';
-  FCompiler.WebFS.SetFileContent('main.pp',MSource.value);
+  Compiler.WebFS.SetFileContent('main.pp',MSource.value);
   args:=TStringList.Create;
   try
     Args.Add('-Tbrowser');
@@ -212,8 +202,8 @@ begin
     Args.Add('main.pp');
     ActivateTab('output');
     RFrame.Src:='run.html';
-    FCompiler.Run('','',Args,True);
-    Res:=FCompiler.ExitCode=0;
+    Compiler.Run('','',Args,True);
+    Res:=Compiler.ExitCode=0;
     ShowResult(Res);
     if Res then
       BRun.removeAttribute('disabled');

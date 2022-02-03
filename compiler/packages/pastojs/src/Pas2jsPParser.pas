@@ -18,12 +18,16 @@
 }
 unit Pas2jsPParser;
 
-{$i pas2js_defines.inc}
+{$IFDEF Pas2JS}
+{$I pas2js_defines.inc}
+{$ELSE}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
 uses
-  Classes, SysUtils, PParser, PScanner, PasTree, PasResolver, fppas2js,
+  SysUtils, PParser, PScanner, PasTree, PasResolver, fppas2js,
   Pas2jsLogger;
 
 const // Messages
@@ -41,7 +45,7 @@ type
     constructor Create(AScanner: TPascalScanner;
       AFileResolver: TBaseFileResolver; AEngine: TPasTreeContainer); reintroduce;
     procedure RaiseParserError(MsgNumber: integer;
-      Args: array of {$IFDEF Pas2JS}jsvalue{$ELSE}const{$ENDIF});
+      Args: array of const);
     procedure ParseSubModule(var Module: TPasModule);
     property Log: TPas2jsLogger read FLog write FLog;
   end;
@@ -61,7 +65,7 @@ type
   public
     function CreateElement(AClass: TPTreeElement; const AName: String;
       AParent: TPasElement; AVisibility: TPasMemberVisibility;
-      const ASrcPos: TPasSourcePos): TPasElement;
+      const ASrcPos: TPasSourcePos; TypeParams: TFPList = nil): TPasElement;
       overload; override;
     function FindModule(const aUnitname: String): TPasModule; override;
     function FindUnit(const AName, InFilename: String; NameExpr,
@@ -114,7 +118,7 @@ begin
 end;
 
 procedure TPas2jsPasParser.RaiseParserError(MsgNumber: integer;
-  Args: array of {$IFDEF Pas2JS}jsvalue{$ELSE}const{$ENDIF});
+  Args: array of const);
 var
   Msg: TPas2jsMessage;
 begin
@@ -143,11 +147,11 @@ end;
 
 function TPas2jsCompilerResolver.CreateElement(AClass: TPTreeElement;
   const AName: String; AParent: TPasElement; AVisibility: TPasMemberVisibility;
-  const ASrcPos: TPasSourcePos): TPasElement;
+  const ASrcPos: TPasSourcePos; TypeParams: TFPList): TPasElement;
 begin
-  if AClass = TFinalizationSection then
+  if AClass=TFinalizationSection then
     (CurrentParser as TPas2jsPasParser).RaiseParserError(nFinalizationNotSupported,[]);
-  Result := inherited CreateElement(AClass, AName, AParent, AVisibility, ASrcPos);
+  Result:=inherited CreateElement(AClass,AName,AParent,AVisibility,ASrcPos,TypeParams);
   if (Result is TPasModule) then
     OnCheckSrcName(Result);
 end;
@@ -155,7 +159,6 @@ end;
 function TPas2jsCompilerResolver.FindModule(const aUnitname: String): TPasModule;
 begin
   raise EPasResolve.Create('Call TPas2jsCompilerResolver.FindModule(name,expr,...) instead');
-  Result:=nil;
   if aUnitname='' then ;
 end;
 

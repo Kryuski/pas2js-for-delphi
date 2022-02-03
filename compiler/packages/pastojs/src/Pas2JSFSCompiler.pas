@@ -18,22 +18,33 @@
 }
 unit Pas2JSFSCompiler;
 
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
+
 interface
 
 uses
-  Classes, SysUtils,
+  SysUtils,
   PasUseAnalyzer,
+  FPPJsSrcMap,
   Pas2jsFileCache, Pas2jsCompiler,
   Pas2JSFS,
   Pas2jsFileUtils;
 
 Type
+
+  { TPas2jsFSCompiler }
+
   TPas2jsFSCompiler = Class(TPas2JSCompiler)
   private
     function GetFileCache: TPas2jsFilesCache;
     function OnMacroEnv(Sender: TObject; var Params: string; Lvl: integer): boolean;
+  Protected
+    function CreateJSMapper: TPas2JSMapper; override;
+    function OnJSMapperIsBinary(Sender: TObject; const aFilename: string): boolean; virtual;
   Public
-    Procedure SetWorkingDir(const aDir: string); override;
+    Procedure SetWorkingDir(const aDir: String); override;
     function CreateSetOfCompilerFiles(keyType: TKeyCompareType): TPasAnalyzerKeySet; override;
     Function CreateFS : TPas2JSFS; override;
     Procedure InitParamMacros; override;
@@ -43,21 +54,21 @@ Type
 implementation
 
 {$IFDEF PAS2JS}
-function Pas2jsCompilerFile_FilenameToKeyName(Item: Pointer): string;
+function Pas2jsCompilerFile_FilenameToKeyName(Item: Pointer): String;
 var
   aFile: TPas2jsCompilerFile absolute Item;
 begin
   Result:=FilenameToKey(aFile.PasFilename);
 end;
 
-function PtrUnitnameToKeyName(Item: Pointer): string;
+function PtrUnitnameToKeyName(Item: Pointer): String;
 var
   aUnitName: string absolute Item;
 begin
   Result:=LowerCase(aUnitName);
 end;
 
-function Pas2jsCompilerFile_UnitnameToKeyName(Item: Pointer): string;
+function Pas2jsCompilerFile_UnitnameToKeyName(Item: Pointer): String;
 var
   aFile: TPas2jsCompilerFile absolute Item;
 begin
@@ -75,10 +86,10 @@ end;
 function CompareFileAndCompilerFile_UnitFilename(Filename, Item: Pointer): integer;
 var
   aFile: TPas2JSCompilerFile absolute Item;
-  aFilename: string;
+  aFilename: String;
 begin
   aFilename := string(Filename);
-  Result := CompareFilenames(aFilename, aFile.UnitFilename);
+  Result:=CompareFilenames(aFilename,aFile.UnitFilename);
 end;
 
 function CompareCompilerFilesPasUnitname(Item1, Item2: Pointer): integer;
@@ -86,23 +97,23 @@ var
   File1: TPas2JSCompilerFile absolute Item1;
   File2: TPas2JSCompilerFile absolute Item2;
 begin
-  Result := CompareText(File1.PasUnitName, File2.PasUnitName);
+  Result:=CompareText(File1.PasUnitName,File2.PasUnitName);
 end;
 
 function CompareUnitnameAndCompilerFile_PasUnitName(TheUnitname, Item: Pointer): integer;
 var
   aFile: TPas2JSCompilerFile absolute Item;
-  anUnitname: string;
+  anUnitname: String;
 begin
   anUnitname := string(TheUnitname);
-  Result := CompareText(anUnitname, aFile.PasUnitName);
+  Result:=CompareText(anUnitname,aFile.PasUnitName);
 end;
 {$ENDIF}
 
 function TPas2jsFSCompiler.CreateFS: TPas2JSFS;
 
 Var
-  C :  TPas2jsFilesCache;
+  C: TPas2jsFilesCache;
 
 begin
   C:=TPas2jsFilesCache.Create(Log);
@@ -124,7 +135,22 @@ begin
   Result:=true;
 end;
 
-procedure TPas2jsFSCompiler.SetWorkingDir(const aDir: string);
+function TPas2jsFSCompiler.CreateJSMapper: TPas2JSMapper;
+begin
+  Result:=inherited CreateJSMapper;
+  Result.OnIsBinary:=OnJSMapperIsBinary;
+end;
+
+function TPas2jsFSCompiler.OnJSMapperIsBinary(Sender: TObject;
+  const aFilename: string): boolean;
+var
+  CurFile: TPas2jsCachedFile;
+begin
+  CurFile:=FileCache.FindFile(aFilename);
+  Result:=(CurFile=nil) or (not CurFile.AllowSrcMap);
+end;
+
+procedure TPas2jsFSCompiler.SetWorkingDir(const aDir: String);
 begin
   inherited SetWorkingDir(aDir);
   FileCache.BaseDirectory:=aDir;
@@ -136,16 +162,16 @@ begin
     kcFileName:
       Result:=TPasAnalyzerKeySet.Create(
           {$IFDEF Pas2js}
-          Pas2jsCompilerFile_FilenameToKeyName, PtrFilenameToKeyName
+          @Pas2jsCompilerFile_FilenameToKeyName,@PtrFilenameToKeyName
           {$ELSE}
-          CompareCompilerFiles_UnitFilename, CompareFileAndCompilerFile_UnitFilename
+          @CompareCompilerFiles_UnitFilename,@CompareFileAndCompilerFile_UnitFilename
           {$ENDIF});
     kcUnitName:
       Result:=TPasAnalyzerKeySet.Create(
         {$IFDEF Pas2js}
-        Pas2jsCompilerFile_UnitnameToKeyName, PtrUnitnameToKeyName
+        @Pas2jsCompilerFile_UnitnameToKeyName,@PtrUnitnameToKeyName
         {$ELSE}
-        CompareCompilerFilesPasUnitname, CompareUnitnameAndCompilerFile_PasUnitName
+        @CompareCompilerFilesPasUnitname,@CompareUnitnameAndCompilerFile_PasUnitName
         {$ENDIF});
   else
     Raise EPas2jsFileCache.CreateFmt('Internal Unknown key type: %d',[Ord(KeyType)]);
@@ -155,8 +181,7 @@ end;
 procedure TPas2jsFSCompiler.InitParamMacros;
 begin
   inherited InitParamMacros;
-  ParamMacros.AddFunction('Env', 'environment variable, e.g. $Env(HOME)',
-    OnMacroEnv, true);
+  ParamMacros.AddFunction('Env','environment variable, e.g. $Env(HOME)',OnMacroEnv,true);
 end;
 
 

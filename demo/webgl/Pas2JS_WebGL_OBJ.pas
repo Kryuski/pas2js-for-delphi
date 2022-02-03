@@ -4,8 +4,8 @@ uses
 	BrowserConsole, Web, WebGL, JS, Math;
 
 var
-	gl: TJSWebGLRenderingContext;
-	shader: TShader;
+  gl: TJSWebGLRenderingContext;
+  shader: TShader;
   projTransform: TMat4;
   viewTransform: TMat4;
   modelTransform: TMat4;

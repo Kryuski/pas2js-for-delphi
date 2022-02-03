@@ -11,7 +11,7 @@ var
   viewTransform: TMat4;
   modelTransform: TMat4;
 
- var
+var
   debugConsole: TJSElement;
   canvasAnimationHandler: integer = 0;
 

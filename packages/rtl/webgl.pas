@@ -6,7 +6,7 @@ Unit webgl;
 
 interface
 
-uses SysUtils, JS,web;
+uses JS, Web;
 
 {
   Automatically generated file by TWebIDLToPas on 2018-06-23 15:31:57

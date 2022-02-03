@@ -1,0 +1,41 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#democontainer {
+  padding: 10px;
+  background-color: #E0ECFF;
+}
+
+.propGridTable {
+    border: solid 1px #95B8E7;
+    border-spacing: 0;
+}
+
+.propGridGroupRow {
+    background-color: #E0ECFF;
+    font-weight: bold;
+}
+
+.propGridGroupRow.pgCollapsible {
+  cursor: pointer;
+}
+
+.propGridGroupCell {
+    padding: 5px;
+}
+
+.propGridRow{
+}
+
+.propGridDataCell {
+    border: dotted 1px #ccc;
+    padding: 5px;
+}
+
+.propGridNameCell {
+    border: dotted 1px #ccc;
+    padding: 5px;
+}

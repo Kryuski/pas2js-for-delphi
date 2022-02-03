@@ -128,6 +128,8 @@ Resourcestring
   SatEOFInternalOnly          = 'loAtEOF is for internal use only.';
   SErrInsertingSameRecordtwice = 'Attempt to insert the same record twice.';
   SErrDoApplyUpdatesNeedsProxy = 'Cannot apply updates without Data proxy';
+  SNestedDataSetClass = 'Nested dataset must inherit from %s';
+  SCircularDataLink = 'Circular datalinks are not allowed';
 
 Implementation
 

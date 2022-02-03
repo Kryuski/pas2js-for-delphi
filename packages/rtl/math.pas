@@ -57,13 +57,17 @@ function randg(mean,stddev : float) : float;
 function RandomRange(const aFrom, aTo: Integer): Integer;
 function RandomRange(const aFrom, aTo: NativeLargeInt): NativeLargeInt;
 
+Type
+  TValueSign = -1..1;
+
 const
   NegativeValue = -1;
   ZeroValue = 0;
   PositiveValue = 1;
 
-function Sign(const AValue: Integer): Integer; external name 'Math.sign'; overload;
-function Sign(const AValue: Double): Double; external name 'Math.sign'; overload;
+//function Sign(const AValue: Integer): TValueSign; external name 'Math.sign'; overload;
+function Sign(const AValue: NativeInt): TValueSign; external name 'Math.sign'; overload; //!![Kryvich]
+function Sign(const AValue: Double): TValueSign; external name 'Math.sign'; overload;
 
 function IsZero(const d: Double; Epsilon: Double): Boolean; overload;
 function IsZero(const d: Double): Boolean; overload;
@@ -85,6 +89,7 @@ function ArcSin(const A : Double): Double; external name 'Math.asin';
 function ArcSinH(const A : Double): Double; external name 'Math.asinh'; // not on IE
 function ArcTanH(const A: Double): Double; external name 'Math.atanh'; // not on IE
 function CosH(const A: Double): Double; external name 'Math.cosh'; // not on IE
+procedure SinCos(const A: Double; var B: Double; var C: Double);
 function ExpM1(const A: Double): Double; external name 'Math.expm1'; // not on IE
 function FRound(const A: Double): Double; overload; external name 'Math.fround'; // not on IE
 function FTrunc(const A: Double): double; overload; external name 'Math.trunc'; // not on IE
@@ -331,6 +336,12 @@ begin
         Inc(Exponent);
         end;
   Mantissa:=X;
+end;
+
+procedure SinCos(const A: Double; var B: Double; var C: Double);
+begin
+  B:=Sin(A);
+  C:=Cos(A);
 end;
 
 function LogN(const A, Base: Double): Double; 

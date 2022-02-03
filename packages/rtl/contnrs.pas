@@ -383,7 +383,7 @@ Type
     Function AddItem(ABucket: Integer; AItem, AData: JSValue): JSValue; virtual;
     Function BucketFor(AItem: JSValue): Integer; virtual; abstract;
     Function DeleteItem(ABucket: Integer; AIndex: Integer): JSValue; virtual;
-    Procedure Error(Msg : String; Args : Array of JSValue);
+    Procedure Error(Msg : String; Args : Array of Const);
     Function FindItem(AItem: JSValue; out ABucket, AIndex: Integer): Boolean; virtual;
     property Buckets: TBucketArray read FBuckets;
     property BucketCount: Integer read GetBucketCount write SetBucketCount;
@@ -1693,7 +1693,7 @@ begin
   Dec(FBuckets[ABucket].Count);
 end;
 
-Procedure TCustomBucketList.Error(Msg: String; Args: array of JSValue);
+Procedure TCustomBucketList.Error(Msg: String; Args: array of Const);
 begin
   raise ElistError.CreateFmt(Msg,Args);
 end;
@@ -1819,7 +1819,7 @@ end;
 Function TBucketList.BucketFor(AItem: JSValue): Integer;
 begin
   // JSValues on average have a granularity of 4
-  Result:=(PtrInt(AItem) shr 2) and FBucketMask;
+  Result:=(longword(AItem) shr 2) and FBucketMask;
 end;
 
 constructor TBucketList.Create(ABuckets: TBucketListSizes);

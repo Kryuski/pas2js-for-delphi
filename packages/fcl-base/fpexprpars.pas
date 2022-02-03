@@ -874,7 +874,7 @@ begin
   Raise EExprParser.Create(Msg);
 end;
 
-Procedure RaiseParserError(Fmt : String; Args : Array of JSValue);
+Procedure RaiseParserError(Fmt : String; Args : Array of Const);
 begin
   Raise EExprParser.CreateFmt(Fmt,Args);
 end;
@@ -1460,7 +1460,7 @@ begin
     Result := DoNumber(nkBinary)
   else if IsDigit(C, nkDecimal) then
     Result:=DoNumber(nkDecimal)
-  else if IsAlpha(C) or (C='"') then
+  else if IsAlpha(C) or (C='"') or (C='_') then
     Result:=DoIdentifier
   else
     ScanError(Format(SErrUnknownCharacter,[FPos,C]))  ;
@@ -3996,18 +3996,21 @@ end;
 
 Function BuiltInDate(Const Args : TExprParameterArray) : TFPExpressionResult;
 begin
+  if Args=nil then ;
   Result.ResultType:=rtDateTime;
   Result.resValue:=Date;
 end;
 
 Function BuiltInTime(Const Args : TExprParameterArray) : TFPExpressionResult;
 begin
+  if Args=nil then ;
   Result.ResultType:=rtDateTime;
   Result.resValue:=Time;
 end;
 
 Function BuiltInNow(Const Args : TExprParameterArray) : TFPExpressionResult;
 begin
+  if Args=nil then ;
   Result.ResultType:=rtDateTime;
   Result.resValue:=Now;
 end;

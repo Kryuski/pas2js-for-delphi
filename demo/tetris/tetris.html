@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Tetris using pas2js</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="tetris.css">
+    <script src="tetris.js"></script>
+</head>
+<body>
+    <div id="tetris">
+        <div id="gameboard">
+          <canvas id="my-canvas"></canvas>
+        </div>
+        <div id="info">
+          <div id="logo">
+            <img id="logo-img" src="tetrislogo.png" height="54"/>
+          </div>
+          <div id="score-envelope" class="envelope">
+            <div id="score-label" class="label">Score:</div>
+            <div id="score">0</div>
+          </div>
+          <div id="level-envelope" class="envelope">
+            <div id="level-label" class="label">Level:</div>
+            <div id="level">1</div>
+          </div>
+          <div id="status-envelope" class="envelope">
+            <div id="status-label" class="label">Game status:</div>
+            <div id="status">Playing</div>
+          </div>
+          <div id="controls-envelope" class="envelope">
+            <div id="controls-label" class="label">Controls:</div>
+            <div id="controls">
+              <div class="one-btn">
+                <button class="button" id="control-rotate"><i class="fas fa-sync"></i>&nbsp; &nbsp;Arrow up: Rotate</button>
+              </div>
+              <div class="two-btn">
+                <button class="button" id="control-left"><i class="fas fa-arrow-left"></i>&nbsp;&nbsp;Move Left</button>
+                <button class="button" id="control-right">Move Right&nbsp; &nbsp;<i class="fas fa-arrow-right"></i></button>
+              </div>
+              <div class="one-btn">
+                <button class="button" id="control-down"><i class="fas fa-arrow-down"></i>&nbsp; &nbsp;Move Down</button>
+              </div>
+              <div class="one-btn">
+                <button class="button" id="control-drop"><i class="fas fa-level-down-alt"></i>&nbsp; &nbsp;Space bar: Drop block</button>
+              </div>
+            </div>
+          </div>
+          <button id="btn-reset">Restart</button>
+        </div>
+    </div>
+    <div class="source">
+        Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> &nbsp;&nbsp;Sources: &nbsp; <a target="new" href="tetris.lpr">Program</a> &nbsp; <a target="new" href="utetris.pp">unit</a>.
+    </div>
+    <script>
+      window.addEventListener("load", rtl.run);
+    </script>
+</body>
+</html>

@@ -17,7 +17,13 @@
   **********************************************************************}
 unit JSSrcMap;
 
-{$I pas2js_defines.inc}
+{$IFDEF Pas2JS}
+  {$ifdef nodejs}
+    {$define HasFS}
+  {$endif}
+{$ELSE}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
@@ -25,16 +31,16 @@ uses
   {$ifdef pas2js}
   JS,
     {$ifdef nodejs}
-    NodeJSFS,
+    Node.FS,
     {$endif}
   {$else}
   contnrs,
   {$endif}
-  Classes, SysUtils, fpjson,
+  Classes, SysUtils, fpjson
   {$ifdef HasJsonParser}
-  jsonparser, jsonscanner,
+  , jsonparser, jsonscanner
   {$endif}
-  Generics.Collections;
+  {$ifndef pas2js}, Generics.Collections{$endif};
 
 const
   Base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -71,10 +77,11 @@ type
   TSourceMapOptions = set of TSourceMapOption;
 const
   DefaultSourceMapOptions = [smoAddMonotonous,smoSafetyHeader];
-
 type
+  {$ifndef pas2js}
   TFPList = TList;
   TFPHashList = TDictionary<string, Integer>;
+  {$endif}
 
   { TSourceMap }
 
@@ -156,9 +163,7 @@ type
     property Sorted: boolean read FSorted write SetSorted; // Segments are sorted for GeneratedLine/Col
   end;
 
-function DefaultSrcMapHeader: string;
-
-function EncodeBase64VLQ(i: NativeInt): string; // base64 Variable Length Quantity
+function EncodeBase64VLQ(i: NativeInt): String; // base64 Variable Length Quantity
 function DecodeBase64VLQ(const s: string): NativeInt; overload; // base64 Variable Length Quantity
 function DecodeBase64VLQ(
   {$ifdef UsePChar}var p: PChar{$else}const s: string; var p: integer{$endif}): NativeInt; overload; // base64 Variable Length Quantity
@@ -171,12 +176,14 @@ procedure DebugSrcMapLine(GeneratedLine: integer; var GeneratedLineSrc: String;
 
 implementation
 
+{$IFNDEF Pas2JS}
 uses
   FPCTypes, StrUtils;
+{$ENDIF}
 
 function DefaultSrcMapHeader: string;
 begin
-  Result:=')]}''' + LineEnding;
+  Result:=')]}'''+LineEnding;
 end;
 
 function EncodeBase64VLQ(i: NativeInt): String;
@@ -215,10 +222,10 @@ begin
     i:=i shl 1;
     end;
   repeat
-    digits:=i and b00011111;
+    digits:=i and $1F; //%11111;  !![Kryvich] Delphi under 11.0 compatibility
     i:=i shr 5;
     if i>0 then
-      inc(digits, b00100000); // need another char -> set continuation bit
+      inc(digits, $20); //%100000); // need another char -> set continuation bit
     Result:=Result+Base64Chars[digits+1];
   until i=0;
 end;
@@ -295,9 +302,9 @@ begin
     inc(run);
     if Shift>MaxShift then
       RaiseInvalid;
-    inc(Result,(digit and B00011111) shl Shift);
+    inc(Result,(digit and $1F{%00011111}) shl Shift);
     inc(Shift,5);
-  until digit<B00100000;
+  until digit<$20{%00100000};
   if (Result and 1)>0 then
     Result:=-(Result shr 1)
   else
@@ -343,47 +350,58 @@ begin
   LastSrcFile:=0;
   LastSrcLine:=-1;
   i:=SrcMap.IndexOfSegmentAt(GeneratedLine,GeneratedCol);
-  if i<0 then begin
+  if i<0 then
+    begin
     // no segment at line start
     i:=0;
     if (i=SrcMap.Count) then
       aSeg:=nil
     else
       aSeg:=SrcMap[i];
-    if (aSeg=nil) or (aSeg.GeneratedLine>GeneratedLine) then begin
+    if (aSeg=nil) or (aSeg.GeneratedLine>GeneratedLine) then
+      begin
       // no segment in line
-      for icol := 1 to length(JS) do Origins := Origins + '?';
+      for icol:=1 to length(JS) do Origins:=Origins+'?';
       GeneratedLineSrc:=JS;
       InfoLine:=Origins;
       exit;
-    end else begin
+      end
+    else
+      begin
       // show "?" til start of first segment
-      for icol := 1 to aSeg.GeneratedColumn do Origins := Origins + '?';
-    end;
-  end else begin
+      for icol:=1 to aSeg.GeneratedColumn do Origins:=Origins+'?';
+      end;
+    end
+  else
+    begin
     aSeg:=SrcMap[i];
     if i>0 then
       LastSrcFile:=SrcMap[i-1].SrcFileIndex;
-  end;
+    end;
+
   repeat
     Addition:='';
-    if (aSeg.GeneratedLine=GeneratedLine) and (aSeg.GeneratedColumn=GeneratedCol) then begin
+    if (aSeg.GeneratedLine=GeneratedLine) and (aSeg.GeneratedColumn=GeneratedCol) then
+      begin
       // segment starts here  -> write "|line,col"
       Addition:='|';
-      if LastSrcFile<>aSeg.SrcFileIndex then begin
+      if LastSrcFile<>aSeg.SrcFileIndex then
+        begin
         Addition:=Addition+{$ifdef HasFS}ExtractFileName{$endif}(SrcMap.SourceFiles[aSeg.SrcFileIndex])+',';
         LastSrcFile:=aSeg.SrcFileIndex;
-      end;
-      if LastSrcLine<>aSeg.SrcLine then begin
+        end;
+      if LastSrcLine<>aSeg.SrcLine then
+        begin
         Addition:=Addition+IntToStr(aSeg.SrcLine)+',';
         LastSrcLine:=aSeg.SrcLine;
-      end;
+        end;
       Addition:=Addition+IntToStr(aSeg.SrcColumn);
       Origins:=Origins+Addition;
-    end;
+      end;
     inc(i);
     // skip segments at same GeneratedLine/Col
-    while (i<SrcMap.Count) do begin
+    while (i<SrcMap.Count) do
+      begin
       aSeg:=SrcMap[i];
       if (aSeg.GeneratedLine=GeneratedLine) and (aSeg.GeneratedColumn=GeneratedCol) then
         inc(i)
@@ -394,14 +412,15 @@ begin
       aSeg:=nil
     else
       aSeg:=SrcMap[i];
-    if (aSeg=nil) or (aSeg.GeneratedLine>GeneratedLine) then begin
+    if (aSeg=nil) or (aSeg.GeneratedLine>GeneratedLine) then
+      begin
       // in the last segment
       while length(Origins)<length(JS) do
         Origins:=Origins+'.';
       GeneratedLineSrc:=JS;
       InfoLine:=Origins;
       exit;
-    end;
+      end;
     // there is another segment in this line
     // -> align JS and Origins
     GenColStep:=aSeg.GeneratedColumn-GeneratedCol;
@@ -412,10 +431,11 @@ begin
       //  Origins:  |12,3|12,5|12,7
       Insert(StringOfChar('~',-diff),JS,length(Origins)-length(Addition)+1+GenColStep)
     else
-      while diff>0 do begin
+      while diff>0 do
+        begin
         Origins:=Origins+'.';
         dec(diff);
-      end;
+        end;
     GeneratedCol:=aSeg.GeneratedColumn;
   until false;
 end;
@@ -461,7 +481,8 @@ begin
   {$endif}
 end;
 
-function TSourceMap.TStringToIndex.FindValue(const Value: string): integer;
+function TSourceMap.TStringToIndex.FindValue(const Value: String
+  ): integer;
 begin
   {$ifdef pas2js}
   if FItems.hasOwnProperty('%'+Value) then
@@ -716,7 +737,7 @@ begin
       if LastGeneratedLine<Item.GeneratedLine then
         begin
         // new line
-        //LastGeneratedColumn:=0;
+        LastGeneratedColumn:=0; // column is reset every generated line
         for j:=LastGeneratedLine+1 to Item.GeneratedLine do
           begin
           AddChar(';');
@@ -773,7 +794,7 @@ begin
     {$ifdef pas2js}
     Result:=buf.join('');
     {$else}
-    SetLength(Result,buf.Size);
+    SetLength(Result,buf.Size div SizeOf(Char));
     if Result<>'' then
       Move(buf.Memory^,Result[1],buf.Size);
     {$endif}
@@ -851,6 +872,7 @@ begin
       begin
       // next line
       inc(GeneratedLine);
+      LastColumn:=0;
       inc(p);
       end;
     else
@@ -1092,7 +1114,7 @@ end;
 {$ifdef HasStreams}
 procedure TSourceMap.LoadFromStream(aStream: TStream);
 var
-  s: string;
+  s: UTF8String;
   P: TJSONParser;
   Data: TJSONData;
 begin
@@ -1100,7 +1122,9 @@ begin
   SetLength(s,aStream.Size-aStream.Position);
   if s<>'' then
     aStream.Read(s[1],length(s));
-  if LeftStr(s,3)=')]}' then
+  if Copy(s,1,4)=UTF8String(')]}''') then
+    Delete(s,1,4)
+  else if Copy(s,1,3)=UTF8String(')]}') then
     Delete(s,1,3);
   P:=TJSONParser.Create(s,[joUTF8]);
   try
@@ -1178,7 +1202,8 @@ begin
   r:=Count-1;
   aSeg:=nil;
   m := -1;
-  while l<=r do begin
+  while l<=r do
+    begin
     m:=(l+r) div 2;
     aSeg:=Items[m];
     if aSeg.GeneratedLine<GeneratedLine then
@@ -1189,27 +1214,28 @@ begin
       l:=m+1
     else if aSeg.GeneratedColumn>GeneratedCol then
       r:=m-1
-    else begin
+    else
+      begin
       // exact match found
       Result:=m;
       // -> return the leftmost exact match
-      while Result>0 do begin
+      while Result>0 do
+        begin
         aSeg:=Items[Result-1];
         if (aSeg.GeneratedLine<>GeneratedLine)
             or (aSeg.GeneratedColumn<>GeneratedCol) then
           exit;
         dec(Result);
-      end;
+        end;
       exit;
+      end;
     end;
-  end;
   // no exact match found
   if aSeg=nil then
     exit(-1);
   // return the next lower. Note: there may be no such segment
   if (aSeg.GeneratedLine>GeneratedLine)
-    or ((aSeg.GeneratedLine=GeneratedLine) and (aSeg.GeneratedColumn>GeneratedCol))
-  then
+      or ((aSeg.GeneratedLine=GeneratedLine) and (aSeg.GeneratedColumn>GeneratedCol)) then
     dec(m);
   Result:=m;
 end;

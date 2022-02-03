@@ -18,7 +18,11 @@
 }
 unit Pas2jsFileUtils;
 
-{$i pas2js_defines.inc}
+{$IFDEF Pas2JS}
+{$I pas2js_defines.inc}
+{$ELSE}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
@@ -28,9 +32,9 @@ uses
   BaseUnix,
   {$ENDIF}
   {$IFDEF Pas2JS}
-  JS, NodeJS, NodeJSFS,
+  JS, NodeJS, Node.FS,
   {$ENDIF}
-  SysUtils, Classes;
+  SysUtils, Classes, Pas2JSUtils;
 
 function FilenameIsAbsolute(const aFilename: string):boolean;
 function FilenameIsWinAbsolute(const aFilename: string):boolean;
@@ -288,7 +292,7 @@ function TryCreateRelativePath(const Dest: String; const Source: String;
 Type
   TDirArr =  TStringArray;
 
-  function SplitDirs(Dir: String; out Dirs: TDirArr): integer;
+  function SplitDirs(Dir: String; out Dirs: TDirArr): Integer;
   var
     Start, Stop, Len: Integer;
     S: String;
@@ -857,18 +861,18 @@ end;
 function GetDefaultTextEncoding: string;
 begin
   if EncodingValid then begin
-    Result := DefaultTextEncoding;
+    Result:=DefaultTextEncoding;
     exit;
   end;
 
   {$IFDEF Pas2js}
-  Result := EncodingUTF8;
+  Result:=EncodingUTF8;
   {$ELSE}
     {$IFDEF Windows}
-    Result := GetWindowsEncoding;
+    Result:=GetWindowsEncoding;
     {$ELSE}
       {$IFDEF Darwin}
-      Result := EncodingUTF8;
+      Result:=EncodingUTF8;
       {$ELSE}
       // unix
       Lang := GetEnvironmentVariable('LC_ALL');
@@ -881,9 +885,9 @@ begin
       {$ENDIF}
     {$ENDIF}
   {$ENDIF}
-  Result := NormalizeEncoding(Result);
-  DefaultTextEncoding := Result;
-  EncodingValid := true;
+  Result:=NormalizeEncoding(Result);
+  DefaultTextEncoding:=Result;
+  EncodingValid:=true;
 end;
 
 function NormalizeEncoding(const Encoding: string): string;
@@ -925,39 +929,39 @@ end;
 function UTF8CharacterStrictLength(const P: PAnsiChar): Integer;
 begin
   if p=nil then exit(0);
-  if ord(p^)<b10000000 then
+  if ord(p^)<$80{%10000000} then
   begin
     // regular single byte character
     exit(1);
   end
-  else if ord(p^)<b11000000 then
+  else if ord(p^)<$C0{%11000000} then
   begin
     // invalid single byte character
     exit(0);
   end
-  else if ((ord(p^) and b11100000) = b11000000) then
+  else if ((ord(p^) and $E0{%11100000}) = $C0{%11000000}) then
   begin
     // should be 2 byte character
-    if (ord(p[1]) and b11000000) = b10000000 then
+    if (ord(p[1]) and $C0{%11000000}) = $80{%10000000} then
       exit(2)
     else
       exit(0);
   end
-  else if ((ord(p^) and b11110000) = b11100000) then
+  else if ((ord(p^) and $F0{%11110000}) = $E0{%11100000}) then
   begin
     // should be 3 byte character
-    if ((ord(p[1]) and b11000000) = b10000000)
-    and ((ord(p[2]) and b11000000) = b10000000) then
+    if ((ord(p[1]) and $C0{%11000000}) = $80{%10000000})
+    and ((ord(p[2]) and $C0{%11000000}) = $80{%10000000}) then
       exit(3)
     else
       exit(0);
   end
-  else if ((ord(p^) and b11111000) = b11110000) then
+  else if ((ord(p^) and $F8{%11111000}) = $F0{%11110000}) then
   begin
     // should be 4 byte character
-    if ((ord(p[1]) and b11000000) = b10000000)
-    and ((ord(p[2]) and b11000000) = b10000000)
-    and ((ord(p[3]) and b11000000) = b10000000) then
+    if ((ord(p[1]) and $C0{%11000000}) = $80{%10000000})
+    and ((ord(p[2]) and $C0{%11000000}) = $80{%10000000})
+    and ((ord(p[3]) and $C0{%11000000}) = $80{%10000000}) then
       exit(4)
     else
       exit(0);

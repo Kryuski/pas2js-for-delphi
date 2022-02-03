@@ -12,19 +12,10 @@ Type
     top,left : integer;
   end;
 
-  { // Sections/categories in the API documentation site to be checked/added.
-    Todo : Deferred
-    Todo : Effects
-    Todo : events
-    Todo : Forms
-    Todo : Internals
-    Todo : Manipulation
-    Todo : Properties
-  }
   TJQuery = class;
 
   TCallback = Procedure (args : JSValue);
-  TCallbackEvent = Procedure (args : JSValue);
+  TCallbackEvent = Procedure (args : JSValue) of object;
 
   TCallbacks = class external name 'Callbacks'
   Public
@@ -173,8 +164,9 @@ Type
   TJQueryAjaxLoadHandler = Reference to function (aResponseText,aStatus : String; aXHR : TJQXHR) : Boolean;
   TJQueryAjaxScriptHandler = Reference to function (aScript,aStatus : String; aXHR : TJQXHR) : Boolean;
   TJQueryAjaxHandler = Reference to procedure;
+  TPrependCallback = reference to Function(elementOfArray : NativeInt; Html : String) : JSValue;
 
-  TJQuery = class external name 'JQuery' (TJSObject)
+  TJQuery = class external name 'jQuery' (TJSObject)
   private
     FCSSHooks: TJSObject; external name 'cssHooks';
     FCSSNumber: TJSObject; external name 'cssNumber';
@@ -325,6 +317,19 @@ Type
     function offSet(const aOffset : TJQueryTopLeft): TJQuery;overload;
     function offSet(aHandler : TJQueryOffsetHandler): TJQuery;overload;
     Function offsetParent : TJQuery;
+    
+    Function off : TJQuery; overload;
+    Function off(events : String) : TJQuery; overload;
+    Function off(events : String; aHandler : TJSEventHandler) : TJQuery; overload;
+    Function off(events : String; selector : String; aHandler : TJSEventHandler) : TJQuery; overload;
+    Function off(events : String; selector : String; data : JSValue; aHandler : TJSEventHandler) : TJQuery; overload;
+    
+    Function On_(events : String; aHandler : TJSEventHandler) : TJQuery; external name 'on'; overload;
+    Function On_(events : String; selector : String; aHandler : TJSEventHandler) : TJQuery; external name 'on'; overload;
+    Function On_(events : String; selector : String; data : JSValue; aHandler : TJSEventHandler) : TJQuery; external name 'on'; overload;
+    Function On_(events : TJSObject; selector : String; data : JSValue) : TJQuery; external name 'on'; overload;
+    Function On_(events : TJSObject; data : JSValue) : TJQuery; overload;
+    Function On_(events : TJSObject) : TJQuery; overload;
     function outerHeight(IncludeMargin : Boolean): Integer;overload;
     function outerHeight: Integer;overload;
     function outerHeight(aValue: Integer) : TJQuery;overload;
@@ -363,6 +368,9 @@ Type
     class function post(url,Data : String; success : TJQueryAjaxSuccessHandler; aDataType : string) : TJQXHR;overload;
     class function post(aSettings : TJSAjaxSettings) : TJQXHR; overload;
     class function post(aSettings : TJSObject) : TJQXHR; overload;
+    function prepend(content : String) : TJQuery; overload;
+    function prepend(Content1,Content2 : String) : TJQuery; overload;
+    function prepend(aHandler : TPrependCallback) : TJQuery; overload;
     Function prev : TJQuery;overload;
     Function prev(Const aSelector : String) : TJQuery;overload;
     Function prevAll : TJQuery;overload;
@@ -387,6 +395,8 @@ Type
     function queue(anArray : TJSArray) : TJQuery;overload;
     function queue(aQueueName : string; anArray : TJSarray) : TJQuery;overload;
     function queue(aQueueName : string; aHandler : TJQueryAddQueueHandler) : TJQuery;overload;
+    function remove(Const Selector : string) : TJQuery; overload;
+    function remove() : TJQuery;overload;
     function removeAttr(Const attributeName : string) : TJQuery;
     function removeClass(Const aClass : String) : TJQuery;overload;
     function removeClass(Const aClassFunction : TJQueryAddClassHandler) : TJQuery;overload;
@@ -439,7 +449,7 @@ Type
 Function JQuery(Const aSelector :  String) : TJQuery; external name 'jQuery';
 Function JQuery(Const aSelector :  String; Context : TJSElement) : TJQuery; external name 'jQuery';
 Function JQuery(Const aElement : TJSElement) : TJQuery; external name 'jQuery';
-Function JQuery(Const aElement : Array of TJSElement) : TJQuery; external name 'JQuery';
+Function JQuery(Const aElement : Array of TJSElement) : TJQuery; external name 'jQuery';
 Function JQuery(Const aElement : TJSObject) : TJQuery; external name 'jQuery';
 Function JQuery(Const aQuery : TJQuery) : TJQuery; external name 'jQuery';
 Function JQuery() : TJQuery; external name 'jQuery';

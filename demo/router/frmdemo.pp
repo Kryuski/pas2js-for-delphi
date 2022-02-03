@@ -5,7 +5,7 @@ unit frmdemo;
 interface
 
 uses
-  sysutils, classes, js, web, webrouter;
+  sysutils, classes, web, webrouter;
 
 Type
 
@@ -34,7 +34,7 @@ end;
 
 function TDemoForm.ButtonClick(Event: TJSMouseEvent): boolean;
 begin
-  Router.Push(Event.target['data']);
+  Router.Push(String(TJSHTMLElement(Event.target).Dataset['link']));
 end;
 
 constructor TDemoForm.Create(aFormNo: Integer; UseSlash: Boolean);
@@ -74,7 +74,7 @@ begin
       Link:=TJSHTMLElement(document.createElement('a'));
       link['href']:=MakeLink(i,True);
       link.innerHTML:='Go to form <span class="badge">'+IntToStr(i)+'</span>';
-      if (Router.HistoryKind=hkHTML5) then
+      if (Router.HistoryKind<>hkHTML5) then
         Link.onclick:=@DoLinkClick;
       adiv.appendChild(link);
       end;
@@ -85,7 +85,7 @@ begin
       Button:=TJSHTMLElement(document.createElement('button'));
       Button['class']:='btn btn-default';
       Button.InnerHTML:='Go to form '+IntToStr(i);
-      Button['data']:=MakeLink(i,false);
+      Button.Dataset['link']:=MakeLink(i,false);
       Button.onclick:=@ButtonClick;
       PanelContent.appendChild(Button);
       end;
@@ -94,8 +94,18 @@ begin
 end;
 
 function TDemoForm.DoLinkClick(aEvent: TJSMouseEvent): boolean;
+
+Var
+  URL : String;
+  p: Integer;
+
 begin
-  Router.Push(aEvent.target['href']);
+  URL:=String(aEvent.target['href']);
+  P:=Pos('#',URL);
+  URL:=Copy(URL,P+1,Length(URL)-P);
+  Writeln('URL :',URL);
+  Router.Push(URL);
+  aEvent.preventDefault;
 end;
 
 end.

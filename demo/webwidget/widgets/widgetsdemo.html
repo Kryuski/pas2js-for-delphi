@@ -1,0 +1,62 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Web Widgets Demo</title>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/foundicons/3.0.0/foundation-icons.min.css"/>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/widgetsdemo.css"/>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+  <script src="webwidgetsdemo.js"></script>
+  <script src="countrycodes.js"></script>
+</head>
+<body>
+  <!-- navbar -->
+  <nav class="navbar navbar-dark bg-primary sticky-top">
+    <a class="navbar-brand" href="#">
+      <!-- <img src="images/freePascal.jpeg" height="30" class="d-inline-block align-top mr-2 " alt="" loading="lazy"> -->
+      <span class="font-weight-bold">Web Widgets Demo</span>
+    </a>
+    <img src="images/freePascal.jpeg" height="30" class="ml-auto d-inline-block align-top mr-2 " alt="" loading="lazy">
+  </nav>
+  <!-- end of navbar -->
+
+  <div class="container-fluid" />
+    <!-- toast -->
+    <div id="toastarea" aria-live="polite" aria-atomic="true" style="position: relative; top:0; right: 0; z-index: 99;">
+     <div id="toastarea-stack" style="position: absolute; top: 0; right: 0; z-index: 99;" data-ww-element-content="ww-1"  >
+     </div>
+    </div>
+    <!-- end of toast -->
+    <div class="d-flex flex-column" style="height: 88vh;">
+      <div class="flex-fill mt-1 row h-100 overflow-auto" >
+        <!-- demo -->
+        <div id="demolist" class="col-auto h-100 overflow-auto"></div>
+        <div id="democontainer" class="col h-100 overflow-auto d-flex justify-content-center py-2"></div>
+        <div id="propertygrid" class="col-auto h-100 overflow-auto"></div>
+        <!-- end of demo -->
+      </div>
+      <div class="mt-2 border bg-light" style="max-height: 30vh;">
+        <!-- console -->
+        <div class="form-check ml-2 my-2">
+          <label class="form-check-label">
+            <input type="checkbox" id="showconsole" class="form-check-input" checked>Show pas2js console
+          </label>
+        </div>
+        <div id="pasjsconsole" class="democonsole h-100 overflow-auto mb-2"></div>
+        <!-- end of console -->
+      </div>
+    </div>
+  </div>
+   <script>
+    window.addEventListener("load", rtl.run);
+  </script>
+</body>
+</html>

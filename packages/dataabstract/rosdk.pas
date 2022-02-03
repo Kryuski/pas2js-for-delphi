@@ -77,10 +77,16 @@ Type
     Procedure writeTo(aMessage : TROMessage);
   end;
 
+  { TROEnumType }
+
   TROEnumType = class external name 'RemObjects.SDK.ROEnumType' (TROComplexType)
+  private
+    FEnumValues: TStringDynArray;
   Public
+    value : string;
     Procedure fromObject(aObject : TJSObject); overload;
     Function toObject(aStoreType : Boolean) : TJSObject;overload;
+    property enumValues : TStringDynArray read FEnumValues;
   end;
 
   TROStructType = class external name 'RemObjects.SDK.ROStructType' (TROComplexType)
@@ -136,6 +142,7 @@ Type
     function read (const aName,aType : String) : TROValue;
     Procedure write (const aName,aType : String; aValue : JSValue);
     Property ClientID : String Read getClientID Write setClientID;
+    Property ErrorMessage : String Read getErrorMessage;
   end;
 
   TROJSONMessage = class external name 'RemObjects.SDK.JSONMessage' (TROMessage)
@@ -205,7 +212,18 @@ Type
     function encodeInt(data : NativeInt; bits : Integer; Signed : boolean) : String;
   end;
 
+Function ExtractErrorMsg(jsError : TJSError) : String;
+
 implementation
+
+Function ExtractErrorMsg(jsError : TJSError) : String;
+begin
+  if Assigned(jsError) and isString(jsError.message) then
+    Result:=jsError.message
+  else
+    Result:='Unknown error'
+end;
+
 
 end.
 

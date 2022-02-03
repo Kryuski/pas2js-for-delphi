@@ -1,0 +1,81 @@
+<html>
+  <head>
+    <title>REST Bridge</title>
+    <meta charset="utf-8"/>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"> </script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="restbridgeclient.js"></script>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-12">
+          <div id="urlform" role="form" class="form-inline">
+            <div class="input-group col-md-6">
+              <label class="input-group-text" for="edtUrl">
+                Base URL
+              </label>
+              <input type="text" class="form-control" id="edtURL" value="http://localhost:8080/"/>
+            </div>
+            <div class="input-group col-md-2">
+              <label class="input-group-text" for="edtUserName">
+                UserName
+              </label>
+              <input type="text" class="form-control" id="edtUserName" value="Michael"/>
+            </div>
+            <div class="input-group col-md-2">
+              <label class="input-group-text" for="exampleInputPassword1">
+                Password
+              </label>
+              <input type="password" class="form-control" id="edtPassword" value="secret" />
+            </div>
+            <button id="btnResources" class="btn col-md-2">
+              Get Resource List
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <form id="show" role="form" class="form-inline">
+            <div class="input-group col-md-3">
+              <label class="input-group-text " for="selResource">
+                Resource
+              </label>
+              <select class="custom-select col-md-auto" id="selResource"  >
+                <option selected>Choose...</option>
+                <option value="1">One</option>
+                <option value="2">Two</option>
+                <option value="3">Three</option>
+              </select>
+            </div>
+            <div class="input-group col-md-7">
+              <label class="input-group-text " for="edtOptions">
+                Additional options:
+              </label>
+              <input type="text" class="form-control" id="edtOptions" />
+            </div>
+            <button id="btnFetch" type="submit" class="btn btn-primary col-md-2">
+              Get data
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <table id="resulttable" class="table table-sm table-striped table-hover">
+          <thead id="datahead"></thead>
+          <tbody id="databody"></tbody>
+        </table>
+      </div>
+    </div>
+    <script type="application/javascript">
+      rtl.showUncaughtExceptions=true;
+      rtl.run();
+    </script>
+  </body>
+</html>
+

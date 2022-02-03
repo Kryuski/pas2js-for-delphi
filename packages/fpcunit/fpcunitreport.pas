@@ -152,6 +152,17 @@ type
     Property TestListener: ITestListener read FTestListener; // ToDo: replace when interfaces are implemented
   end;
 
+  // This is a callback which can be used to re-run test in apps
+  TRunForm = class(TComponent)
+  private
+    FOnRun: TNotifyEvent;
+  Public
+    Procedure Initialize; virtual;
+    Property OnRun : TNotifyEvent Read FOnRun Write FOnRun;
+  end;
+  TRunFormClass = class of TRunForm;
+
+
 implementation
 
 { TCustomResultsWriterTestListener }
@@ -403,6 +414,14 @@ var
 begin
   for i := 0 to FResultsList.Count -1 do
     Inc(TSuiteResults(FResultsList[i]).Ignores);
+end;
+
+
+{ TRunForm }
+
+procedure TRunForm.Initialize;
+begin
+  // Do nothing
 end;
 
 end.

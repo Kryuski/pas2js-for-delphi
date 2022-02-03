@@ -59,7 +59,7 @@ var
 begin
   T:=aPascalName+' = Class external name '''+aJSName+'''';
   if aAncestor<>'' then
-    T:=T+'('+aAncestor+')';
+    T:=T+' ('+aAncestor+')';
   aDecl.Add(T);
   aDecl.Add('Public');
   p:=TJSArray.new;

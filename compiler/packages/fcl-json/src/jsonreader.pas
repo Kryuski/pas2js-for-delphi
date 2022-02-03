@@ -12,8 +12,13 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-{$h+}
 unit jsonreader;
+
+{$IFDEF Pas2JS}
+{$I fcl-json.inc}
+{$ELSE}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
@@ -27,51 +32,53 @@ Type
   TBaseJSONReader = Class(TObject)
   Private
     FScanner : TJSONScanner;
+    //function GetO(AIndex: TJSONOption): Boolean;
     function GetOptions: TJSONOptions; inline;
+    //procedure SetO(AIndex: TJSONOption; AValue: Boolean);
     procedure SetOptions(AValue: TJSONOptions);
   Protected
     procedure DoError(const Msg: String);
-    procedure DoParse(AtCurrent,AllowEOF: Boolean);
+    Procedure DoParse(AtCurrent,AllowEOF: Boolean);
     function GetNextToken: TJSONToken;
     function CurrentTokenString: String;
     function CurrentToken: TJSONToken; inline;
 
-    procedure KeyValue(const AKey : TJSONStringType); virtual; abstract;
-    procedure StringValue(const AValue : TJSONStringType);virtual; abstract;
-    procedure NullValue; virtual; abstract;
-    procedure FloatValue(const AValue : Double); virtual; abstract;
-    procedure BooleanValue(const AValue : Boolean); virtual; abstract;
-    procedure NumberValue(const AValue : TJSONStringType); virtual; abstract;
-    procedure IntegerValue(const AValue : integer); virtual; abstract;
-    procedure Int64Value(const AValue : int64); virtual; abstract;
-    procedure QWordValue(const AValue : QWord); virtual; abstract;
-    procedure StartArray; virtual; abstract;
-    procedure StartObject; virtual; abstract;
-    procedure EndArray; virtual; abstract;
-    procedure EndObject; virtual; abstract;
+    Procedure KeyValue(Const AKey : TJSONStringType); virtual; abstract;
+    Procedure StringValue(Const AValue : TJSONStringType);virtual; abstract;
+    Procedure NullValue; virtual; abstract;
+    Procedure FloatValue(Const AValue : Double); virtual; abstract;
+    Procedure BooleanValue(Const AValue : Boolean); virtual; abstract;
+    Procedure NumberValue(Const AValue : TJSONStringType); virtual; abstract;
+    Procedure IntegerValue(Const AValue : integer); virtual; abstract;
+    Procedure Int64Value(Const AValue : int64); virtual; abstract;
+    Procedure QWordValue(Const AValue : QWord); virtual; abstract;
+    Procedure StartArray; virtual; abstract;
+    Procedure StartObject; virtual; abstract;
+    Procedure EndArray; virtual; abstract;
+    Procedure EndObject; virtual; abstract;
 
-    procedure ParseArray;
-    procedure ParseObject;
-    procedure ParseNumber;
-    procedure DoExecute;
+    Procedure ParseArray;
+    Procedure ParseObject;
+    Procedure ParseNumber;
+    Procedure DoExecute;
     Property Scanner : TJSONScanner read FScanner;
   Public
     Constructor Create(Source : TStream; AUseUTF8 : Boolean = True); overload;deprecated 'use options form instead';
-    Constructor Create(Source : TJSONStringType; AUseUTF8 : Boolean = True); overload;deprecated 'use options form instead';
+    Constructor Create(Const Source : RawByteString; AUseUTF8 : Boolean = True); overload;deprecated 'use options form instead';
     constructor Create(Source: TStream; AOptions: TJSONOptions); overload;
-    constructor Create(const Source: String; AOptions: TJSONOptions); overload;
+    constructor Create(const Source: RawByteString; AOptions: TJSONOptions); overload;
     destructor Destroy();override;
     // Parsing options
     Property Options : TJSONOptions Read GetOptions Write SetOptions;
   end;
 
-  TOnJSONBoolean = procedure (Sender : TObject; const AValue : Boolean) of object;
-  TOnJSONFloat = procedure (Sender : TObject; const AValue : TJSONFloat) of object;
-  TOnJSONInt64 = procedure (Sender : TObject; const AValue : Int64) of object;
-  TOnJSONQWord = procedure (Sender : TObject; const AValue : QWord) of object;
-  TOnJSONInteger = procedure (Sender : TObject; const AValue : Integer) of object;
-  TOnJSONString = procedure (Sender : TObject; const AValue : TJSONStringType) of Object;
-  TOnJSONKey = procedure (Sender : TObject; const AKey : TJSONStringType) of Object;
+  TOnJSONBoolean = Procedure (Sender : TObject; Const AValue : Boolean) of object;
+  TOnJSONFloat = Procedure (Sender : TObject; Const AValue : TJSONFloat) of object;
+  TOnJSONInt64 = Procedure (Sender : TObject; Const AValue : Int64) of object;
+  TOnJSONQWord = Procedure (Sender : TObject; Const AValue : QWord) of object;
+  TOnJSONInteger = Procedure (Sender : TObject; Const AValue : Integer) of object;
+  TOnJSONString = Procedure (Sender : TObject; Const AValue : TJSONStringType) of Object;
+  TOnJSONKey = Procedure (Sender : TObject; Const AKey : TJSONStringType) of Object;
 
 
   { TJSONEventReader }
@@ -92,21 +99,21 @@ Type
     FOnStartObject: TNotifyEvent;
     FOnStringValue: TOnJSONString;
   Protected
-    procedure KeyValue(const AKey : TJSONStringType); override;
-    procedure StringValue(const AValue : TJSONStringType);override;
-    procedure NullValue; override;
-    procedure FloatValue(const AValue : Double); override;
-    procedure BooleanValue(const AValue : Boolean); override;
-    procedure NumberValue(const AValue : TJSONStringType); override;
-    procedure IntegerValue(const AValue : integer); override;
-    procedure Int64Value(const AValue : int64); override;
-    procedure QWordValue(const AValue : QWord); override;
-    procedure StartArray; override;
-    procedure StartObject; override;
-    procedure EndArray; override;
-    procedure EndObject; override;
+    Procedure KeyValue(Const AKey : TJSONStringType); override;
+    Procedure StringValue(Const AValue : TJSONStringType);override;
+    Procedure NullValue; override;
+    Procedure FloatValue(Const AValue : Double); override;
+    Procedure BooleanValue(Const AValue : Boolean); override;
+    Procedure NumberValue(Const AValue : TJSONStringType); override;
+    Procedure IntegerValue(Const AValue : integer); override;
+    Procedure Int64Value(Const AValue : int64); override;
+    Procedure QWordValue(Const AValue : QWord); override;
+    Procedure StartArray; override;
+    Procedure StartObject; override;
+    Procedure EndArray; override;
+    Procedure EndObject; override;
   Public
-    procedure Execute;
+    Procedure Execute;
     Property OnNullValue : TNotifyEvent Read FOnNullValue Write FOnNullValue;
     Property OnBooleanValue : TOnJSONBoolean Read FOnBooleanValue Write FOnBooleanValue;
     Property OnNumberValue : TOnJSONString Read FOnNumberValue Write FOnNumberValue;
@@ -123,19 +130,19 @@ Type
   end;
 
   IJSONConsumer = Interface ['{60F9D640-2A69-4AAB-8EE1-0DB6DC614D27}']
-    procedure NullValue;
-    procedure BooleanValue (const AValue : Boolean);
-    procedure NumberValue (const AValue : TJSONStringType);
-    procedure FloatValue (const AValue : TJSONFloat);
-    procedure Int64Value (const AValue : Int64);
-    procedure QWordValue (const AValue : QWord);
-    procedure IntegerValue(const AValue : Integer) ;
-    procedure StringValue(const AValue : TJSONStringType) ;
-    procedure KeyName(const AKey : TJSONStringType);
-    procedure StartObject;
-    procedure EndObject;
-    procedure StartArray;
-    procedure EndArray;
+    Procedure NullValue;
+    Procedure BooleanValue (const AValue : Boolean);
+    Procedure NumberValue (const AValue : TJSONStringType);
+    Procedure FloatValue (const AValue : TJSONFloat);
+    Procedure Int64Value (const AValue : Int64);
+    Procedure QWordValue (const AValue : QWord);
+    Procedure IntegerValue(const AValue : Integer) ;
+    Procedure StringValue(const AValue : TJSONStringType) ;
+    Procedure KeyName(const AKey : TJSONStringType);
+    Procedure StartObject;
+    Procedure EndObject;
+    Procedure StartArray;
+    Procedure EndArray;
   end;
 
   { TJSONConsumerReader }
@@ -144,21 +151,21 @@ Type
   Private
     FConsumer: IJSONConsumer;
   Protected
-    procedure KeyValue(const AKey : TJSONStringType); override;
-    procedure StringValue(const AValue : TJSONStringType);override;
-    procedure NullValue; override;
-    procedure FloatValue(const AValue : Double); override;
-    procedure BooleanValue(const AValue : Boolean); override;
-    procedure NumberValue(const AValue : TJSONStringType); override;
-    procedure IntegerValue(const AValue : integer); override;
-    procedure Int64Value(const AValue : int64); override;
-    procedure QWordValue(const AValue : QWord); override;
-    procedure StartArray; override;
-    procedure StartObject; override;
-    procedure EndArray; override;
-    procedure EndObject; override;
+    Procedure KeyValue(Const AKey : TJSONStringType); override;
+    Procedure StringValue(Const AValue : TJSONStringType);override;
+    Procedure NullValue; override;
+    Procedure FloatValue(Const AValue : Double); override;
+    Procedure BooleanValue(Const AValue : Boolean); override;
+    Procedure NumberValue(Const AValue : TJSONStringType); override;
+    Procedure IntegerValue(Const AValue : integer); override;
+    Procedure Int64Value(Const AValue : int64); override;
+    Procedure QWordValue(Const AValue : QWord); override;
+    Procedure StartArray; override;
+    Procedure StartObject; override;
+    Procedure EndArray; override;
+    Procedure EndObject; override;
   Public
-    procedure Execute;
+    Procedure Execute;
     Property Consumer : IJSONConsumer Read FConsumer Write FConsumer;
   end;
 
@@ -172,19 +179,29 @@ Resourcestring
   SErrExpectedColon   = 'Expected colon (:), got token "%s".';
   //SErrEmptyElement = 'Empty element encountered.';
   SErrExpectedElementName    = 'Expected element name, got token "%s"';
-  SExpectedCommaorBraceClose = 'Expected , or ], got token "%s".';
+  SExpectedCommaorBraceClose = 'Expected comma (,) or square bracket (]), got token "%s".';
   SErrInvalidNumber          = 'Number is not an integer or real number: %s';
   SErrNoScanner = 'No scanner. No source specified ?';
-  
+  SErrorAt = 'Error at line %d, Pos %d: ';
+  SErrGarbageFound = 'Expected EOF, but got %s';
+
 { TBaseJSONReader }
 
 
-procedure TBaseJSONReader.DoExecute;
+Procedure TBaseJSONReader.DoExecute;
 
 begin
   if (FScanner=Nil) then
     DoError(SErrNoScanner);
   DoParse(False,True);
+  if joStrict in Options then
+    begin
+    Repeat
+       GetNextToken;
+    Until CurrentToken<>tkWhiteSpace;
+    If CurrentToken<>tkEOF then
+      DoError(Format(SErrGarbageFound,[CurrentTokenString]));
+   end;
 end;
 
 {
@@ -201,16 +218,19 @@ begin
 end;
 
 function TBaseJSONReader.CurrentTokenString: string;
+
 begin
   If CurrentToken in [tkString,tkIdentifier,tkNumber,tkComment] then
-    Result := FScanner.CurTokenString
+    Result:=FScanner.CurTokenString
   else
-    Result := TokenInfos[CurrentToken];
+    Result:=TokenInfos[CurrentToken];
 end;
 
 procedure TBaseJSONReader.DoParse(AtCurrent, AllowEOF: Boolean);
+
 var
-  T: TJSONToken;
+  T : TJSONToken;
+  
 begin
   If not AtCurrent then
     T:=GetNextToken
@@ -222,10 +242,7 @@ begin
     tkNull  : NullValue;
     tkTrue,
     tkFalse : BooleanValue(t=tkTrue);
-    tkString : if (joUTF8 in Options) and (DefaultSystemCodePage<>CP_UTF8) then
-                 StringValue(TJSONStringType(UTF8ToString(RawByteString(CurrentTokenString))))
-               else
-                 StringValue(CurrentTokenString);
+    tkString : StringValue(CurrentTokenString);
     tkCurlyBraceOpen :
         ParseObject;
     tkCurlyBraceClose :
@@ -240,17 +257,22 @@ begin
         DoError(SErrUnexpectedToken);
     tkIdentifier :
         DoError(SErrUnexpectedToken);
+  else
+    // Do nothing
   end;
 end;
 
+
 // Creates the correct JSON number type, based on the current token.
 procedure TBaseJSONReader.ParseNumber;
-var
+
+Var
   I : Integer;
   I64 : Int64;
   QW  : QWord;
   F : TJSONFloat;
   S : String;
+
 begin
   S:=CurrentTokenString;
   NumberValue(S);
@@ -292,10 +314,23 @@ begin
     end;
 end;
 
+//function TBaseJSONReader.GetO(AIndex: TJSONOption): Boolean;
+//begin
+//  Result:=AIndex in Options;
+//end;
+
 function TBaseJSONReader.GetOptions: TJSONOptions;
 begin
   Result:=FScanner.Options
 end;
+
+//procedure TBaseJSONReader.SetO(AIndex: TJSONOption; AValue: Boolean);
+//begin
+//  if aValue then
+//    FScanner.Options:=FScanner.Options+[AINdex]
+//  else
+//    FScanner.Options:=FScanner.Options-[AINdex]
+//end;
 
 procedure TBaseJSONReader.SetOptions(AValue: TJSONOptions);
 begin
@@ -304,11 +339,12 @@ end;
 
 
 // Current token is {, on exit current token is }
-procedure TBaseJSONReader.ParseObject;
+Procedure TBaseJSONReader.ParseObject;
 
-var
+Var
   T : TJSONtoken;
   LastComma : Boolean;
+  S : TJSONStringType;
 
 begin
   LastComma:=False;
@@ -318,7 +354,9 @@ begin
     begin
     If (T<>tkString) and (T<>tkIdentifier) then
       DoError(SErrExpectedElementName);
-    KeyValue(CurrentTokenString);
+    S:=CurrentTokenString;
+    KeyValue(S);
+    // Writeln(S);
     T:=GetNextToken;
     If (T<>tkColon) then
       DoError(SErrExpectedColon);
@@ -338,8 +376,9 @@ begin
 end;
 
 // Current token is [, on exit current token is ]
-procedure TBaseJSONReader.ParseArray;
-var
+Procedure TBaseJSONReader.ParseArray;
+
+Var
   T : TJSONtoken;
   LastComma : Boolean;
   S : TJSONOPTions;
@@ -366,6 +405,7 @@ end;
 
 // Get next token, discarding whitespace
 function TBaseJSONReader.GetNextToken: TJSONToken;
+
 begin
   Repeat
     Result:=FScanner.FetchToken;
@@ -373,11 +413,13 @@ begin
 end;
 
 procedure TBaseJSONReader.DoError(const Msg: String);
-var
-  S: String;
+
+Var
+  S : String;
+
 begin
   S:=Format(Msg,[CurrentTokenString]);
-  S:=Format('Error at line %d, Pos %d:',[FScanner.CurRow,FSCanner.CurColumn])+S;
+  S:=Format(SErrorAt,[FScanner.CurRow,FSCanner.CurColumn])+S;
   Raise EJSONParser.Create(S);
 end;
 
@@ -389,7 +431,7 @@ begin
    Options:=Options + [joUTF8];
 end;
 
-constructor TBaseJSONReader.Create(Source: TJSONStringType; AUseUTF8 : Boolean = True);
+constructor TBaseJSONReader.Create(const Source: RawByteString; AUseUTF8 : Boolean = True);
 begin
   Inherited Create;
   FScanner:=TJSONScanner.Create(Source,[joUTF8]);
@@ -402,7 +444,7 @@ begin
   FScanner:=TJSONScanner.Create(Source,AOptions);
 end;
 
-constructor TBaseJSONReader.Create(const Source: String; AOptions: TJSONOptions);
+constructor TBaseJSONReader.Create(const Source: RawByteString; AOptions: TJSONOptions);
 begin
   FScanner:=TJSONScanner.Create(Source,AOptions);
 end;

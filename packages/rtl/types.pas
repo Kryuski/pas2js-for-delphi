@@ -20,13 +20,18 @@ type
   TDirection = (FromBeginning, FromEnd);
 
   TBooleanDynArray = array of Boolean;
+  TWordDynArray = array of Word;
   TIntegerDynArray = array of Integer;
   TNativeIntDynArray = array of NativeInt;
   TStringDynArray = array of String;
   TDoubleDynArray = array of Double;
   TJSValueDynArray = array of JSValue;
+  TObjectDynArray = array of TObject;
+  TByteDynArray = array of Byte;
 
   TDuplicates = (dupIgnore, dupAccept, dupError);
+  TProc = Reference to Procedure;
+  TProcString = Reference to Procedure(Const aString : String);
 
   TListCallback = procedure(data, arg: JSValue) of object;
   TListStaticCallback = procedure(data, arg: JSValue);
@@ -42,7 +47,7 @@ type
   TRect  = record
     Left, Top, Right, Bottom: Integer;
   end;
-
+  
 function EqualRect(const r1,r2 : TRect) : Boolean;
 function Rect(Left, Top, Right, Bottom : Integer) : TRect;
 function Bounds(ALeft, ATop, AWidth, AHeight : Integer) : TRect;

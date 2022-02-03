@@ -1,0 +1,26 @@
+{
+  "context-menu": {
+    "atom-text-editor": [
+      {
+        "label": "Toggle pas2jsdemopackage",
+        "command": "pas2jsdemopackage:toggle"
+      }
+    ]
+  },
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "pas2jsdemopackage",
+          "submenu": [
+            {
+              "label": "Toggle",
+              "command": "pas2jsdemopackage:toggle"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

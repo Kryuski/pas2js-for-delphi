@@ -1,0 +1,4 @@
+This demo is compiler with the help text embedded. 
+
+NodeJS applications do not have an associated HTML page so -JRjs is the best
+option to use till another mechanism appears.

@@ -2420,14 +2420,14 @@ Function TryRFC3339ToDateTime(const Avalue: String; out ADateTime: TDateTime): B
 // yyyy-mm-ddThh:nn:ss.zzz
 
 Type
-  TPartPos = (ppTime,ppYear,ppMonth,ppDay,ppHour,ppMinute,ppSec);
+  TPartPos = (ppTime,ppYear,ppMonth,ppDay,ppHour,ppMinute,ppSec,ppMSec);
   TPos = Array [TPartPos] of byte;
 
 Const
-  P : TPos = (11,1,6,9,12,15,18);
+  P : TPos = (11,1,6,9,12,15,18,21);
 
 var
-  lY, lM, lD, lH, lMi, lS: Integer;
+  lY, lM, lD, lH, lMi, lS, lMs: Integer;
 
 begin
   if Trim(AValue) = '' then
@@ -2442,15 +2442,22 @@ begin
     begin
     lH:=StrToIntDef(Copy(AValue,P[ppHour],2),-1);
     lMi:=StrToIntDef(Copy(AValue,P[ppMinute],2),-1);
-    lS:=StrToIntDef(Copy(AValue,P[ppSec],2),-1);
+    // Bug ID 37974
+    if (Length(AValue)>=P[ppSec]) then
+      lS:=StrToIntDef(Copy(AValue,P[ppSec],2),-1)
+    else
+      LS:=0;
+    if (Length(AValue)>=P[ppMSec]) then
+      lmS := StrToIntDef(Copy(AValue,P[ppMSec],3),-1);
     end
   else
     begin
     lH:=0;
     lMi:=0;
     lS:=0;
+    lMS:=0;
     end;
-  Result:=(lY>=0) and (lM>=0) and (lD>=0) and (lH>=0) and (lMi>=0) and (ls>=0);
+  Result:=(lY>=0) and (lM>=0) and (lD>=0) and (lH>=0) and (lMi>=0) and (ls>=0) and (lMS>=0);
   if Not Result then
     ADateTime:=0
   else
@@ -2458,7 +2465,7 @@ begin
     if (lY = 0) or (lM = 0) or (lD = 0) then
       ADateTime:=EncodeTime(lH, lMi, lS, 0)
     else
-      ADateTime:=EncodeDate(lY, lM, lD) + EncodeTime(lH, lMi, lS, 0);
+      ADateTime:=EncodeDate(lY, lM, lD) + EncodeTime(lH, lMi, lS, lMs);
 end;
 
 Function RFC3339ToDateTime(const Avalue: String): TDateTime;

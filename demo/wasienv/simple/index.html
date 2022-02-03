@@ -1,0 +1,49 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FPC-Webassembly and Pas2JS Demo</title>
+  <link href="bulma.min.css" rel="stylesheet">
+  <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"> -->
+  <script src="demowasienv.js"></script>
+  <style>
+
+  .source {
+    /* width: 730px; */
+    margin: -45px auto;
+    font-size: 0.9em;
+  }
+
+  .source-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* width: 482px; */
+  }
+  </style>
+</head>
+<body>
+  <div class="section pb-4">
+    <h1 class="title is-4">FPC compiled wasm program console output:</h1>
+    <div class="box" id="pasjsconsole"></div>
+  </div>
+  <!-- <hr> -->
+  <div class="section">
+    <div class="source">
+      <div class="source-inner">
+        <div>
+          <p>Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> </p>
+          <p>Pas2JS Sources: &nbsp; <a target="new" href="demowasienv.lpr">Pas2JS Program</a></p>
+          <p>Webassembly Sources: &nbsp; <a target="new" href="helloworld.pp">FPC Program</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    rtl.showUncaughtExceptions=true;
+    rtl.run();
+  </script>
+</body>
+</html>

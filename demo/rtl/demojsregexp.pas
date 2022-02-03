@@ -1,4 +1,4 @@
-uses JS;
+uses JS, Types;
 
 Var
  R : TJSRegexp;

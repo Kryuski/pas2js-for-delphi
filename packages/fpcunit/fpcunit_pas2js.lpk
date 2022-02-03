@@ -9,11 +9,19 @@
       <SearchPaths>
         <UnitOutputDirectory Value="js"/>
       </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <AllowLabel Value="False"/>
+          <UseAnsiStrings Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+      <Linking>
+        <Debugging>
+          <GenerateDebugInfo Value="False"/>
+        </Debugging>
+      </Linking>
       <Other>
-        <ExecuteBefore>
-          <Command Value="$MakeExe(pas2js) -O- -Jc -vbq fpcunit_pas2js.pas"/>
-          <ScanForFPCMsgs Value="True"/>
-        </ExecuteBefore>
+        <CustomOptions Value="-Jc"/>
       </Other>
       <SkipCompiler Value="True"/>
     </CompilerOptions>
@@ -53,13 +61,10 @@
         <UnitName Value="htmltestreport"/>
       </Item8>
     </Files>
-    <RequiredPkgs Count="2">
+    <RequiredPkgs Count="1">
       <Item1>
         <PackageName Value="fcl_base_pas2js"/>
       </Item1>
-      <Item2>
-        <PackageName Value="pas2js_rtl"/>
-      </Item2>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="."/>

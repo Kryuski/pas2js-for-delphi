@@ -33,9 +33,10 @@ Const piInheritablePipe : TSecurityAttributes = (
       PipeBufSize = 1024;
 
 
-function CreatePipeHandles(var Inhandle, OutHandle: THandle; APipeBufferSize: Cardinal = PipeBufSize): Boolean;
+Function CreatePipeHandles (Var Inhandle,OutHandle : THandle; APipeBufferSize : Cardinal = PipeBufSize) : Boolean;
+
 begin
-  Result := CreatePipe(Inhandle, OutHandle,@piNonInheritablePipe,APipeBufferSize);
+  Result := CreatePipe (Inhandle,OutHandle,@piNonInheritablePipe,APipeBufferSize);
 end;
 
 

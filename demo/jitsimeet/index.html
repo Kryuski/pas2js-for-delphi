@@ -1,0 +1,225 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jitsi meet Pas2JS Demo</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://code.jquery.com/jquery-3.3.1.js" type="text/javascript"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" type="text/javascript"></script>
+  <script src='https://meet.jit.si/external_api.js'></script>
+  <script src="demojitsimeet.js"></script>
+</head>
+<style>
+  body {
+    background-color: #eee;
+    max-width: 1000px;
+    margin: auto;
+  }
+</style>
+<body>
+  <div class="container-fluid">
+    <div id="Options">
+      <div class="card">
+        <div class="card-header" id="MeetOptionsHeader">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#MeetOptions" aria-expanded="true" aria-controls="MeetOptions">
+              Meeting options
+            </button>
+          </h5>
+        </div>
+        <div id="MeetOptions" class="collapse show" aria-labelledby="MeetOptionsHeader" data-parent="#Options">
+          <div class="card-body">
+            <div class="row" id="controls">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="edtServer">Jitsi Server</label>
+                  <input type="text" class="form-control" id="edtServer" aria-describedby="lblServer" placeholder="Jitsi server" value="meet.jit.si">
+                  <small id="lblServer" class="form-text text-muted">Jitsi server to contact.</small>
+                </div>
+                <div class="form-group">
+                  <label for="edtRoom">Room name</label>
+                  <input type="text" class="form-control" id="edtRoom" aria-describedby="lblRoom" placeholder="Jitsi room name" value="">
+                  <small id="lblRoom" class="form-text text-muted">Room you want to join.</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="edtEmail">Your email</label>
+                  <input type="text" class="form-control" id="edtEmail" aria-describedby="lblEmail" placeholder="Your email address" value="">
+                  <small id="lblEmail" class="form-text text-muted">Your email so people know who you are.</small>
+                </div>
+                <div class="form-group">
+                  <label for="edtNick">Your nickname</label>
+                  <input type="text" class="form-control" id="edtNick" aria-describedby="lblNick" placeholder="Your name in the room" value="">
+                  <small id="lblNick" class="form-text text-muted">Nickname to use in the room.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header" id="ConnOptionsHeader">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#ConnOptions" aria-expanded="true" aria-controls="collapseOne">
+              GUI elements
+            </button>
+          </h5>
+        </div>
+        <div id="ConnOptions" class="collapse " aria-labelledby="ConnOptionsHeader" data-parent="#Options">
+          <div class="card-body">
+            <div class="row" id="controls">
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieMicrophone" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieMicrophone">Microphone</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieCamera" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieCamera">Camera</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieClosedCaptions" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieClosedCaptions">Closed captions</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieDesktop" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieDesktop">Desktop</label>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieFullScreen" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieFullScreen">Full Screen</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieFODeviceSelection" type="checkbox" class="form-check-input" checked >
+                  <label class="form-check-label" for="uieCamera">Device Selection</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieHangup" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieHangup">Hangup</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieChat" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieChat">Chat</label>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieLiveStreaming" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieLiveStreaming">Live Streaming</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieEtherPad" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieEtherPad">Ether Pad</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieSharedVideo" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieSharedVideo">Shared Video</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieSettings" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieSettings">Settings</label>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieVideoQuality" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieVideoQuality">Video Quality</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieFilmStrip" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieFilmStrip">Film strip</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieFeedBack" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieFeedBack">Shared Video</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieStats" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieStats">Stats</label>
+                </div>
+              </div>
+              <!--         uieHelp, uieMuteEveryone,
+                          uieProfile, uieInfo, uieRaiseHand, uieInvite -->
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieShortCuts" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieShortCuts">ShortCuts</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieTileView" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieTileView">Tile View</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieVideoBackgroundBlur" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieVideoBackgroundBlur">Video Background Blur</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieDownload" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieDownload">Download</label>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieHelp" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieHelp">Help</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieMuteEveryone" type="checkbox" class="form-check-input" checked >
+                  <label class="form-check-label" for="uieMuteEveryone">Mute Everyone</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieProfile" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieProfile">Profile</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieInfo" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieInfo">Info</label>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="form-check">
+                  <input id="uieRaiseHand" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieRaiseHand">Raise Hand</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieInvite" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieInvite">Invite</label>
+                </div>
+                <div class="form-check">
+                  <input id="uieRecording" type="checkbox" class="form-check-input"  checked>
+                  <label class="form-check-label" for="uieRecording">Recording</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-3" id="buttons">
+      <div class="col-6 col-sm-4 col-md-3">
+        <button class="btn btn-primary btn-block" id="btnConnect">Join Jitsi meeting</button>
+      </div>
+      <div class="col-6 col-sm-4 col-md-3">
+        <button class="btn btn-primary btn-block" id="btnDisconnect" disabled>End Jitsi meeting</button>
+      </div>
+    </div>
+    <div class="row mt-3 ml-1 text-muted">
+      Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> &nbsp;&nbsp;
+       Sources: &nbsp; <a target="new" href="demojitsimeet.lpr">Program</a>
+    </div>
+    <div class="row">
+      <div id="jitsi-container" class="col-md-12" style="height: 66vh;">
+        <div id="jitsi" style="height: 100%;">
+        </div>
+      </div>
+    </div>
+  <script>
+    window.addEventListener("load", rtl.run);
+  </script>
+</body>
+</html>

@@ -131,7 +131,7 @@ Type
     TJSAudioContextOptions
     --------------------------------------------------------------------}
   
-  TJSAudioContextOptions = class(TJSObject)
+  TJSAudioContextOptions = class external name 'Object' (TJSObject)
     latencyHint : JSValue;
     sampleRate : Double;
   end;
@@ -140,7 +140,7 @@ Type
     TJSAudioTimestamp
     --------------------------------------------------------------------}
   
-  TJSAudioTimestamp = class(TJSObject)
+  TJSAudioTimestamp = class external name 'Object' (TJSObject)
     contextTime : Double;
     performanceTime : TJSDOMHighResTimeStamp;
   end;
@@ -149,7 +149,7 @@ Type
     TJSOfflineAudioContextOptions
     --------------------------------------------------------------------}
   
-  TJSOfflineAudioContextOptions = class(TJSObject)
+  TJSOfflineAudioContextOptions = class external name 'Object' (TJSObject)
     numberOfChannels : NativeInt;
     length_ : NativeInt;external name 'length';
     sampleRate : Double;
@@ -159,7 +159,7 @@ Type
     TJSOfflineAudioCompletionEventInit
     --------------------------------------------------------------------}
   
-  TJSOfflineAudioCompletionEventInit = class(TJSObject)
+  TJSOfflineAudioCompletionEventInit = class external name 'Object' (TJSObject)
     renderedBuffer : TJSAudioBuffer;
   end;
   
@@ -167,7 +167,7 @@ Type
     TJSAudioBufferOptions
     --------------------------------------------------------------------}
   
-  TJSAudioBufferOptions = class(TJSObject)
+  TJSAudioBufferOptions = class external name 'Object' (TJSObject)
     numberOfChannels : NativeInt;
     length_ : NativeInt;external name 'length';
     sampleRate : Double;
@@ -177,7 +177,7 @@ Type
     TJSAudioNodeOptions
     --------------------------------------------------------------------}
   
-  TJSAudioNodeOptions = class(TJSObject)
+  TJSAudioNodeOptions = class external name 'Object' (TJSObject)
     channelCount : NativeInt;
     _channelCountMode : ChannelCountMode;external name 'channelCountMode';
     _channelInterpretation : ChannelInterpretation;external name 'channelInterpretation';
@@ -187,7 +187,7 @@ Type
     TJSAnalyserOptions
     --------------------------------------------------------------------}
   
-  TJSAnalyserOptions = class(TJSObject)
+  TJSAnalyserOptions = class external name 'Object' (TJSObject)
     fftSize : NativeInt;
     maxDecibels : Double;
     minDecibels : Double;
@@ -198,7 +198,7 @@ Type
     TJSAudioBufferSourceOptions
     --------------------------------------------------------------------}
   
-  TJSAudioBufferSourceOptions = class(TJSObject)
+  TJSAudioBufferSourceOptions = class external name 'Object' (TJSObject)
     buffer : TJSAudioBuffer;
     detune : Double;
     loop : boolean;
@@ -211,7 +211,7 @@ Type
     TJSAudioProcessingEventInit
     --------------------------------------------------------------------}
   
-  TJSAudioProcessingEventInit = class(TJSObject)
+  TJSAudioProcessingEventInit = class external name 'Object' (TJSObject)
     playbackTime : Double;
     inputBuffer : TJSAudioBuffer;
     outputBuffer : TJSAudioBuffer;
@@ -221,7 +221,7 @@ Type
     TJSBiquadFilterOptions
     --------------------------------------------------------------------}
   
-  TJSBiquadFilterOptions = class(TJSObject)
+  TJSBiquadFilterOptions = class external name 'Object' (TJSObject)
     type_ : BiquadFilterType;external name 'type';
     Q : Double;
     detune : Double;
@@ -233,7 +233,7 @@ Type
     TJSChannelMergerOptions
     --------------------------------------------------------------------}
   
-  TJSChannelMergerOptions = class(TJSObject)
+  TJSChannelMergerOptions = class external name 'Object' (TJSObject)
     numberOfInputs : NativeInt;
   end;
   
@@ -241,7 +241,7 @@ Type
     TJSChannelSplitterOptions
     --------------------------------------------------------------------}
   
-  TJSChannelSplitterOptions = class(TJSObject)
+  TJSChannelSplitterOptions = class external name 'Object' (TJSObject)
     numberOfOutputs : NativeInt;
   end;
   
@@ -249,7 +249,7 @@ Type
     TJSConstantSourceOptions
     --------------------------------------------------------------------}
   
-  TJSConstantSourceOptions = class(TJSObject)
+  TJSConstantSourceOptions = class external name 'Object' (TJSObject)
     offset : Double;
   end;
   
@@ -257,7 +257,7 @@ Type
     TJSConvolverOptions
     --------------------------------------------------------------------}
   
-  TJSConvolverOptions = class(TJSObject)
+  TJSConvolverOptions = class external name 'Object' (TJSObject)
     buffer : TJSAudioBuffer;
     disableNormalization : boolean;
   end;
@@ -266,7 +266,7 @@ Type
     TJSDelayOptions
     --------------------------------------------------------------------}
   
-  TJSDelayOptions = class(TJSObject)
+  TJSDelayOptions = class external name 'Object' (TJSObject)
     maxDelayTime : Double;
     delayTime : Double;
   end;
@@ -275,7 +275,7 @@ Type
     TJSDynamicsCompressorOptions
     --------------------------------------------------------------------}
   
-  TJSDynamicsCompressorOptions = class(TJSObject)
+  TJSDynamicsCompressorOptions = class external name 'Object' (TJSObject)
     attack : Double;
     knee : Double;
     ratio : Double;
@@ -287,7 +287,7 @@ Type
     TJSGainOptions
     --------------------------------------------------------------------}
   
-  TJSGainOptions = class(TJSObject)
+  TJSGainOptions = class external name 'Object' (TJSObject)
     gain : Double;
   end;
   
@@ -295,7 +295,7 @@ Type
     TJSIIRFilterOptions
     --------------------------------------------------------------------}
   
-  TJSIIRFilterOptions = class(TJSObject)
+  TJSIIRFilterOptions = class external name 'Object' (TJSObject)
     feedforward : TDoubleDynArray;
     feedback : TDoubleDynArray;
   end;
@@ -304,7 +304,7 @@ Type
     TJSMediaElementAudioSourceOptions
     --------------------------------------------------------------------}
   
-  TJSMediaElementAudioSourceOptions = class(TJSObject)
+  TJSMediaElementAudioSourceOptions = class external name 'Object' (TJSObject)
     mediaElement : TJSElement;
   end;
   
@@ -312,7 +312,7 @@ Type
     TJSMediaStreamAudioSourceOptions
     --------------------------------------------------------------------}
   
-  TJSMediaStreamAudioSourceOptions = class(TJSObject)
+  TJSMediaStreamAudioSourceOptions = class external name 'Object' (TJSObject)
     mediaStream : JSValue;
   end;
   
@@ -320,7 +320,7 @@ Type
     TJSMediaStreamTrackAudioSourceOptions
     --------------------------------------------------------------------}
   
-  TJSMediaStreamTrackAudioSourceOptions = class(TJSObject)
+  TJSMediaStreamTrackAudioSourceOptions = class external name 'Object' (TJSObject)
     mediaStreamTrack : JSValue;
   end;
   
@@ -328,7 +328,7 @@ Type
     TJSOscillatorOptions
     --------------------------------------------------------------------}
   
-  TJSOscillatorOptions = class(TJSObject)
+  TJSOscillatorOptions = class external name 'Object' (TJSObject)
     type_ : OscillatorType;external name 'type';
     frequency : Double;
     detune : Double;
@@ -339,7 +339,7 @@ Type
     TJSPannerOptions
     --------------------------------------------------------------------}
   
-  TJSPannerOptions = class(TJSObject)
+  TJSPannerOptions = class external name 'Object' (TJSObject)
     panningModel : PanningModelType;
     distanceModel : DistanceModelType;
     positionX : Double;
@@ -360,7 +360,7 @@ Type
     TJSPeriodicWaveConstraints
     --------------------------------------------------------------------}
   
-  TJSPeriodicWaveConstraints = class(TJSObject)
+  TJSPeriodicWaveConstraints = class external name 'Object' (TJSObject)
     disableNormalization : boolean;
   end;
   
@@ -368,7 +368,7 @@ Type
     TJSPeriodicWaveOptions
     --------------------------------------------------------------------}
   
-  TJSPeriodicWaveOptions = class(TJSObject)
+  TJSPeriodicWaveOptions = class external name 'Object' (TJSObject)
     real : TDoubleDynArray;
     imag : TDoubleDynArray;
   end;
@@ -377,7 +377,7 @@ Type
     TJSStereoPannerOptions
     --------------------------------------------------------------------}
   
-  TJSStereoPannerOptions = class(TJSObject)
+  TJSStereoPannerOptions = class external name 'Object' (TJSObject)
     pan : Double;
   end;
   
@@ -385,7 +385,7 @@ Type
     TJSWaveShaperOptions
     --------------------------------------------------------------------}
   
-  TJSWaveShaperOptions = class(TJSObject)
+  TJSWaveShaperOptions = class external name 'Object' (TJSObject)
     curve : TDoubleDynArray;
     oversample : OverSampleType;
   end;
@@ -394,7 +394,7 @@ Type
     TJSAudioWorkletNodeOptions
     --------------------------------------------------------------------}
   
-  TJSAudioWorkletNodeOptions = class(TJSObject)
+  TJSAudioWorkletNodeOptions = class external name 'Object' (TJSObject)
     numberOfInputs : NativeInt;
     numberOfOutputs : NativeInt;
     outputChannelCount : TNativeIntDynArray;
@@ -406,7 +406,7 @@ Type
     TJSAudioParamDescriptor
     --------------------------------------------------------------------}
   
-  TJSAudioParamDescriptor = class(TJSObject)
+  TJSAudioParamDescriptor = class external name 'Object' (TJSObject)
     name : String;
     defaultValue : Double;
     minValue : Double;
@@ -539,7 +539,7 @@ Type
     TJSAudioNode
     --------------------------------------------------------------------}
   
-  TJSAudioNode = class external name 'AudioNode'  (TJSEventTarget)
+TJSAudioNode = class external name 'AudioNode'  (TJSEventTarget)
   Private
     Fcontext : TJSBaseAudioContext; external name 'context'; 
     FnumberOfInputs : NativeInt; external name 'numberOfInputs'; 

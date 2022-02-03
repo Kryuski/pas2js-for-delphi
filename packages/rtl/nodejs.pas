@@ -18,7 +18,7 @@ unit NodeJS;
 interface
 
 uses
-  JS, Types;
+  JS, Types, node.events;
 
 type
 
@@ -48,19 +48,119 @@ type
   end;
 
   { TNJSBuffer }
-
-  TNJSBuffer = class external name 'buffer'
+  TNJSBuffer = Class external name 'Buffer' (TJSObject)
+  private
+    FBuffer : TJSArrayBuffer; external name 'buffer';
+    FByteOffset : NativeInt;  external name 'byteOffset';
+    function getbuf(Index : NativeInt): Byte; external name '[]';
+    procedure setbuf(Index : NativeInt; AValue: Byte); external name '[]';
+    class var FPoolSize : NativeInt; external name 'poolSize';
   public
-    class function alloc(Size: NativeInt): TJSArrayBuffer;
-    class function alloc(Size: NativeInt; const Fill: JSValue): TJSArrayBuffer;
-    class function alloc(Size: NativeInt; const Fill: JSValue; Encoding: String): TJSArrayBuffer;
-    class function allocUnsafe(Size: NativeInt): TJSArrayBuffer;
-    class function from(const Values: TJSValueDynArray): TJSArrayBuffer;
-    class function from(s: String): TJSArrayBuffer;
-    class function from(s, Encoding: String): TJSArrayBuffer;
-    class function from(Buffer: TJSArrayBuffer): TJSArrayBuffer;
-    class function from(Buffer: TJSArrayBuffer; Offset: NativeInt): TJSArrayBuffer;
-    class function from(Buffer: TJSArrayBuffer; Offset, Count: NativeInt): TJSArrayBuffer;
+    constructor new (size : NativeInt); overload; deprecated;
+    constructor new (aString : string); overload; deprecated;
+    constructor new (aString,aEncoding : string); overload; deprecated;
+    constructor new (arrayBuffer : TJSArray); overload; deprecated;
+    constructor new (Buffer : TNJSBuffer); overload; deprecated;
+    constructor new (Buffer : TJSUint8Array); overload; deprecated;
+    constructor new (arrayBuffer : TJSArrayBuffer); overload; deprecated;
+    constructor new (arrayBuffer : TJSArrayBuffer; byteOffset : NativeInt); overload; deprecated;
+    constructor new (arrayBuffer : TJSArrayBuffer; byteOffset,length : NativeInt); overload;deprecated;
+    class function alloc(size : NativeInt) : TNJSBuffer; overload;
+    class function alloc(size : NativeInt; Fill : string) : TNJSBuffer; overload;
+    class function alloc(size : NativeInt; Fill : TNJSBuffer) : TNJSBuffer; overload;
+    class function alloc(size : NativeInt; Fill : NativeInt) : TNJSBuffer; overload;
+    class function alloc(size : NativeInt; Fill,Encoding : string) : TNJSBuffer; overload;
+    class function allocUnsafe(size : NativeInt) : TNJSBuffer; overload;
+    class function allocUnsafeSlow(size : NativeInt) : TNJSBuffer; overload;
+    class function byteLength(aData: string) : NativeInt; overload;
+    class function byteLength(aData,aEncoding: string) : NativeInt; overload;
+    class function byteLength(aData: TNJSBuffer) : NativeInt; overload;
+    class function byteLength(aData: TJSDataView) : NativeInt; overload;
+    class function byteLength(aData: TJSArrayBuffer) : NativeInt; overload;
+//    class function byteLength(aData: TJSSharedArrayBuffer) : NativeInt; overload;
+    class function compare(buf1, buf2 : TNJSBuffer) : NativeInt; overload;
+    class function compare(buf1, buf2 : TJSUint8Array) : NativeInt; overload;
+    class function compare(buf1: TJSUint8Array; buf2 : TNJSBuffer) : NativeInt; overload;
+    class function compare(buf1: TNJSBuffer; buf2 : TJSUint8Array) : NativeInt; overload;
+    class function concat(buf1: array of TNJSBuffer) : TNJSBuffer; overload;
+    class function concat(buf1: array of TJSUInt8Array) : TNJSBuffer; overload;
+    class function concat(buf1: array of TNJSBuffer; totalLength : NativeInt) : TNJSBuffer; overload;
+    class function concat(buf1: array of TJSUInt8Array; totalLength : NativeInt) : TNJSBuffer; overload;
+    class function from(arr: array of byte): TNJSBuffer; overload;
+    class function from(arr: array of Integer): TNJSBuffer; overload;
+    class function from(arrayBuffer : TJSArrayBuffer): TNJSBuffer; overload;
+    class function from(arrayBuffer : TJSArrayBuffer; aByteOffset : NativeInt): TNJSBuffer; overload;
+    class function from(arrayBuffer : TJSArrayBuffer; aByteOffset,aLength : NativeInt): TNJSBuffer; overload;
+    class function from(const Values: TJSValueDynArray): TNJSBuffer;
+    class function from(arrayBuffer : TJSUint8Array): TNJSBuffer; overload;
+    class function from(arrayBuffer : TNJSBuffer): TNJSBuffer; overload;
+    class function from(aObject : TJSObject): TNJSBuffer; overload;
+    class function from(aObject : TJSObject; aEncoding : String): TNJSBuffer; overload;
+    class function from(aObject : TJSObject; aOffset : NativeInt): TNJSBuffer; overload;
+    class function from(aObject : TJSObject; aEncoding : String;aLength : NativeInt): TNJSBuffer; overload;
+    class function from(aObject : TJSObject; aOffset,aLength : NativeInt): TNJSBuffer; overload;
+    class function from(aString : String): TNJSBuffer; overload;
+    class function from(aString, aEncoding : String): TNJSBuffer; overload;
+    class function isBuffer(aObj : TJSObject): Boolean; overload;
+    class function isEncoding(aEncoding : string): Boolean; overload;
+    class property poolSize : NativeInt read FPoolSize;
+    function compare(target : TNJSBuffer) : NativeInt; overload;
+    function compare(target : TJSUint8Array) : NativeInt; overload;
+    function compare(target : TNJSBuffer; targetStart: NativeInt) : NativeInt; overload;
+    function compare(target : TJSUint8Array; targetStart: NativeInt) : NativeInt; overload;
+    function compare(target : TNJSBuffer; targetStart, targetEnd: NativeInt) : NativeInt; overload;
+    function compare(target : TJSUint8Array; targetStart, targetEnd: NativeInt) : NativeInt; overload;
+    function compare(target : TNJSBuffer; targetStart, targetEnd, sourceStart: NativeInt) : NativeInt; overload;
+    function compare(target : TJSUint8Array; targetStart, targetEnd, sourceStart: NativeInt) : NativeInt; overload;
+    function compare(target : TNJSBuffer; targetStart, targetEnd, sourceStart, SourceEnd: NativeInt) : NativeInt; overload;
+    function compare(target : TJSUint8Array; targetStart, targetEnd, sourceStart, SourceEnd: NativeInt) : NativeInt; overload;
+    function copy(target : TNJSBuffer) : NativeInt; overload;
+    function copy(target : TJSUint8Array) : NativeInt; overload;
+    function copy(target : TNJSBuffer; targetStart: NativeInt) : NativeInt; overload;
+    function copy(target : TJSUint8Array; targetStart: NativeInt) : NativeInt; overload;
+    function copy(target : TNJSBuffer; targetStart, sourceStart: NativeInt) : NativeInt; overload;
+    function copy(target : TJSUint8Array; targetStart, sourceStart: NativeInt) : NativeInt; overload;
+    function copy(target : TNJSBuffer; targetStart, sourceStart, sourceEnd: NativeInt) : NativeInt; overload;
+    function copy(target : TJSUint8Array; targetStart, sourceStart, sourceEnd: NativeInt) : NativeInt; overload;
+    function fill(value : String) : TNJSBuffer;overload;
+    function fill(value : String; aOffset : integer) : TNJSBuffer;overload;
+    function fill(value : String; aOffset,aEnd : integer) : TNJSBuffer;overload;
+    function fill(value : String; aOffset,aEnd : integer;aEncoding : string) : TNJSBuffer;overload;
+    function fill(value : TNJSBuffer) : TNJSBuffer;overload;
+    function fill(value : TNJSBuffer; aOffset : integer) : TNJSBuffer;overload;
+    function fill(value : TNJSBuffer; aOffset,aEnd : integer) : TNJSBuffer;overload;
+    function fill(value : NativeInt) : TNJSBuffer;overload;
+    function fill(value : NativeInt; aOffset : integer) : TNJSBuffer;overload;
+    function fill(value : NativeInt; aOffset,aEnd : integer) : TNJSBuffer;overload;
+    function fill(value : TJSUint8Array) : TNJSBuffer;overload;
+    function fill(value : TJSUint8Array; aOffset : integer) : TNJSBuffer;overload;
+    function fill(value : TJSUint8Array; aOffset,aEnd : integer) : TNJSBuffer;overload;
+    function includes(value : string)  : Boolean;overload;
+    function includes(value,encoding : string)  : Boolean;overload;
+    function includes(value : integer)  : Boolean;overload;
+    function includes(value  : Boolean)  : Boolean;overload;
+    function includes(value : TJSUint8Array)  : Boolean;overload;
+    function includes(value : string; aByteOffset:NativeInt)  : Boolean;overload;
+    function includes(value : string;aByteOffset:NativeInt;encoding : string)  : Boolean;overload;
+    function includes(value : integer; aByteOffset:NativeInt)  : Boolean;overload;
+    function includes(value  : Boolean; aByteOffset:NativeInt)  : Boolean;overload;
+    function includes(value : TJSUint8Array; aByteOffset:NativeInt)  : Boolean;overload;
+    function indexOf(value : string)  : NativeInt;overload;
+    function indexOf(value,encoding : string)  : NativeInt;overload;
+    function indexOf(value : integer)  : NativeInt;overload;
+    function indexOf(value  : NativeInt)  : NativeInt;overload;
+    function indexOf(value : TJSUint8Array)  : NativeInt;overload;
+    function indexOf(value : string; aByteOffset:NativeInt)  : NativeInt;overload;
+    function indexOf(value : string;aByteOffset:NativeInt;encoding : string)  : NativeInt;overload;
+    function indexOf(value : integer; aByteOffset:NativeInt)  : NativeInt;overload;
+    function indexOf(value  : NativeInt; aByteOffset:NativeInt)  : NativeInt;overload;
+    function indexOf(value : TJSUint8Array; aByteOffset:NativeInt)  : NativeInt;overload;
+    function entries : TJSIterator;
+    function equals(target : TNJSBuffer) : boolean; overload;
+    function equals(target : TJSUint8Array) : boolean; overload;
+    property buf [Index : NativeInt] : Byte Read getbuf write setbuf;
+    property buffer : TJSArrayBuffer read FBuffer;
+    property byteOffset : nativeint read FByteOffset;
   end;
 
   TNJSProcessConfig = TJSObject;
@@ -150,10 +250,39 @@ type
     procedure warn(const Obj1 : JSValue); varargs;
   end;
 
+  TNJSEventEmitterHandler = node.events.TNJSEventEmitterHandler;
+  TNJSEventEmitterHandlerArray = node.events.TNJSEventEmitterHandlerArray;
+  TNJSEventEmitter = node.events.TNJSEventEmitter;
+  TNJSEvents = node.events.TNJSEventEmitter;
+
+  TNJSTimerCallBack = reference to procedure;
+
+  TNJSImmediate = class external name 'Immediate' (TJSObject)
+    function hasRef : boolean;
+    function ref : TNJSImmediate;
+    function unref : TNJSImmediate;
+  end;
+
+  TNJSTimeout = class external name 'Timeout' (TJSObject)
+    function hasRef : boolean;
+    function ref : TNJSTimeout;
+    function refresh : TNJSTimeout;
+    function unref : TNJSTimeout;
+  end;
+
+
+
 function Require(ModuleName: String): JSValue; external name 'require';
+Procedure clearImmediate(aImmediate : TNJSImmediate); external name 'clearImmediate';
+Procedure clearInterval(aTimeout : TNJSTimeout); external name 'clearInterval';
+Procedure clearTimeout(aTimeout : TNJSTimeout); external name 'clearTimeout';
+function setImmediate(aCallback : TNJSTimerCallBack) : TNJSImmediate; varargs; external name 'setImmediate';
+function setInterval(aCallback : TNJSTimerCallBack; aMsecDelay : Integer) : TNJStimeout; varargs; external name 'setInterval';
+function setTimeout(aCallback : TNJSTimerCallBack; aMsecDelay : Integer) : TNJStimeout; varargs; external name 'setTimeout';
 
 var
   Console: TNJSConsole external name 'console';
+  global : TJSObject;
   NJS_OS: TNJSOS;
 
 implementation

@@ -23,7 +23,6 @@ interface
 uses Classes, SysUtils, JS, Types, DateUtils;
 
 const
-
   dsMaxBufferCount = MAXINT div 8;
   dsMaxStringSize = 8192;
 
@@ -34,7 +33,6 @@ const
   SQLDelimiterCharacters = [';',',',' ','(',')',#13,#10,#9];
 
 type
-
 { Misc Dataset types }
 
   TDataSetState = (dsInactive, dsBrowse, dsEdit, dsInsert, dsSetKey,
@@ -46,8 +44,11 @@ type
     deCheckBrowseMode, dePropertyChange, deFieldListChange, deFocusControl,
     deParentScroll,deConnectChange,deReconcileError,deDisabledStateChange);
 
-  TUpdateStatus = (usUnmodified, usModified, usInserted, usDeleted, usResolved, usResolveFailed);
+  TUpdateStatus = (usModified, usInserted, usDeleted);
   TUpdateStatusSet = Set of TUpdateStatus;
+
+  TResolveStatus = (rsUnresolved, rsResolving, rsResolved, rsResolveFailed);
+  TResolveStatusSet = Set of TResolveStatus;
 
   TUpdateMode = (upWhereAll, upWhereChanged, upWhereKeyOnly);
   TResolverResponse = (rrSkip, rrAbort, rrMerge, rrApply, rrIgnore);
@@ -89,7 +90,7 @@ type
     property OriginalException : Exception read FOriginalException;
     property PreviousError : Integer read FPreviousError;
   end;
-  
+
 
 { TFieldDef }
 
@@ -115,7 +116,7 @@ type
   protected
     function GetDisplayName: string; override;
     procedure SetDisplayName(const Value: string); override;
-  Public  
+  Public
     property DisplayName : string read GetDisplayName write SetDisplayName;
   published
     property Name : string read FName write SetDisplayName;
@@ -333,6 +334,7 @@ type
     procedure SetText(const AValue: string); virtual;
     procedure SetVarValue(const AValue{%H-}: JSValue); virtual;
     procedure SetAsBytes(const AValue{%H-}: TBytes); virtual;
+    procedure DefineProperties(Filer: TFiler);  override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -649,6 +651,8 @@ type
     function GetValue(var AValue: TBytes): Boolean;
     procedure SetAsString(const AValue: string); override;
     procedure SetVarValue(const AValue: JSValue); override;
+    Function GetAsBytes: TBytes; override;
+    Procedure SetAsBytes(const aValue: TBytes); override;
   public
     constructor Create(AOwner: TComponent); override;
   published
@@ -659,17 +663,21 @@ type
 
 
 { TBlobField }
+  TBlobDisplayValue = (dvClass, dvFull, dvClip, dvFit);
   TBlobStreamMode = (bmRead, bmWrite, bmReadWrite);
-//  TBlobType = ftBlob..ftMemo;
+  TBlobType = ftBlob..ftMemo;
 
   TBlobField = class(TBinaryField)
   private
+    FDisplayValue: TBlobDisplayValue;
     FModified : Boolean;
     // Wrapper that retrieves FDataType as a TBlobType
-    //   function GetBlobType: TBlobType;
+    function GetBlobType: TBlobType;
     // Wrapper that calls SetFieldType
-    //   procedure SetBlobType(AValue: TBlobType);
+    procedure SetBlobType(AValue: TBlobType);
+    procedure SetDisplayValue(AValue: TBlobDisplayValue);
   protected
+    class procedure CheckTypeSize(AValue: Longint); override;
     function GetBlobSize: Longint; virtual;
     function GetIsNull: Boolean; override;
     procedure GetText(var AText: string; ADisplayText{%H-}: Boolean); override;
@@ -682,7 +690,8 @@ type
     property Modified: Boolean read FModified write FModified;
     property Value: string read GetAsString write SetAsString;
   published
-   // property BlobType: TBlobType read GetBlobType write SetBlobType; // default ftBlob;
+    property DisplayValue: TBlobDisplayValue read FDisplayValue write SetDisplayValue default dvClass;
+    property BlobType: TBlobType read GetBlobType write SetBlobType; // default ftBlob;
     property Size default 0;
   end;
 
@@ -721,6 +730,18 @@ type
 
   public
     constructor Create(AOwner: TComponent); override;
+  end;
+
+  TDataSetField = class(TField)
+  private
+    FNestedDataSet: TDataSet;
+    procedure AssignNestedDataSet(Value: TDataSet);
+  protected
+    procedure Bind(Binding: Boolean); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+
+    destructor Destroy; override;
   end;
 
 { TIndexDef }
@@ -985,7 +1006,7 @@ type
   end;
 
 { TDataSet }
-  
+
   TBookmarkFlag = (bfCurrent, bfBOF, bfEOF, bfInserted);
   TBookmark = record
     Data : JSValue;
@@ -1001,7 +1022,7 @@ type
   TUpdateAction = (uaFail, uaAbort, uaSkip, uaRetry, uaApplied);
   TUpdateKind = (ukModify, ukInsert, ukDelete);
 
-  TLocateOption = (loCaseInsensitive, loPartialKey);
+  TLocateOption = (loCaseInsensitive, loPartialKey, loFromCurrent);
   TLocateOptions = set of TLocateOption;
   TDataOperation = procedure of object;
 
@@ -1012,7 +1033,7 @@ type
   TFilterOption = (foCaseInsensitive, foNoPartialCompare);
   TFilterOptions = set of TFilterOption;
 
-  TLoadOption = (loNoOpen,loNoEvents,loAtEOF);
+  TLoadOption = (loNoOpen,loNoEvents,loAtEOF,loCancelPending);
   TLoadOptions = Set of TLoadOption;
   TDatasetLoadEvent = procedure(DataSet: TDataSet; Data : JSValue) of object;
   TDatasetLoadFailEvent = procedure(DataSet: TDataSet; ID : Integer; Const ErrorMsg : String) of object;
@@ -1033,6 +1054,7 @@ type
   TResolveInfo = record
     Data : JSValue;
     Status : TUpdateStatus;
+    ResolveStatus : TResolveStatus;
     Error : String; // Only filled on error.
     BookMark : TBookmark;
     _private : JSValue; // for use by descendents of TDataset
@@ -1046,6 +1068,8 @@ type
 
   TOnRecordResolveEvent = Procedure (Sender : TDataset; info : TResolveInfo) of object;
   TApplyUpdatesEvent = Procedure (Sender : TDataset; info : TResolveResults) of object;
+
+  TNestedDataSetsList = TFPList;
 
 {------------------------------------------------------------------------------}
 
@@ -1084,6 +1108,7 @@ type
     FBeforeScroll: TDataSetNotifyEvent;
     FBlobFieldCount: Longint;
     FBuffers : TBuffers;
+    // The actual length of FBuffers is FBufferCount+1
     FBufferCount: Longint;
     FConstraints: TCheckConstraints;
     FDisableControlsCount : Integer;
@@ -1116,11 +1141,17 @@ type
     FUpdateBatchID : Integer;
     FChangeList : TFPList;
     FBatchList : TFPList;
+    FInApplyupdates : Boolean;
+    FLoadCount : Integer;
+    FMinLoadID : Integer;
+    FDataSetField: TDataSetField;
+    FNestedDataSets: TNestedDataSetsList;
+    FNestedDataSetClass: TDataSetClass;
     Procedure DoInsertAppend(DoAppend : Boolean);
     Procedure DoInternalOpen;
     Function  GetBuffer (Index : longint) : TDataRecord;
-    function GetBufferCount: Longint;
     function GetDataProxy: TDataProxy;
+    function GetIsLoading: Boolean;
     Procedure RegisterDataSource(ADataSource : TDataSource);
     procedure SetConstraints(Value: TCheckConstraints);
     procedure SetDataProxy(AValue: TDataProxy);
@@ -1134,7 +1165,8 @@ type
     procedure DoInsertAppendRecord(const Values: array of jsValue; DoAppend : boolean);
     // Callback for Tdataproxy.DoGetData;
     function ResolveRecordUpdate(anUpdate: TRecordUpdateDescriptor): Boolean;
-    procedure HandleRequestresponse(ARequest: TDataRequest);
+    procedure HandleRequestResponse(ARequest: TDataRequest);
+    function GetNestedDataSets: TNestedDataSetsList;
   protected
     // Proxy methods
     // Override this to integrate package in local data
@@ -1151,6 +1183,8 @@ type
     Procedure InitChangeList; virtual;
     Procedure DoneChangeList; virtual;
     Procedure ClearChangeList;
+    procedure ResetUpdateDescriptors;
+    function GetApplyUpdateData(aBuffer: TDataRecord) : JSValue; virtual;
     Function IndexInChangeList(aBookmark: TBookmark): Integer; virtual;
     Function AddToChangeList(aChange : TUpdateStatus) : TRecordUpdateDescriptor ; virtual;
     Procedure RemoveFromChangeList(R : TRecordUpdateDescriptor); virtual;
@@ -1247,7 +1281,7 @@ type
     property CurrentRecord: Longint read FCurrentRecord;
     property BlobFieldCount: Longint read FBlobFieldCount;
     property Buffers[Index: Longint]: TDataRecord read GetBuffer;
-    property BufferCount: Longint read GetBufferCount;
+    property BufferCount: Longint read FBufferCount;
     property CalcBuffer: TDataRecord read FCalcBuffer;
     property CalcFieldsCount: Longint read FCalcFieldsCount;
     property InternalCalcFields: Boolean read FInternalCalcFields;
@@ -1271,6 +1305,7 @@ type
     procedure SetBookmarkData(Var Buffer{%H-}: TDataRecord; Data{%H-}: TBookmark); virtual;
     procedure SetUniDirectional(const Value: Boolean);
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SetDataSetField(const Value: TDataSetField); virtual;
     // These use the active buffer
     function GetFieldData(Field: TField): JSValue;  virtual; overload;
     procedure SetFieldData(Field: TField; AValue : JSValue);  virtual; overload;
@@ -1278,6 +1313,7 @@ type
     procedure SetFieldData(Field: TField; var Buffer: TDatarecord; AValue : JSValue);  virtual; overload;
     class function FieldDefsClass : TFieldDefsClass; virtual;
     class function FieldsClass : TFieldsClass; virtual;
+    property NestedDataSets: TNestedDataSetsList read GetNestedDataSets;
   protected { abstract methods }
     function GetRecord(var Buffer: TDataRecord; GetMode: TGetMode; DoCheck: Boolean): TGetResult; virtual; abstract;
     procedure InternalClose; virtual; abstract;
@@ -1285,6 +1321,7 @@ type
     procedure InternalInitFieldDefs; virtual; abstract;
     function IsCursorOpen: Boolean; virtual; abstract;
     property DataProxy : TDataProxy Read GetDataProxy Write SetDataProxy;
+    Property LoadCount : Integer Read FLoadCount;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1292,10 +1329,10 @@ type
     procedure Append;
     procedure AppendRecord(const Values: array of jsValue);
     function BookmarkValid(ABookmark{%H-}: TBookmark): Boolean; virtual;
-    function ConvertToDateTime(aValue : JSValue; ARaiseException : Boolean) : TDateTime; virtual;
-    function ConvertDateTimeToNative(aValue : TDateTime) : JSValue; virtual;
-    Class function DefaultConvertToDateTime(aValue : JSValue; ARaiseException{%H-} : Boolean) : TDateTime; virtual;
-    Class function DefaultConvertDateTimeToNative(aValue : TDateTime) : JSValue; virtual;
+    function ConvertToDateTime(aField : TField; aValue : JSValue; ARaiseException : Boolean) : TDateTime; virtual;
+    function ConvertDateTimeToNative(aField : TField; aValue : TDateTime) : JSValue; virtual;
+    Class function DefaultConvertToDateTime(aField : TField; aValue : JSValue; ARaiseException{%H-} : Boolean) : TDateTime; virtual;
+    Class function DefaultConvertDateTimeToNative(aField : TField; aValue : TDateTime) : JSValue; virtual;
     Function BlobDataToBytes(aValue : JSValue) : TBytes; virtual;
     Class Function DefaultBlobDataToBytes(aValue : JSValue) : TBytes; virtual;
     Function BytesToBlobData(aValue : TBytes) : JSValue ; virtual;
@@ -1342,11 +1379,13 @@ type
     procedure Prior;
     procedure Refresh;
     procedure Resync(Mode: TResyncMode); virtual;
+    Procedure CancelLoading;
     procedure SetFields(const Values: array of JSValue);
     procedure UpdateCursorPos;
     procedure UpdateRecord;
     Function GetPendingUpdates : TResolveInfoArray;
-    function UpdateStatus: TUpdateStatus; virtual;
+    property DataSetField: TDataSetField read FDataSetField write SetDataSetField;
+    Property Loading : Boolean Read GetIsLoading;
     property BlockReadSize: Integer read FBlockReadSize write SetBlockReadSize;
     property BOF: Boolean read FBOF;
     property Bookmark: TBookmark read GetBookmark write GotoBookmark;
@@ -1364,7 +1403,7 @@ type
     property RecordSize: Word read GetRecordSize;
     property State: TDataSetState read FState;
     property Fields : TFields read FFieldList;
-    property FieldValues[FieldName : string] : JSValue read GetFieldValues write SetFieldValues; default;
+    property FieldValues[const FieldName : string] : JSValue read GetFieldValues write SetFieldValues; default;
     property Filter: string read FFilterText write SetFilterText;
     property Filtered: Boolean read FFiltered write SetFiltered default False;
     property FilterOptions: TFilterOptions read FFilterOptions write SetFilterOptions;
@@ -1596,12 +1635,12 @@ type
     FData: JSValue;
     FDataset: TDataset;
     FProxy: TDataProxy;
+    FResolveStatus: TResolveStatus;
     FResolveError: String;
     FServerData: JSValue;
     FStatus: TUpdateStatus;
-    FOriginalStatus : TUpdateStatus;
   Protected
-    Procedure SetStatus(aValue : TUpdateStatus); virtual;
+    Procedure SetResolveStatus(aValue : TResolveStatus); virtual;
     Procedure Reset;
   Public
     Constructor Create(aProxy : TDataProxy; aDataset : TDataset; aBookmark : TBookMark; AData : JSValue; AStatus : TUpdateStatus); reintroduce;
@@ -1609,8 +1648,9 @@ type
     Procedure ResolveFailed(aError : String);
     Property Proxy : TDataProxy read FProxy;
     Property Dataset : TDataset Read FDataset;
-    Property OriginalStatus : TUpdateStatus Read FOriginalStatus;
+    Property OriginalStatus : TUpdateStatus Read FStatus; deprecated;
     Property Status : TUpdateStatus Read FStatus;
+    Property ResolveStatus : TResolveStatus Read FResolveStatus;
     Property ServerData : JSValue Read FServerData;
     Property Data : JSValue Read FData;
     Property Bookmark : TBookmark Read FBookmark;
@@ -1735,14 +1775,14 @@ Const
 
 Procedure DatabaseError (Const Msg : String); overload;
 Procedure DatabaseError (Const Msg : String; Comp : TComponent); overload;
-Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of JSValue); overload;
-Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of JSValue; Comp : TComponent); overload;
+Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of Const); overload;
+Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of Const; Comp : TComponent); overload;
 Function ExtractFieldName(Const Fields: String; var Pos: Integer): String;
 
 // function SkipComments(var p: PChar; EscapeSlash, EscapeRepeat : Boolean) : boolean;
 
 // operator Enumerator(ADataSet: TDataSet): TDataSetEnumerator;
- 
+
 implementation
 
 uses DBConst,TypInfo;
@@ -1766,13 +1806,13 @@ begin
     DatabaseError(Msg);
 end;
 
-Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of JSValue);
+Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of Const);
 
 begin
   Raise EDatabaseError.CreateFmt(Fmt,Args);
 end;
 
-Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of JSValue;
+Procedure DatabaseErrorFmt (Const Fmt : String; Const Args : Array Of Const;
                             Comp : TComponent);
 begin
   if assigned(comp) then
@@ -1825,14 +1865,14 @@ end;
 
 { TRecordUpdateDescriptor }
 
-procedure TRecordUpdateDescriptor.SetStatus(aValue: TUpdateStatus);
+procedure TRecordUpdateDescriptor.SetResolveStatus(aValue: TResolveStatus);
 begin
-  FStatus:=AValue;
+  FResolveStatus:=AValue;
 end;
 
 procedure TRecordUpdateDescriptor.Reset;
 begin
-  FStatus:=FOriginalStatus;
+  FResolveStatus:=rsUnresolved;
   FResolveError:='';
   FServerData:=Null;
 end;
@@ -1844,20 +1884,19 @@ begin
   FBookmark:=aBookmark;
   FData:=AData;
   FStatus:=AStatus;
-  FOriginalStatus:=AStatus;
   FProxy:=aProxy;
 end;
 
 
 procedure TRecordUpdateDescriptor.Resolve(aData: JSValue);
 begin
-  FStatus:=usResolved;
+  SetResolveStatus(rsResolved);
   FServerData:=AData;
 end;
 
 procedure TRecordUpdateDescriptor.ResolveFailed(aError: String);
 begin
-  SetStatus(usResolveFailed);
+  SetResolveStatus(rsResolveFailed);
   FResolveError:=AError;
 end;
 
@@ -1923,7 +1962,7 @@ end;
 { EUpdateError }
 constructor EUpdateError.Create(NativeError, Context : String;
                                 ErrCode, PrevError : integer; E: Exception);
-                                
+
 begin
   Inherited CreateFmt(NativeError,[Context]);
   FContext := Context;
@@ -2329,9 +2368,8 @@ begin
   FIsUniDirectional := False;
   FAutoCalcFields := True;
   FDataRequestID:=0;
+  FNestedDataSetClass := TDataSetClass(Self.ClassType);
 end;
-
-
 
 destructor TDataSet.Destroy;
 
@@ -2340,8 +2378,12 @@ var
 
 begin
   Active:=False;
+
+  SetDataSetField(nil);
+
   FFieldDefs.Free;
   FFieldList.Free;
+  FNestedDataSets.Free;
   With FDataSources do
     begin
     While Count>0 do
@@ -2423,24 +2465,20 @@ end;
 procedure TDataSet.CalculateFields(var Buffer: TDataRecord);
 var
   i: Integer;
-  OldState: TDatasetState;
 begin
-  FCalcBuffer := Buffer; 
+  FCalcBuffer := Buffer;
+
   if FState <> dsInternalCalc then
   begin
-    OldState := FState;
-    FState := dsCalcFields;
-    try
-      ClearCalcFields(FCalcBuffer);
-      if not IsUniDirectional then
-        for i := 0 to FFieldList.Count - 1 do
-          if FFieldList[i].FieldKind = fkLookup then
-            FFieldList[i].CalcLookupValue;
-    finally
-      DoOnCalcFields;
-      FState := OldState;
-    end;
+    ClearCalcFields(FCalcBuffer);
+
+    if not IsUniDirectional then
+      for i := 0 to FFieldList.Count - 1 do
+        if FFieldList[i].FieldKind = fkLookup then
+          FFieldList[i].CalcLookupValue;
   end;
+
+  DoOnCalcFields;
 end;
 
 procedure TDataSet.CheckActive;
@@ -2517,7 +2555,7 @@ procedure TDataSet.DataEvent(Event: TDataEvent; Info: JSValue);
   begin
     if aField.FieldKind in [fkData, fkInternalCalc] then
       SetModified(True);
-      
+
     if State <> dsSetKey then begin
       if aField.FieldKind = fkData then begin
         if FInternalCalcFields then
@@ -2528,11 +2566,25 @@ procedure TDataSet.DataEvent(Event: TDataEvent; Info: JSValue);
       aField.Change;
     end;
   end;
-  
+
   procedure HandleScrollOrChange;
+  var
+    A: Integer;
+
+    NestedDataSet: TDataSet;
+
   begin
     if State <> dsInsert then
       UpdateCursorPos;
+
+    if Assigned(FNestedDataSets) then
+      for A := 0 to Pred(NestedDataSets.Count) do
+      begin
+        NestedDataSet := TDataSet(NestedDataSets[A]);
+
+        if NestedDataSet.Active then
+          NestedDataSet.DataEvent(deParentScroll, 0);
+      end;
   end;
 
 var
@@ -2542,7 +2594,7 @@ begin
     deFieldChange   : HandleFieldChange(TField(Info));
     deDataSetChange,
     deDataSetScroll : HandleScrollOrChange;
-    deLayoutChange  : FEnableControlsEvent:=deLayoutChange;    
+    deLayoutChange  : FEnableControlsEvent:=deLayoutChange;
   end;
 
   if not ControlsDisabled and (FState <> dsBlockRead) then begin
@@ -2735,7 +2787,7 @@ begin
     FBeforeApplyUpdates(Self);
 end;
 
-procedure TDataSet.DoAfterApplyUpdates(Const ResolveInfo : TResolveResults);
+procedure TDataSet.DoAfterApplyUpdates(const ResolveInfo: TResolveResults);
 
 begin
   If Assigned(FAfterApplyUpdates) then
@@ -2776,11 +2828,6 @@ begin
   Result:=FBuffers[Index];
 end;
 
-function TDataSet.GetBufferCount: Longint;
-begin
-  Result:=Length(FBuffers);
-end;
-
 function TDataSet.DoGetDataProxy: TDataProxy;
 
 begin
@@ -2809,7 +2856,17 @@ begin
     end;
 end;
 
-Function TDataSet.IndexInChangeList(aBookmark : TBookmark) : Integer;
+procedure TDataSet.ResetUpdateDescriptors;
+
+Var
+  I : Integer;
+
+begin
+  For I:=0 to FChangeList.Count-1 do
+    TRecordUpdateDescriptor(FChangeList[i]).Reset;
+end;
+
+function TDataSet.IndexInChangeList(aBookmark: TBookmark): Integer;
 
 begin
   Result:=-1;
@@ -2820,11 +2877,18 @@ begin
     Dec(Result);
 end;
 
-Function TDataSet.AddToChangeList(aChange: TUpdateStatus) : TRecordUpdateDescriptor;
+function TDataSet.GetApplyUpdateData(aBuffer : TDataRecord) : JSValue;
+
+begin
+  Result:=aBuffer.Data;
+end;
+
+function TDataSet.AddToChangeList(aChange: TUpdateStatus): TRecordUpdateDescriptor;
 
 Var
   B : TBookmark;
   I : Integer;
+  aData : JSValue;
 
 begin
   Result:=Nil;
@@ -2834,19 +2898,26 @@ begin
   I:=IndexInChangeList(B);
   if (I=-1) then
     begin
+    aData:=GetApplyUpdateData(ActiveBuffer);
     if Assigned(DataProxy) then
-      Result:=DataProxy.GetUpdateDescriptor(Self,B,ActiveBuffer.data,aChange)
+      Result:=DataProxy.GetUpdateDescriptor(Self,B,aData,aChange)
     else
-      Result:=TRecordUpdateDescriptor.Create(Nil,Self,B,ActiveBuffer.data,aChange);
+      Result:=TRecordUpdateDescriptor.Create(Nil,Self,B,aData,aChange);
     FChangeList.Add(Result);
     end
   else
     begin
     Result:=TRecordUpdateDescriptor(FChangeList[i]);
     Case aChange of
-      usDeleted : Result.FStatus:=usDeleted;
+      usDeleted :
+        begin
+        if Result.FStatus = usInserted then
+          FChangeList.Delete(I)
+        else
+          Result.FStatus:=usDeleted;
+        end;
       usInserted : DatabaseError(SErrInsertingSameRecordtwice,Self);
-      usModified : Result.FData:=ActiveBuffer.Data;
+      usModified : Result.FData:=GetApplyUpdateData(ActiveBuffer);
     end
     end;
 end;
@@ -2858,7 +2929,7 @@ begin
     Exit;
 end;
 
-Function TDataSet.GetRecordUpdates(AList: TRecordUpdateDescriptorList) : Integer;
+function TDataSet.GetRecordUpdates(AList: TRecordUpdateDescriptorList): Integer;
 
 Var
   I,MinIndex : integer;
@@ -2866,11 +2937,12 @@ Var
 begin
   MinIndex:=0; // Check batch list for minimal index ?
   For I:=MinIndex to FChangeList.Count-1 do
-    Alist.Add(FChangeList[i]);
+    if TRecordUpdateDescriptor(FChangeList[i]).ResolveStatus=rsUnResolved  then
+      Alist.Add(FChangeList[i]);
   Result:=FChangeList.Count;
 end;
 
-Function TDataSet.ResolveRecordUpdate(anUpdate: TRecordUpdateDescriptor) : Boolean;
+function TDataSet.ResolveRecordUpdate(anUpdate: TRecordUpdateDescriptor): Boolean;
 
 // This must return true if the record may be removed from the list of 'modified' records.
 // If it returns false, the record is kept in the list of modified records.
@@ -2879,7 +2951,7 @@ begin
   try
     Result:=DoResolveRecordUpdate(anUpdate);
     If not Result then
-      anUpdate.FStatus:=usResolveFailed;
+      anUpdate.SetResolveStatus(rsResolveFailed);
   except
     On E : Exception do
       begin
@@ -2890,12 +2962,13 @@ begin
   DoOnRecordResolved(anUpdate);
 end;
 
-Function TDataSet.RecordUpdateDescriptorToResolveInfo(anUpdate: TRecordUpdateDescriptor) : TResolveInfo;
+function TDataSet.RecordUpdateDescriptorToResolveInfo(anUpdate: TRecordUpdateDescriptor): TResolveInfo;
 
 begin
   Result.BookMark:=anUpdate.Bookmark;
   Result.Data:=anUpdate.Data;
   Result.Status:=anUpdate.Status;
+  Result.ResolveStatus:=anUpdate.ResolveStatus;
   Result.Error:=anUpdate.ResolveError;
 end;
 
@@ -2936,11 +3009,11 @@ begin
     if (Idx<>-1) then
       begin
       doRemove:=False;
-      if (RUD.Status=usResolved) then
+      if (RUD.ResolveStatus=rsResolved) then
         DoRemove:=ResolveRecordUpdate(RUD)
       else
         // What if not resolvable.. ?
-        DoRemove:=(RUD.Status in [usUnmodified]);
+        DoRemove:=(RUD.ResolveStatus=rsResolved);
       If DoRemove then
         begin
         RUD.Free;
@@ -2965,24 +3038,33 @@ Var
 begin
   if Not Assigned(DataProxy) then
     DatabaseError(SErrDoApplyUpdatesNeedsProxy,Self);
-  if Not (Assigned(FChangeList) and (FChangeList.Count>0)) then
-    Exit;
-  L:=TRecordUpdateDescriptorList.Create;
+  if FInApplyupdates then
+    exit;
   try
-    I:=GetRecordUpdates(L);
-  except
-    L.Free;
-    Raise;
+    FInApplyupdates:=True;
+    if Not (Assigned(FChangeList) and (FChangeList.Count>0)) then
+      Exit;
+    L:=TRecordUpdateDescriptorList.Create;
+    try
+      I:=GetRecordUpdates(L);
+    except
+      L.Free;
+      Raise;
+    end;
+    Inc(FUpdateBatchID);
+    For I:=0 to L.Count-1 do
+      TRecordUpdateDescriptor(L[i]).SetResolveStatus(rsResolving);
+    B:=DataProxy.GetRecordUpdateBatch(FUpdateBatchID,L,True);
+    B.FDataset:=Self;
+    B.FLastChangeIndex:=I;
+    B.OnResolve:=@ResolveUpdateBatch;
+    If not Assigned(FBatchlist) then
+      FBatchlist:=TFPList.Create;
+    FBatchList.Add(B);
+    DataProxy.ProcessUpdateBatch(B);
+  Finally
+    FInApplyupdates:=False;
   end;
-  Inc(FUpdateBatchID);
-  B:=DataProxy.GetRecordUpdateBatch(FUpdateBatchID,L,True);
-  B.FDataset:=Self;
-  B.FLastChangeIndex:=I;
-  B.OnResolve:=@ResolveUpdateBatch;
-  If not Assigned(FBatchlist) then
-    FBatchlist:=TFPList.Create;
-  FBatchList.Add(B);
-  DataProxy.ProcessUpdateBatch(B);
 end;
 
 procedure TDataSet.DoneChangeList;
@@ -3000,13 +3082,19 @@ begin
   Result:=FDataProxy;
 end;
 
+function TDataSet.GetIsLoading: Boolean;
+begin
+//  Writeln(Name,' GetIsLoading Loadcount : ',LoadCount);
+  Result:=(FLoadCount>0);
+end;
+
 function TDataSet.DataPacketReceived(ARequest: TDataRequest): Boolean;
 
 begin
   Result:=False;
 end;
 
-procedure TDataSet.HandleRequestresponse(ARequest: TDataRequest);
+procedure TDataSet.HandleRequestResponse(ARequest: TDataRequest);
 
 Var
   DataAdded : Boolean;
@@ -3014,6 +3102,14 @@ Var
 begin
   if Not Assigned(ARequest) then
     exit;
+//  Writeln(Name,' Check request response: ',ARequest.FRequestID,', min: ',FMinLoadID,' Loadcount:',FLoadCount);
+  if ARequest.FRequestID<=FMinLoadID then
+    begin
+    ARequest.Destroy;
+    Exit;
+    end;
+  Dec(FloadCount);
+//  Writeln(Name,' Handle request response: ',ARequest.FRequestID,', min: ',FMinLoadID,' Loadcount:',FLoadCount);
   Case ARequest.Success of
   rrFail:
     begin
@@ -3057,10 +3153,20 @@ begin
 end;
 
 procedure TDataSet.GetCalcFields(var Buffer: TDataRecord);
-
+var
+  i: Integer;
+  OldState: TDatasetState;
 begin
   if (FCalcFieldsCount > 0) or FInternalCalcFields then
-    CalculateFields(Buffer);
+  begin
+    OldState := FState;
+    FState := dsCalcFields;
+    try
+      CalculateFields(Buffer);
+    finally
+      FState := OldState;
+    end;
+  end;
 end;
 
 function TDataSet.GetCanModify: Boolean;
@@ -3108,20 +3214,51 @@ begin
   // empty stub
 end;
 
-procedure TDataSet.InternalGotoBookmark(ABookmark: TBookMark);
+procedure TDataSet.InternalGotoBookmark(ABookmark: TBookmark);
 begin
   // empty stub
 end;
 
+procedure TDataSet.SetDataSetField(const Value: TDataSetField);
+begin
+  if Value = FDataSetField then
+    exit;
+  if (Value <> nil) and ((Value.DataSet = Self) or
+     ((Value.DataSet.GetDataSource <> nil) and
+      (Value.DataSet.GetDataSource.DataSet = Self))) then
+    DatabaseError(SCircularDataLink, Self);
+  if Assigned(Value) and not InheritsFrom(Value.DataSet.FNestedDataSetClass) then
+    DatabaseErrorFmt(SNestedDataSetClass, [Value.DataSet.FNestedDataSetClass.ClassName], Self);
+  if Active then
+    Close;
+  if Assigned(FDataSetField) then
+    FDataSetField.AssignNestedDataSet(nil);
+  FDataSetField := Value;
+  if Assigned(Value) then
+    begin
+    Value.AssignNestedDataSet(Self);
+    if Value.DataSet.Active then
+      Open;
+    end;
+end;
 
-function TDataset.GetFieldData(Field: TField; Buffer: TDatarecord): JSValue;
+function TDataSet.GetNestedDataSets: TNestedDataSetsList;
+begin
+  if not Assigned(FNestedDataSets) then
+    FNestedDataSets := TNestedDataSetsList.Create;
+  Result := FNestedDataSets;
+end;
+
+function TDataSet.GetFieldData(Field: TField; Buffer: TDatarecord): JSValue;
 
 begin
   Result:=TJSObject(buffer.data).Properties[Field.FieldName];
+  if isUndefined(Result) then
+    Result:=Null;
 end;
 
 
-procedure TDataSet.SetFieldData(Field: TField; var Buffer: TDataRecord; AValue : JSValue);
+procedure TDataSet.SetFieldData(Field: TField; var Buffer: TDatarecord; AValue: JSValue);
 
 begin
   TJSObject(buffer.data).Properties[Field.FieldName]:=AValue;
@@ -3142,10 +3279,10 @@ end;
 
 function TDataSet.GetIndexDefs(IndexDefs: TIndexDefs; IndexTypes: TIndexOptions
   ): TIndexDefs;
-  
+
 var i,f : integer;
     IndexFields : TStrings;
-    
+
 begin
   IndexDefs.Update;
   Result := TIndexDefs.Create(Self);
@@ -3293,15 +3430,15 @@ begin
   FBlockReadSize := AValue;
   if AValue > 0 then
   begin
-    CheckActive; 
+    CheckActive;
     SetState(dsBlockRead);
-  end	
+  end
   else
   begin
-    //update state only when in dsBlockRead 
+    //update state only when in dsBlockRead
     if FState = dsBlockRead then
       SetState(dsBrowse);
-  end;	
+  end;
 end;
 
 procedure TDataSet.SetFieldDefs(AFieldDefs: TFieldDefs);
@@ -3311,7 +3448,7 @@ begin
   FFieldDefs.Assign(AFieldDefs);
 end;
 
-procedure TDataSet.DoInsertAppendRecord(const Values: array of JSValue; DoAppend : boolean);
+procedure TDataSet.DoInsertAppendRecord(const Values: array of jsValue; DoAppend: boolean);
 var i : integer;
     ValuesSize : integer;
 begin
@@ -3326,7 +3463,7 @@ begin
   Post;
 end;
 
-procedure TDataSet.InitFieldDefsFromFields;
+procedure TDataSet.InitFieldDefsFromfields;
 var i : integer;
 
 begin
@@ -3404,7 +3541,7 @@ begin
   end;
 end;
 
-procedure TDataSet.RefreshInternalCalcFields(Var Buffer: TDataRecord);
+procedure TDataSet.RefreshInternalCalcFields(var Buffer: TDataRecord);
 
 begin
   //!! To be implemented
@@ -3471,12 +3608,12 @@ begin
   // empty stub
 end;
 
-procedure TDataSet.SetBookmarkFlag(Var Buffer: TDataRecord; Value: TBookmarkFlag);
+procedure TDataSet.SetBookmarkFlag(var Buffer: TDataRecord; Value: TBookmarkFlag);
 begin
   // empty stub
 end;
 
-procedure TDataSet.SetBookmarkData(Var Buffer: TDataRecord; Data: TBookmark);
+procedure TDataSet.SetBookmarkData(var Buffer: TDataRecord; Data: TBookmark);
 begin
   // empty stub
 end;
@@ -3531,7 +3668,6 @@ begin
     begin
     DoBeforeClose;
     SetState(dsInactive);
-    FDataRequestID:=0;
     DoneChangeList;
     CloseCursor;
     DoAfterClose;
@@ -3636,12 +3772,13 @@ begin
   If Value=FBufferCount Then
     exit;
   // Less buffers, shift buffers.
-  if value>BufferCount then
+  if value>FBufferCount then
     begin
+    SetLength(FBuffers,Value+1); // FBuffers[FBufferCount] is used as a temp buffer
     For I:=FBufferCount to Value do
       FBuffers[i]:=AllocRecordBuffer;
     end
-  else if value<BufferCount then
+  else if value<FBufferCount then
     if (value>=0) and (FActiveRecord>Value-1) then
       begin
       for i := 0 to (FActiveRecord-Value) do
@@ -3829,7 +3966,10 @@ begin
 {$ifdef dsdebug}
   Writeln ('Active buffer requested. Returning record number: ',ActiveRecord);
 {$endif}
-  Result:=FBuffers[FActiveRecord];
+  if FactiveRecord<>-1 then
+    Result:=FBuffers[FActiveRecord]
+  else
+    Result:=Default(TDataRecord);
 end;
 
 function TDataSet.GetFieldData(Field: TField): JSValue;
@@ -3854,7 +3994,7 @@ begin
   //!! To be implemented
 end;
 
-procedure TDataSet.AppendRecord(const Values: array of JSValue);
+procedure TDataSet.AppendRecord(const Values: array of jsValue);
 
 begin
   DoInsertAppendRecord(Values,True);
@@ -3870,12 +4010,12 @@ end;
 
 
 
-function TDataSet.ConvertToDateTime(aValue: JSValue; ARaiseException: Boolean): TDateTime;
+function TDataSet.ConvertToDateTime(aField: TField; aValue: JSValue; ARaiseException: Boolean): TDateTime;
 begin
-  Result:=DefaultConvertToDateTime(aValue,ARaiseException);
+  Result:=DefaultConvertToDateTime(aField,aValue,ARaiseException);
 end;
 
-class function TDataSet.DefaultConvertToDateTime(aValue: JSValue; ARaiseException: Boolean): TDateTime;
+class function TDataSet.DefaultConvertToDateTime(aField: TField; aValue: JSValue; ARaiseException: Boolean): TDateTime;
 begin
   Result:=0;
   if IsString(aValue) then
@@ -3885,15 +4025,17 @@ begin
     end
   else if IsNumber(aValue) then
     Result:=TDateTime(AValue)
+  else if IsDate(aValue) then
+    Result:=JSDateToDateTime(TJSDate(aValue));
 end;
 
-function TDataSet.ConvertDateTimeToNative(aValue : TDateTime) : JSValue;
+function TDataSet.ConvertDateTimeToNative(aField: TField; aValue : TDateTime) : JSValue;
 
 begin
-  Result:=DefaultConvertDateTimeToNative(aValue);
+  Result:=DefaultConvertDateTimeToNative(aField, aValue);
 end;
 
-Class function TDataSet.DefaultConvertDateTimeToNative(aValue : TDateTime) : JSValue;
+class function TDataSet.DefaultConvertDateTimeToNative(aField: TField; aValue: TDateTime): JSValue;
 
 begin
   Result:=DateTimeToRFC3339(aValue);
@@ -3929,13 +4071,13 @@ begin
     end;
 end;
 
-Function TDataSet.BytesToBlobData(aValue : TBytes) : JSValue ;
+function TDataSet.BytesToBlobData(aValue: TBytes): JSValue;
 
 begin
   Result:=DefaultBytesToBlobData(aValue);
 end;
 
-Class Function TDataSet.DefaultBytesToBlobData(aValue : TBytes) : JSValue;
+class function TDataSet.DefaultBytesToBlobData(aValue: TBytes): JSValue;
 
 Var
   S : String;
@@ -3947,8 +4089,9 @@ begin
   else
     begin
     S:='';
-    For I:=0 to Length(AValue) do
-      TJSString(S).Concat(IntToHex(aValue[i],2));
+    For I:=0 to Length(AValue)-1 do
+      S:=TJSString(S).Concat(IntToHex(aValue[i],2));
+    Result:=S;
     end;
 end;
 
@@ -4375,7 +4518,7 @@ procedure TDataSet.GotoBookmark(const ABookmark: TBookmark);
 
 
 begin
-  If Assigned(ABookMark) then
+  If Not IsNull(ABookMark.Data) then
     begin
     CheckBrowseMode;
     DoBeforeScroll;
@@ -4456,6 +4599,7 @@ Var
   Request : TDataRequest;
 
 begin
+//  Writeln(Name,' Load called. LoadCount ',LoadCount);
   if not (loNoEvents in aOptions) then
     DoBeforeLoad;
   Result:=DataProxy<>Nil;
@@ -4467,7 +4611,11 @@ begin
     Request.FBookmark:=GetBookmark;
   Inc(FDataRequestID);
   Request.FRequestID:=FDataRequestID;
-  DataProxy.DoGetData(Request);
+  if DataProxy.DoGetData(Request) then
+    Inc(FLoadCount)
+  else
+    Request.Free;
+//  Writeln(Name,' End of Load call. Count: ',LoadCount);
 end;
 
 
@@ -4476,6 +4624,8 @@ function TDataSet.Load(aOptions: TLoadOptions; aAfterLoad: TDatasetLoadEvent): B
 begin
   if loAtEOF in aOptions then
     DatabaseError(SatEOFInternalOnly,Self);
+  if loCancelPending in aOptions then
+    CancelLoading;
   Result:=DoLoad(aOptions,aAfterLoad);
 end;
 
@@ -4731,6 +4881,12 @@ begin
   DataEvent(deDatasetChange,0);
 end;
 
+procedure TDataSet.CancelLoading;
+begin
+  FMinLoadID:=FDataRequestID;
+  FloadCount:=0;
+end;
+
 procedure TDataSet.SetFields(const Values: array of JSValue);
 
 Var I  : longint;
@@ -4812,11 +4968,13 @@ begin
   end;
 end;
 
+(*
 function TDataSet.UpdateStatus: TUpdateStatus;
 
 begin
-  Result:=usUnmodified;
+  Result:=;
 end;
+*)
 
 procedure TDataSet.SetConstraints(Value: TCheckConstraints);
 begin
@@ -4850,7 +5008,7 @@ begin
   TempBuf := FBuffers[0];
   For I:=1 to FBufferCount do
     FBuffers[I-1]:=FBuffers[i];
-  FBuffers[BufferCount]:=TempBuf;
+  FBuffers[FBufferCount]:=TempBuf;
 end;
 
 procedure TDataSet.ShiftBuffersForward;
@@ -5267,6 +5425,27 @@ begin
   Result:=EDatabaseError.CreateFmt(SinvalidTypeConversion,[TypeName,FFieldName]);
 end;
 
+procedure TField.DefineProperties(Filer: TFiler); 
+  procedure IgnoreReadString(Reader: TReader);
+  begin
+    Reader.ReadString;
+  end;
+  
+  procedure IgnoreReadBoolean(Reader: TReader);
+  begin
+    Reader.ReadBoolean;
+  end;
+
+  procedure IgnoreWrite(Writer: TWriter);
+  begin
+  end;
+
+begin
+  Filer.DefineProperty('AttributeSet', @IgnoreReadString, @IgnoreWrite, False);
+  Filer.DefineProperty('Calculated', @IgnoreReadBoolean, @IgnoreWrite, False);
+  Filer.DefineProperty('Lookup', @IgnoreReadBoolean, @IgnoreWrite, False);
+end;
+
 procedure TField.Assign(Source: TPersistent);
 
 begin
@@ -5498,7 +5677,11 @@ begin
   If FValidating then
     result:=FValueBuffer
   else
+    begin
     Result:=FDataset.GetFieldData(Self);
+    If IsUndefined(Result) then
+      Result:=Null;
+    end;
 end;
 
 function TField.GetDataSize: Integer;
@@ -5547,7 +5730,7 @@ begin
 //  if FLookupCache then
 //    Value := LookupList.ValueOfKey(FDataSet.FieldValues[FKeyFields])
 //  else if
-  if Assigned(FLookupDataSet) and FDataSet.Active then
+  if Assigned(FLookupDataSet) and FLookupDataSet.Active then
     Value := FLookupDataSet.Lookup(FLookupKeyfields, FDataSet.FieldValues[FKeyFields], FLookupresultField)
   else
     Value:=Null;
@@ -5619,7 +5802,7 @@ begin
   if not Assigned(FLookupDataSet) or (Length(FLookupKeyfields) = 0)
   or (Length(FLookupresultField) = 0) or (Length(FKeyFields) = 0) then
     Exit;
-    
+
   tmpActive := FLookupDataSet.Active;
   try
     FLookupDataSet.Active := True;
@@ -5764,8 +5947,8 @@ end;
 procedure TField.SetParentComponent(Value: TComponent);
 
 begin
-  if not (csLoading in ComponentState) then
-    DataSet := Value as TDataSet;
+  // if not (csLoading in ComponentState) then
+  DataSet := Value as TDataSet;
 end;
 
 procedure TField.SetSize(AValue: Integer);
@@ -6530,7 +6713,7 @@ begin
     Fmt:=FDisplayFormat
   else
     Fmt:=FEditFormat;
-    
+
   Digits := 0;
   if not FCurrency then
     ff := ffGeneral
@@ -6574,7 +6757,7 @@ var f : Double;
 begin
   If (AValue='') then
     Clear
-  else  
+  else
     begin
     If not TryStrToFloat(AValue,F) then
       DatabaseErrorFmt(SNotAFloat, [AValue]);
@@ -6738,18 +6921,20 @@ end;
 
 function TDateTimeField.ConvertToDateTime(aValue: JSValue; aRaiseError: Boolean): TDateTime;
 begin
-  if Assigned(Dataset) then
-    Result:=Dataset.ConvertToDateTime(aValue,aRaiseError)
+  if JS.isNull(aValue) then
+    Result:=0
+  else if Assigned(Dataset) then
+    Result:=Dataset.ConvertToDateTime(Self,aValue,aRaiseError)
   else
-    Result:=TDataset.DefaultConvertToDateTime(aValue,aRaiseError);
+    Result:=TDataset.DefaultConvertToDateTime(Self,aValue,aRaiseError);
 end;
 
 function TDateTimeField.DateTimeToNativeDateTime(aValue: TDateTime): JSValue;
 begin
   if Assigned(Dataset) then
-    Result:=Dataset.ConvertDateTimeToNative(aValue)
+    Result:=Dataset.ConvertDateTimeToNative(Self,aValue)
   else
-    Result:=TDataset.DefaultConvertDateTimeToNative(aValue);
+    Result:=TDataset.DefaultConvertDateTimeToNative(Self,aValue);
 end;
 
 function TDateTimeField.GetAsDateTime: TDateTime;
@@ -6768,7 +6953,7 @@ function TDateTimeField.GetAsJSValue: JSValue;
 
 begin
   Result:=GetData;
-  if Not isString(Result) then
+  if Not isString(Result) and not IsObject(Result) then
     Result:=Null;
 end;
 
@@ -6901,7 +7086,7 @@ begin
     DatabaseErrorFmt(SInvalidFieldSize,[AValue]);
 end;
 
-Function TBinaryField.BlobToBytes(aValue : JSValue) : TBytes;
+function TBinaryField.BlobToBytes(aValue: JSValue): TBytes;
 
 begin
   if Assigned(Dataset) then
@@ -6910,7 +7095,7 @@ begin
     Result:=TDataSet.DefaultBlobDataToBytes(aValue)
 end;
 
-Function TBinaryField.BytesToBlob(aValue : TBytes) : JSValue;
+function TBinaryField.BytesToBlob(aValue: TBytes): JSValue;
 
 begin
   if Assigned(Dataset) then
@@ -6930,11 +7115,14 @@ begin
   Result := '';
   V:=GetData;
   if V<>Null then
-    begin
-    S:=BlobToBytes(V);
-    For I:=0 to Length(S) do
-       TJSString(Result).Concat(TJSString.fromCharCode(S[I]));
-    end;
+    if (DataType=ftMemo) then
+      Result:=String(V)
+    else
+      begin
+      S:=BlobToBytes(V);
+      For I:=0 to Length(S)-1 do
+         Result:=TJSString(Result).Concat(TJSString.fromCharCode(S[I]));
+      end;
 end;
 
 
@@ -6966,10 +7154,15 @@ var
   i : Integer;
 
 begin
-  SetLength(B, Length(aValue));
-  For I:=1 to Length(aValue) do
-    B[i-1]:=Ord(aValue[i]);
-  SetAsBytes(B);
+  if DataType=ftMemo then
+    SetData(aValue)
+  else
+    begin
+    SetLength(B, Length(aValue));
+    For I:=1 to Length(aValue) do
+      B[i-1]:=Ord(aValue[i]);
+    SetAsBytes(B);
+    end;
 end;
 
 
@@ -6992,6 +7185,24 @@ begin
     SetAsString(String(AValue))
   else
     RaiseAccessError('Blob');
+end;
+
+function TBinaryField.GetAsBytes: TBytes;
+
+Var
+  V : JSValue;
+
+begin
+  V:=GetData;
+  if Assigned(V) then
+    Result:=BlobToBytes(V)
+  else
+    SetLength(Result,0);
+end;
+
+procedure TBinaryField.SetAsBytes(const aValue: TBytes);
+begin
+  SetData(BytesToBlob(aValue))
 end;
 
 
@@ -7030,7 +7241,28 @@ end;
 *)
 
 
+function TBlobField.GetBlobType: TBlobType;
+begin
+  Result:=ftBlob;
+end;
 
+procedure TBlobField.SetBlobType(AValue: TBlobType);
+begin
+  SetFieldType(aValue);
+end;
+
+procedure TBlobField.SetDisplayValue(AValue: TBlobDisplayValue);
+begin
+  if FDisplayValue=AValue then Exit;
+  FDisplayValue:=AValue;
+  PropertyChanged(False);
+end;
+
+class procedure TBlobField.CheckTypeSize(AValue: Longint);
+begin
+  If AValue<0 then
+    DatabaseErrorFmt(SInvalidFieldSize,[AValue]);
+end;
 
 function TBlobField.GetBlobSize: Longint;
 
@@ -7053,8 +7285,26 @@ begin
 end;
 
 procedure TBlobField.GetText(var AText: string; ADisplayText: Boolean);
+
 begin
-  AText := inherited GetAsString;
+  Case FDisplayValue of
+  dvClass:
+    aText:=GetClassDesc;
+  dvFull:
+    aText:=GetAsString;
+  dvClip:
+    begin
+    aText:=GetAsString;
+    if aDisplayText and (Length(aText)>DisplayWidth) then
+      aText:=Copy(Text,1,DisplayWidth) + '...';
+    end;
+  dvFit:
+    begin
+    aText:=GetAsString;
+    if aDisplayText and (Length(aText)>DisplayWidth) then
+      aText:=GetClassDesc;
+    end;
+  end;
 end;
 
 class function TBlobField.IsBlob: Boolean;
@@ -7105,9 +7355,9 @@ Var
 begin
   V:=GetData;
   if Assigned(Dataset) then
-    Result:=Dataset.ConvertToDateTime(V,True)
+    Result:=Dataset.ConvertToDateTime(Self,V,True)
   else
-    Result:=TDataset.DefaultConvertToDateTime(V,True)
+    Result:=TDataset.DefaultConvertToDateTime(Self,V,True)
 end;
 
 function TVariantField.GetAsFloat: Double;
@@ -7330,7 +7580,7 @@ procedure TFields.Clear;
 var
   AField: TField;
 begin
-  while FFieldList.Count > 0 do 
+  while FFieldList.Count > 0 do
     begin
     AField := TField(FFieldList.Last);
     AField.FDataSet := Nil;
@@ -7445,12 +7695,8 @@ Var
   B : Boolean;
 
 begin
-  B:=Assigned(DataSource) and Not (DataSource.State in [dsInactive,dsOpening]);
-  If B<>FActive then
-    begin
-    FActive:=B;
-    ActiveChanged;
-    end;
+  B:=Assigned(DataSource) and not (DataSource.State in [dsInactive, dsOpening]);
+  SetActive(B);
   B:=Assigned(DataSource) and (DataSource.State in dsEditModes) and Not FReadOnly;
   If B<>FEditing Then
     begin
@@ -7473,7 +7719,7 @@ begin
   else if DataSource.DataSet.FActiveRecord < FFirstRecord + Index then
     Result := DataSource.DataSet.FActiveRecord - (FFirstRecord + Index)
   else Result := 0;
-  
+
   Inc(FFirstRecord, Index + Result);
 end;
 
@@ -7499,30 +7745,31 @@ end;
 
 
 Procedure TDataLink.DataEvent(Event: TDataEvent; Info: JSValue);
-
-
 begin
-  Case Event of
-    deFieldChange, deRecordChange:
-      If Not FUpdatingRecord then
-        RecordChanged(TField(Info));
-    deDataSetChange: begin
-      SetActive(DataSource.DataSet.Active);
-      CalcRange;
-      CalcFirstRecord(Integer(Info));
-      DatasetChanged;
+  if Event = deUpdateState then
+    CheckActiveAndEditing
+  else if Active then
+    case Event of
+      deFieldChange, deRecordChange:
+        if not FUpdatingRecord then
+          RecordChanged(TField(Info));
+      deDataSetChange:
+      begin
+        SetActive(DataSource.DataSet.Active);
+        CalcRange;
+        CalcFirstRecord(Integer(Info));
+        DatasetChanged;
+      end;
+      deDataSetScroll: DatasetScrolled(CalcFirstRecord(Integer(Info)));
+      deLayoutChange:
+      begin
+        CalcFirstRecord(Integer(Info));
+        LayoutChanged;
+      end;
+      deUpdateRecord: UpdateRecord;
+      deCheckBrowseMode: CheckBrowseMode;
+      deFocusControl: FocusControl(Info);
     end;
-    deDataSetScroll: DatasetScrolled(CalcFirstRecord(Integer(Info)));
-    deLayoutChange: begin
-      CalcFirstRecord(Integer(Info));
-      LayoutChanged;
-    end;
-    deUpdateRecord: UpdateRecord;
-    deUpdateState: CheckActiveAndEditing;
-    deCheckBrowseMode: CheckBrowseMode;
-    deFocusControl:
-      FocusControl(Info);
-  end;
 end;
 
 
@@ -7564,7 +7811,7 @@ begin
   If Assigned(Datasource) then
     Result:=DataSource.DataSet
   else
-    Result:=Nil;  
+    Result:=Nil;
 end;
 
 
@@ -7759,7 +8006,7 @@ begin
     if Active and (FFields.Count > 0) then
       DoMasterChange
     else
-      DoMasterDisable;  
+      DoMasterDisable;
 end;
 
 
@@ -7790,7 +8037,7 @@ begin
   if (DataSource.State <> dsSetKey) and FDetailDataSet.Active and
      (FFields.Count > 0) and ((Field = nil) or
      (FFields.IndexOf(Field) >= 0)) then
-    DoMasterChange;  
+    DoMasterChange;
 end;
 
 procedure TMasterDatalink.SetFieldNames(const Value: string);
@@ -7803,14 +8050,14 @@ begin
     end;
 end;
 
-Procedure TMasterDataLink.DoMasterDisable; 
+Procedure TMasterDataLink.DoMasterDisable;
 
 begin
-  if Assigned(FOnMasterDisable) then 
+  if Assigned(FOnMasterDisable) then
     FOnMasterDisable(Self);
 end;
 
-Procedure TMasterDataLink.DoMasterChange; 
+Procedure TMasterDataLink.DoMasterChange;
 
 begin
   If Assigned(FOnMasterChange) then
@@ -7833,7 +8080,7 @@ begin
     P:=TParams(GetObjectProp(ADataset,'Params',TParams));
     if (P<>Nil) then
       Params:=P;
-    end;  
+    end;
 end;
 
 
@@ -7845,7 +8092,7 @@ begin
     RefreshParamNames;
 end;
 
-Procedure TMasterParamsDataLink.RefreshParamNames; 
+Procedure TMasterParamsDataLink.RefreshParamNames;
 
 Var
   FN : String;
@@ -7877,7 +8124,7 @@ begin
         end;
       end;
     end;
-  FieldNames:=FN;  
+  FieldNames:=FN;
 end;
 
 Procedure TMasterParamsDataLink.CopyParamsFromMaster(CopyBound : Boolean);
@@ -7887,7 +8134,7 @@ begin
     FParams.CopyParamValuesFromDataset(Dataset,CopyBound);
 end;
 
-Procedure TMasterParamsDataLink.DoMasterDisable; 
+Procedure TMasterParamsDataLink.DoMasterDisable;
 
 begin
   Inherited;
@@ -7895,7 +8142,7 @@ begin
   // If master dataset is reopened, relationship will be reestablished
 end;
 
-Procedure TMasterParamsDataLink.DoMasterChange; 
+Procedure TMasterParamsDataLink.DoMasterChange;
 
 begin
   Inherited;
@@ -7999,6 +8246,7 @@ procedure TDatasource.SetEnabled(Value: Boolean);
 
 begin
   FEnabled:=Value;
+  ProcessEvent(deUpdateState,0);
 end;
 
 
@@ -8051,7 +8299,7 @@ begin
     begin
     NeedDataChange:=(FState=dsInactive);
     FLastState:=FState;
-    If Assigned(Dataset) then
+    If Assigned(Dataset) and enabled then
       FState:=Dataset.State
     else
       FState:=dsInactive;
@@ -8897,6 +9145,49 @@ begin
     end;
 end;
 
-initialization
+{ TDataSetField }
+
+constructor TDataSetField.Create(AOwner: TComponent);
+begin
+  inherited;
+
+  SetDataType(ftDataSet);
+end;
+
+procedure TDataSetField.Bind(Binding: Boolean);
+begin
+  inherited;
+  if Assigned(FNestedDataSet) then
+    if Binding then
+    begin
+      if FNestedDataSet.State = dsInActive then
+        FNestedDataSet.Open;
+    end
+    else
+      FNestedDataSet.Close;
+end;
+
+procedure TDataSetField.AssignNestedDataSet(Value: TDataSet);
+begin
+  if Assigned(FNestedDataSet) then
+  begin
+    FNestedDataSet.Close;
+    FNestedDataSet.FDataSetField := nil;
+    if Assigned(DataSet) then
+      DataSet.NestedDataSets.Remove(FNestedDataSet);
+  end;
+
+  if Assigned(Value) then
+    DataSet.NestedDataSets.Add(Value);
+
+  FNestedDataSet := Value;
+end;
+
+destructor TDataSetField.Destroy;
+begin
+  AssignNestedDataSet(nil);
+
+  inherited;
+end;
 
 end.

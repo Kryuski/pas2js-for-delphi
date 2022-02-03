@@ -1,7 +1,7 @@
 unit Noise;
 interface
 uses
-	SysUtils, Math;
+	Math;
 
 const
 	kNoisekPerumationMax = 256;

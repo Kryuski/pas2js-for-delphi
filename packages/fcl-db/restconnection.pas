@@ -1,3 +1,19 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 2019 by Michael Van Canneyt, member of the
+    Free Pascal development team
+
+    Simple REST connection component for use with Datasets.
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
+
 unit RestConnection;
 
 {$mode objfpc}
@@ -22,9 +38,10 @@ Type
     FPageParam: String;
     function GetDataProxy: TDataProxy;
   Protected
-    Function GetUpdateBaseURL : String; virtual;
-    Function GetReadBaseURL : String; virtual;
-    Function GetPageURL(aRequest : TDataRequest) : String;
+    Procedure SetupRequest(aXHR : TJSXMLHttpRequest); virtual;
+    Function GetUpdateBaseURL(aRequest: TRecordUpdateDescriptor) : String; virtual;
+    Function GetReadBaseURL(aRequest: TDataRequest) : String; virtual;
+    Function GetPageURL(aRequest : TDataRequest) : String; virtual;
     Function GetRecordUpdateURL(aRequest : TRecordUpdateDescriptor) : String;
   Public
     Function DoGetDataProxy : TDataProxy; virtual;
@@ -129,14 +146,22 @@ begin
   Result:=FDataProxy;
 end;
 
-function TRESTConnection.GetUpdateBaseURL: String;
+procedure TRESTConnection.SetupRequest(aXHR: TJSXMLHttpRequest);
 begin
-  Result:=BaseURL;
+  // Do nothing
+  if aXHR=nil then ;
 end;
 
-function TRESTConnection.GetReadBaseURL: String;
+function TRESTConnection.GetUpdateBaseURL(aRequest: TRecordUpdateDescriptor): String;
 begin
   Result:=BaseURL;
+  if aRequest=nil then ;
+end;
+
+function TRESTConnection.GetReadBaseURL(aRequest: TDataRequest): String;
+begin
+  Result:=BaseURL;
+  if aRequest=nil then ;
 end;
 
 function TRESTConnection.GetPageURL(aRequest: TDataRequest): String;
@@ -145,7 +170,7 @@ Var
   URL : String;
 
 begin
-  URL:=GetReadBaseURL;
+  URL:=GetReadBaseURL(aRequest);
   if (PageParam<>'') then
     begin
     if Pos('?',URL)<>0 then
@@ -168,7 +193,7 @@ Var
 begin
   KeyField:='';
   Result:='';
-  Base:=GetUpdateBaseURL;
+  Base:=GetUpdateBaseURL(aRequest);
   if aRequest.Status in [usModified,usDeleted] then
     begin
     I:=aRequest.Dataset.Fields.Count-1;
@@ -210,7 +235,7 @@ begin
   I:=aBatch.List.Count-1;
   While BatchOK and (I>=0) do
     begin
-    BatchOK:=aBatch.List[I].Status in [usResolved,usResolveFailed];
+    BatchOK:=aBatch.List[I].ResolveStatus in [rsResolved,rsResolveFailed];
     Dec(I);
     end;
   If BatchOK and Assigned(aBatch.OnResolve) then
@@ -248,6 +273,7 @@ begin
     end;
     R.FXHR.open(Method,URL);
     R.FXHR.setRequestHeader('content-type','application/json');
+    Connection.SetupRequest(R.FXHR); 
     if R.Status in [usInserted,usModified] then
       R.FXHR.Send(TJSJSON.Stringify(R.Data))
     else
@@ -286,6 +312,7 @@ begin
     else
       begin
       R.FXHR.open('GET',URL,true);
+      Connection.SetupRequest(R.FXHR);
       R.FXHR.send;
       Result:=True;
       end;

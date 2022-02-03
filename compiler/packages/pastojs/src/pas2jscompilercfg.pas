@@ -18,11 +18,15 @@
 }
 unit Pas2JSCompilerCfg;
 
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
+
 interface
 
 uses
   {$IFDEF NodeJS}
-  NodeJSFS,
+  node.fs,
   {$ENDIF}
   Classes, SysUtils, Pas2jsFileUtils, Pas2JSFS, Pas2jsCompiler;
 

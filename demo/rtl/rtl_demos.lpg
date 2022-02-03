@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectGroup FileVersion="2">
+    <Targets>
+      <Target FileName="demoajax.lpi"/>
+      <Target FileName="demobrowserconsole.lpi"/>
+      <Target FileName="democanvas2d.lpi"/>
+      <Target FileName="democlasstopas.lpi">
+        <BuildModes>
+          <Mode Name="default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="democollection.lpi"/>
+      <Target FileName="democomponents.lpi"/>
+      <Target FileName="demodatetime.lpi"/>
+      <Target FileName="demodombuttonevent.lpi"/>
+      <Target FileName="demojsarray.lpi"/>
+      <Target FileName="demorouter.lpi"/>
+      <Target FileName="demortti.lpi"/>
+      <Target FileName="demostringlist.lpi"/>
+      <Target FileName="demouncaughtexception.lpi"/>
+      <Target FileName="demoxhr.lpi"/>
+    </Targets>
+  </ProjectGroup>
+</CONFIG>

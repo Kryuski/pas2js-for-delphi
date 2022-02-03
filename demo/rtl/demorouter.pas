@@ -1,6 +1,6 @@
 program demorouter;
 
-uses web, classes, libjquery, webrouter;
+uses web, classes, libjquery;
 
 Type
   TForm = Class

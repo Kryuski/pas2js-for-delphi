@@ -1,5 +1,9 @@
 program server;
 
+{$IF FPC_FULLVERSION<30101}
+  {$ERROR You need at least fpc 3.1.1}
+{$ENDIF}
+
 uses
   {$IFDEF UNIX}cthreads,{$ENDIF}
   sysutils, classes, fpjson, contnrs, syncobjs, custhttpapp, fpwebfile,

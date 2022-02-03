@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope&display=swap');
+
+html,
+body {
+    height: 100%;
+}
+
+* {
+    padding: 0px;
+    margin: 0px;
+}
+
+body {
+  background-color: #fff;
+  font-family: 'Manrope', sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eee;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+.scroll {
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+  /* height: 325px */
+  height: 425px;
+}
+
+.card {
+  background-color: #eee;
+  border-radius: 10px;
+}
+
+.main {
+  position: relative;
+  padding: 6px 0px 0px 0px;
+}
+
+.name {
+  font-size: 14px;
+}
+
+.msg {
+  background-color: #fff;
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: 500;
+  color: #3e3c3c;
+}
+
+.between {
+  font-size: 14px;
+  font-weight: 500;
+  color: #a09e9e;
+  padding: 10px 0;
+}
+
+.navbar {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)
+}
+
+.form-control:focus {
+  box-shadow: none;
+}

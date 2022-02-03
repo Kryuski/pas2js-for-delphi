@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://unpkg.com/xterm@4.16.0/css/xterm.css" rel="stylesheet">
+  <script src="https://unpkg.com/xterm@4.16.0/lib/xterm.js"></script>
+  <title>XTerm demo</title>
+  <script src="xtermdemo.js"></script>
+</head>
+<body>
+  <div id="xterm" style="width: 100%; height: 80vh; background-color: black;">
+  </div>
+  <div>
+    <input type="text" id="edtInput">
+    <button id="btnSend">Send</button>
+  </div>
+  <script>
+  rtl.showUncaughtExceptions=true;
+  window.addEventListener("load", rtl.run);
+
+  </script>
+  
+</body>
+</html>

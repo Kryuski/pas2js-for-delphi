@@ -65,7 +65,7 @@ type
     Class var AssertCount : Integer;
   public
     class procedure Fail(const AMessage: string);
-    class procedure Fail(const AFmt: string; Args : Array of string);
+    class procedure Fail(const AFmt: string; Args : Array of const);
     class procedure FailEquals(const expected, actual: string; const ErrorMsg: string = '');
     class procedure FailNotEquals(const expected, actual: string; const ErrorMsg: string = '');
 
@@ -1099,7 +1099,7 @@ begin
   raise EAssertionFailedError.Create(AMessage);
 end;
 
-class procedure TAssert.Fail(const AFmt: string; Args: array of string);
+class procedure TAssert.Fail(const AFmt: string; Args: array of Const);
 begin
   Inc(AssertCount);
   raise EAssertionFailedError.CreateFmt(AFmt,Args);

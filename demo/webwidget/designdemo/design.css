@@ -1,0 +1,52 @@
+button[data-widget-class] {
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 36px;
+  height: 36px;
+}
+#toolbar {
+  width: 80%;
+  background-color: #DDDDDD;
+  margin-bottom: 32px;
+  padding: 4px 4px 4px 4px;
+  margin-left: 30px;
+}
+#designpage {
+  background-color: #A0A0A0;
+  width: 80%;
+  height: 80vh;
+  margin-left: 30px;
+  margin-top: 32px;
+}
+
+.designerActive {
+  position: relative;
+  border: 1px dashed #87cefa;
+}
+
+.designerToolbar {
+  position: absolute;
+  top: 0px;
+  left: -18px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+/*  justify-content: space-around;  */
+}
+
+.designerDragHandle{
+  margin-left: 1px;
+}
+
+.designerPlaceholder {
+  border: 3px dotted black;
+  margin: 1em 1em 1em 1em;
+  height: 50px;
+}
+
+.source {
+  display: flex;
+  width: 540px;
+  margin: 10px auto;
+  font-size: 12px;
+}

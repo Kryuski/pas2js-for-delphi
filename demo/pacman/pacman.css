@@ -1,0 +1,227 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Roboto', serif;
+  }
+  
+  #pacman {
+    display: flex;
+    width: 730px;
+    margin: 3em auto;
+  }
+  
+  #my-canvas {
+    width: 482px;
+    height: 528px;
+  }
+  
+  #info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 528px;
+    width: 250px;
+  }
+  
+  #info > #logo {
+    border: 1px solid #B0B0B0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #info > #scare-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+  }
+  
+  #info > #bonus-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+  }
+  
+  #info > #highscore-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #score-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #lives-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #status-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #ghosts-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #bonus-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  #info > #controls-envelope {
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    padding: 0.5em 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-weight: bold;
+  }
+  
+  #info > #sound-envelope {
+    display: flex;
+    align-items: center;
+    border: 1px solid #B0B0B0;
+    border-radius: 2px;
+    font-weight: bold
+  }
+  
+  .progress-inner {
+    height: 15px;
+    margin: 2px;
+  }
+  
+  .button {
+    margin: 0.4em;
+    padding: 0.7em;
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    color: #fff;
+    min-width: 100px;
+    font-weight: bold;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 1px 2px #aaa;
+  }
+  
+  #control-up {
+    background-color: #537fe4;
+  }
+  #control-up:hover {
+    background-color: #275edd;
+  }
+  
+  #control-left {
+    background-color: #0EA7E1;
+  }
+  #control-left:hover {
+    background-color: #0b85b1;
+  }
+  
+  #control-right {
+    background-color: rgb(206, 123, 155);
+  }
+  #control-right:hover {
+    background-color: #c15780;
+  }
+  
+  #control-down {
+    background-color: #d2c537;
+  }
+  #control-down:hover {
+    background-color: #afa328;
+  }
+  
+  #control-pause {
+    background-color: rgb(215, 77, 77);
+  }
+  #control-pause:hover {
+    background-color: #c32c2c;
+  }
+  
+  .button:active {
+    box-shadow: 0 3px #888;
+    transform: translateY(2px);
+  }
+  
+  #controls > .one-btn {
+    display: flex;
+    justify-content: center;
+  }
+  
+  #controls > .two-btn {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .label {
+    text-transform: uppercase;
+    margin-right: 0.5em;
+    padding-left: 0.5em;
+  }
+  
+  .img {
+    margin-bottom: -5px;
+  }
+  
+  .source {
+    width: 730px;
+    margin: -45px auto;
+    font-size: 0.9em;
+  }
+  
+  .source-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 482px;
+  }
+  
+  #btn-reset{
+    background: #275edd;
+    color: #fff;
+    font-weight: bold;
+    border: 0;
+    padding: 10px 0;
+    width: 130px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+  }
+  
+  #btn-reset:hover {
+    background-color: #1e4fc2;
+  }
+  
+  #btn-reset:active {
+    background-color: #1e4fc2;
+    transform: translateY(2px);
+  }
+  

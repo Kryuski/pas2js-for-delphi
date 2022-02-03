@@ -1,0 +1,6 @@
+This example fetches 3 files, and waits for all 3 fetches to be completion
+using the TJSPromise.All() function.
+
+Since there are 3 promises, the result is an array with 3 results.
+
+

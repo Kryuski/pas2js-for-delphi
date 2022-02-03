@@ -20,7 +20,7 @@ unit strutils;
 interface
 
 uses
-  SysUtils;
+  SysUtils, Types;
 
 { ---------------------------------------------------------------------
     Case insensitive search/replace
@@ -217,6 +217,7 @@ function TrimLeftSet(const S: String;const CSet:Array of char): String;
 Function TrimRightSet(const S: String;const CSet:Array of char): String;
 function TrimSet(const S: String;const CSet:Array of char): String;
 
+Function SplitString(const S, Delimiters: string): TStringDynArray;
 
 type
   SizeIntArray = array of SizeInt;
@@ -2113,7 +2114,12 @@ begin
   RemovePadChars(Result,cset);
 end;
 
-function StartsText(const ASubText, AText: string): Boolean; inline;
+function SplitString(const S, Delimiters: string): TStringDynArray;
+begin
+  Result:=S.Split(Delimiters);
+end;
+
+function StartsText(const ASubText, AText: string): Boolean;
 begin
   Result := AnsiStartsText(ASubText, AText);
 end;
@@ -2155,13 +2161,13 @@ end;
 Function StartsStr(const ASubText, AText: string): Boolean;
 
 begin
-  Result := AnsiStartsStr(AText, ASubText);
+  Result := AnsiStartsStr(ASubText, AText);
 end;
 
 Function EndsStr(const ASubText, AText: string): Boolean;
 
 begin
-  Result := AnsiEndsStr(AText, ASubText);
+  Result := AnsiEndsStr(ASubText, AText);
 end;
 
 

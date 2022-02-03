@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Websockets Message demo</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" >
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" >
+  <script src="https://code.jquery.com/jquery-3.4.1.js" ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" ></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.js"></script>
+  <script src="serverconfig.js"></script>
+  <script src="demowebsocket.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container-fluid">
+
+<!-- Your Alias dialog -->
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-6 col-sm-12 col-xs-12">
+          <div class="card p-4 p-md-4 my-4 mx-3 mx-md-0 ">
+            <form onsubmit="event.preventDefault()">
+              <label for="edtSender"> Your Alias </label>
+              <div class="input-group">
+                <input id="edtSender" type="text" class="form-control">
+                <span class="input-group-btn">
+                  <button id="btnConnect" type="submit"  class="btn btn-primary btn-flat">Connect</button>
+                </span>
+              </div>
+            </form>
+          </div>
+      </div>
+    </div>
+    <!-- end of Your Alias dialog -->
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-6 col-sm-12 col-xs-12">
+        <div class="card main">
+          <!-- chat messages -->
+          <div class="px-2 scroll" id="messages">
+          <!-- messages will be appended here -->
+          </div>
+
+          <!-- end of chat messages -->
+
+          <!-- To and Message Inputs -->
+          <nav class="navbar navbar-expand-sm p-0">
+            <!-- To Input -->
+            <div class="input-group" style="width: 40%;">
+              <div class="input-group-prepend">
+                <span class="input-group-text">To:</span>
+              </div>
+              <input id="edtRecipient" type="text" class="form-control">
+            </div>
+            <!-- Message Input and Send button -->
+            <div class="input-group">
+              <input id="edtMessage" type="text" name="message" placeholder="Type Message ..." class="form-control">
+              <span class="input-group-btn">
+                <button id="btnSend" type="button" class="btn btn-primary btn-flat"><i class="fas fa-paper-plane pr-2"></i>Send</button>
+              </span>
+            </div>
+          </nav>
+       </div>
+      </div>
+    </div>
+    <!-- end of chat dialog -->
+  </div>
+
+  <script>
+  rtl.run();
+  </script>
+  <div id="pasjsconsole"></div>
+</body>
+</html>

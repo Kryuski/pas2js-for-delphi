@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.min.css" >
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto" />
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"/>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" >
+  <script src="https://code.jquery.com/jquery-3.4.1.js" ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" ></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.js"></script>
+  <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.js"></script>
+  <script src="demobootstraptable.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+      <ul class="nav nav-tabs">
+        <li><a id="nav-tab-prefilled" class="nav-link active" data-toggle="tab" href="#tab-prefilled">Existing</a></li>
+        <li><a id="nav-tab-data"  class="nav-link" data-toggle="tab" href="#tab-data">Using Data</a></li>
+        <li><a id="nav-tab-manual" class="nav-link " data-toggle="tab" href="#tab-manual">Manual</a></li>
+      </ul>
+  <div class="tab-content">
+    <div id="tab-prefilled" class="tab-pane fade show active" >
+      <div id="prefilled-toolbar" class="row">
+        <div class="col-sm-4"><h3>Pre-defined existing HTML table</h3></div>
+      </div>
+      <div class="row">
+        <table id="table-prefilled">
+      
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Stars</th>
+              <th>Forks</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="tr-id-1" class="tr-class-1" data-title="bootstrap table" data-object='{"key": "value"}'>
+              <td id="td-id-1" class="td-class-1" data-title="bootstrap table">
+                <a href="https://github.com/wenzhixin/bootstrap-table" target="_blank">bootstrap-table</a>
+              </td>
+              <td data-value="526">8827</td>
+              <td data-text="122">3603</td>
+              <td data-i18n="Description">An extended Bootstrap table with radio, checkbox, sort, pagination, and other added features. (supports twitter bootstrap v2 and v3)
+              </td>
+            </tr>
+            <tr id="tr-id-2" class="tr-class-2">
+              <td id="td-id-2" class="td-class-2">
+                <a href="https://github.com/wenzhixin/multiple-select" target="_blank">multiple-select</a>
+              </td>
+              <td>1615</td>
+              <td>623</td>
+              <td>A jQuery plugin to select multiple elements with checkboxes :)
+              </td>
+            </tr>
+            <tr id="tr-id-3" class="tr-class-3">
+              <td id="td-id-3" class="td-class-3">
+                <a href="https://github.com/wenzhixin/bootstrap-show-password" target="_blank">bootstrap-show-password</a>
+              </td>
+              <td>220</td>
+              <td>85</td>
+              <td>Show/hide password plugin for twitter bootstrap.
+              </td>
+            </tr>
+            <tr id="tr-id-4" class="tr-class-4">
+              <td id="td-id-4" class="td-class-4">
+                <a href="https://github.com/wenzhixin/bootstrap-table-examples" target="_blank">bootstrap-table-examples</a>
+              </td>
+              <td>1734</td>
+              <td>1532</td>
+              <td>Bootstrap Table Examples</td>
+            </tr>
+            <tr id="tr-id-5" class="tr-class-5">
+              <td id="td-id-5" class="td-class-5">
+                <a href="https://github.com/wenzhixin/scutech-redmine" target="_blank">scutech-redmine</a>
+              </td>  
+              <td>24</td>
+              <td>18</td>
+              <td>Redmine notification tools for chrome extension.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="tab-data" class="tab-pane fade " >
+      <div id="prefilled-toolbar" class="row">
+        <div class="col-sm-4"><h3>Using data link</h3></div>
+      </div>
+      <div class="row">
+        <table id="table-data">
+          <thead>
+            <tr>
+              <th data-field="Name" >Name</th>
+              <th data-field="Population">Population</th>
+            </tr>
+          </thead>
+                  </table>
+      </div>
+    </div>
+    <div id="tab-manual" class="tab-pane fade " >
+      <div id="manual-toolbar" class="row">
+        <div class="col-sm-4"><h3>Manually created</h3></div>
+      </div>
+      <div class="row">
+        <table id="table-manual"></table>
+      </div> 
+    </div>
+  </div>    
+   <div class="source row">
+     <div>
+       Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> &nbsp;&nbsp;Sources: &nbsp; 
+       <a target="new" href="demobootstraptable.lpr">Program</a>.
+     </div>
+    </div>
+  <script>
+    window.onload=function () { rtl.run() };
+  </script>
+</body>
+</html>

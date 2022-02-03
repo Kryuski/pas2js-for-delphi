@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectGroup FileVersion="2">
+    <Targets>
+      <Target FileName="rtl/rtl_demos.lpg"/>
+      <Target FileName="promise/promise_demos.lpg"/>
+      <Target FileName="chartjs/chartjs_demos.lpg"/>
+      <Target FileName="webgl/webgl_demos.lpg"/>
+      <Target FileName="asyncawait/asyncawaitdemos.lpg"/>
+      <Target FileName="wasienv/wasienvdemos.lpg"/>
+      <Target FileName="translate/translate_demos.lpg"/>
+      <Target FileName="resources/resourcedemos.lpg"/>
+      <Target FileName="router/demorouter.lpi">
+        <BuildModes>
+          <Mode Name="default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="router/demorouter2.lpi"/>
+      <Target FileName="dataabstract/sampleda.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="fcldb/demodb.lpi"/>
+      <Target FileName="fcldb/demoload.lpi"/>
+      <Target FileName="fcldb/demorest.lpi"/>
+      <Target FileName="fcldb/restserver.lpi"/>
+      <Target FileName="fpcunit/browsertest.lpi"/>
+      <Target FileName="dynload/testloader.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="hotreload/hotreload.lpi"/>
+      <Target FileName="hotreload/server.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="jquery/demoadd.lpi"/>
+      <Target FileName="jspdf/basic.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="fullcalendar/demofullcalendar.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="fullcalendar/demofullcalendar4.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="fullcalendar/demofullcalendar5.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="fpreport/reportdemo.lpi"/>
+      <Target FileName="jitsimeet/demojitsimeet.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="pushjs/helloworld.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="tetris/tetris.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="websockets/demowebsocket.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="webwidget/widgets/webwidgetsdemo.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="xterm/xtermdemo.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="restbridge/simple/restbridgeclient.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="opentok/demoopentok.lpi">
+        <BuildModes>
+          <Mode Name="default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="extend_jsclass/ExtendJSFunctionClass1.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="bootstrap/demobootstraptable.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+      <Target FileName="atom/pas2jsdemopackage.lpi">
+        <BuildModes>
+          <Mode Name="Default"/>
+        </BuildModes>
+      </Target>
+    </Targets>
+  </ProjectGroup>
+</CONFIG>

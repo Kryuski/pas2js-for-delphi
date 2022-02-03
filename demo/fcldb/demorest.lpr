@@ -35,19 +35,19 @@ Type
     Constructor create;
     function CreateTable: TJSElement;
     procedure AddRecords;
-    function ApplyUpdatesClick(aEvent: TJSMouseEvent): boolean;
+    function ApplyUpdatesClick(aEvent{%H-}: TJSMouseEvent): boolean;
     function ButtonAddClick(aEvent: TJSMouseEvent): boolean;
-    function ButtonDeleteClick(aEvent: TJSMouseEvent): boolean;
-    function ButtonFetchClick(Event: TJSMouseEvent): boolean;
+    function ButtonDeleteClick(aEvent{%H-}: TJSMouseEvent): boolean;
+    function ButtonFetchClick(Event{%H-}: TJSMouseEvent): boolean;
     function CreateInput(aParent: TJSElement; Atype, AName, ALabel, aID: String): TJSHTMLInputElement;
     function CreateRow(AID : Integer; AName: String; APopulation: NativeInt): TJSElement;
-    function DoAddRecord(aEvent: TJSMouseEvent): boolean;
+    function DoAddRecord(aEvent{%H-}: TJSMouseEvent): boolean;
     procedure DoAfterLoad(DataSet: TDataSet);
-    function DoEditRecord(aEvent: TJSMouseEvent): boolean;
+    function DoEditRecord(aEvent{%H-}: TJSMouseEvent): boolean;
     procedure DoGetURL(Sender: TComponent; aRequest: TDataRequest; Var aURL: String);
-    procedure DoLoadFail(DataSet: TDataSet; ID: Integer; const ErrorMsg: String);
-    procedure DSAfterApplyUpdates(DataSet: TDataSet; Updates: TResolveResults);
-    procedure DSOpen(DataSet: TDataSet);
+    procedure DoLoadFail(DataSet{%H-}: TDataSet; ID{%H-}: Integer; const ErrorMsg: String);
+    procedure DSAfterApplyUpdates(DataSet{%H-}: TDataSet; Updates{%H-}: TResolveResults);
+    procedure DSOpen(DataSet{%H-}: TDataSet);
     procedure ResetButtons(Sender: TDataset);
     function SelectRecord(aEvent: TJSMouseEvent): boolean;
   end;
@@ -185,7 +185,7 @@ Var
   e : TJSElement;
 
 begin
-  e:=aEvent.target;
+  e:=TJSElement(aEvent.target);
   While Assigned(e) and Not SameText(e.nodeName,'tr') do
     e:=e.parentElement;
   if Not Assigned(E) then exit;
@@ -198,7 +198,8 @@ begin
     EPopulation.value:=DS.FieldByName('Population').AsString;
     TJSHTMLInputElement(ButtonChange).disabled:=false;
     TJSHTMLInputElement(ButtonDelete).disabled:=false;
-    end
+    end;
+  Result:=true;
 end;
 
 procedure TForm.AddRecords;
@@ -216,6 +217,7 @@ end;
 function TForm.ApplyUpdatesClick(aEvent: TJSMouseEvent): boolean;
 begin
   DS.ApplyUpdates;
+  Result:=true;
 end;
 
 function TForm.ButtonAddClick(aEvent: TJSMouseEvent): boolean;
@@ -235,12 +237,14 @@ Var
 
 begin
   ID:=DS.RecNo;
+  if ID=0 then ;
   DS.Delete;
   EName.value:='';
   EPopulation.Value:='';
   E:=Document.getElementById(IntToStr(DS.RecNo));
   if E<>Nil then
     E.parentElement.removeChild(e);
+  Result:=true;
 end;
 
 function TForm.ButtonFetchClick(Event: TJSMouseEvent): boolean;
@@ -249,6 +253,7 @@ begin
   if Assigned(TBody) then
     TBody.innerHTML:='';
   DS.Load([],Nil);
+  Result:=true;
 end;
 
 Function TForm.CreateInput(aParent : TJSElement; Atype,AName,ALabel,aID : String) : TJSHTMLInputElement;

@@ -1,0 +1,76 @@
+<HTML>
+<Title>API Code generator</Title>
+<link href="bulma.min.css" rel="stylesheet">
+<script src="apiclient.js" type="application/javascript"></script>
+</body>
+  <nav class="panel">
+    <p class="panel-heading">
+      Settings
+    </p>
+
+    <div class="panel-block">
+      <div class="field">
+        <label class="label">API URL</label>
+        <div class="control">
+          <input id="edtURL" class="input" type="text" placeholder="URL where to reach FPC API">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <div class="field">
+        <label class="label">Unit name</label>
+        <div class="control">
+          <input id="edtUnit" class="input" type="text" placeholder="Unit name">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-block">  
+      <div class="column">
+        <div class="field">
+          <div class="control">
+            <label class="checkbox">
+              <input id="cbPreferNativeInt"  type="checkbox" checked>
+              Prefer NativeInt
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="field">
+          <div class="control">
+            <label class="checkbox">
+              <input id="cbForceJSValueResult" type="checkbox">
+              Force JSValue result in callbacks
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-block">  
+      <div class="field">
+        <div class="control">
+          <button id="btnGenerate" class="button is-link">Generate unit</button>
+        </div>
+      </div>
+    </div>
+    
+  </nav>
+  <nav class="panel">
+    <p class="panel-heading">
+      Generated result
+    </p>
+    <div class="panel-block">
+      <div class="field">
+        <label class="label">Unit source</label>
+        <div class="control">
+          <textarea id="edtResult" class="textarea" placeholder="Unit source" cols="132" rows="25"></textarea>
+        </div>
+      </div>
+    </div>
+  </nav>  
+  <script>
+    rtl.run();
+  </script>
+</HTML>

@@ -1,3 +1,18 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 2019 by Michael Van Canneyt, member of the
+    Free Pascal development team
+
+    Simple JSON dataset component.
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}
 
 unit JSONDataset;
@@ -20,6 +35,9 @@ type
   // This class is responsible for mapping the field objects of the records.
   TJSONFieldMapper = Class(TObject)
   Public
+    Function CopyRow(aRow : JSValue) : JSValue; virtual;
+    // Remove a field from the
+    Procedure RemoveField(Const FieldName : String; FieldIndex : Integer; Row : JSValue); virtual; abstract;
     // Return row TJSONData instance with data for field 'FieldName' or 'FieldIndex'.
     Function GetJSONDataForField(Const FieldName : String; FieldIndex : Integer; Row : JSValue) : JSValue; virtual; abstract;
     // Same, but now based on TField.
@@ -157,6 +175,7 @@ type
   protected
     Function GetCount: Integer; virtual;
     Procedure CreateIndex; Virtual; abstract;
+    Procedure ClearIndex;
     Property List : TJSArray Read FList;
     Property Rows : TJSArray Read FRows;
     Property Dataset : TBaseJSONDataset Read FDataset;
@@ -219,6 +238,7 @@ type
   Private
     FIndex : TSortedJSONIndex;
   Protected
+    Procedure ClearIndex;
     Property Index : TSortedJSONIndex Read FIndex Write FIndex;
   Public
     Procedure BuildIndex(aDataset : TBaseJSONDataset);
@@ -267,6 +287,9 @@ type
     procedure SetRows(AValue: TJSArray);
     procedure SetRowType(AValue: TJSONRowType);
   protected
+    // Remove calculated fields from buffer
+    procedure RemoveCalcFields(Buf: JSValue);
+    procedure ActivateIndex(Build : Boolean);
     // Determine filter value type based on field type
     function FieldTypeToExpressionType(aDataType: TFieldType): TResultType; virtual;
     // Callback for IsNull filter function.
@@ -304,6 +327,7 @@ type
     procedure SetFilterText(const Value: string); override;
     procedure SetFiltered(Value: Boolean); override;
     function  GetFieldClass(FieldType: TFieldType): TFieldClass; override;
+    Function GetApplyUpdateData(Buffer : TDataRecord) : JSValue; override;
     function IsCursorOpen: Boolean; override;
     // Bookmark operations
     procedure GetBookmarkData(Buffer: TDataRecord; var Data: TBookmark); override;
@@ -332,7 +356,7 @@ type
     // Format JSON date to from DT for Field F
     function FormatDateTimeField(DT : TDateTime; F: TField): String; virtual;
     // Create fieldmapper. A descendent MUST implement this.
-    Function CreateFieldMapper : TJSONFieldMapper; virtual; abstract;
+    Function CreateFieldMapper : TJSONFieldMapper; virtual;
     // If True, then the dataset will free MetaData and FRows when it is closed.
     Property OwnsData : Boolean Read FownsData Write FOwnsData;
     // set to true if unknown field types should be handled as string fields.
@@ -354,6 +378,7 @@ type
   public
     constructor Create (AOwner: TComponent); override;
     destructor Destroy; override;
+    function ConvertDateTimeToNative(aField : TField; aValue : TDateTime) : JSValue; override;
     function Locate(const KeyFields: string; const KeyValues: JSValue; Options: TLocateOptions): boolean; override;
     function Lookup(const KeyFields: string; const KeyValues: JSValue; const ResultFields: string): JSValue; override;
     function GetFieldData(Field: TField; Buffer: TDatarecord): JSValue;  override;
@@ -392,12 +417,15 @@ type
     property OnFilterRecord;
     property OnNewRecord;
     property OnPostError;
+    Property OnRecordResolved;
+    property OnLoadFail;
   end;
 
   { TJSONObjectFieldMapper }
   // Fieldmapper to be used when the data is in an object
   TJSONObjectFieldMapper = Class(TJSONFieldMapper)
   Public
+    Procedure RemoveField(Const FieldName : String; FieldIndex : Integer; Row : JSValue); override;
     procedure SetJSONDataForField(Const FieldName : String; FieldIndex{%H-} : Integer; Row,Data : JSValue); override;
     Function GetJSONDataForField(Const FieldName : String; FieldIndex{%H-} : Integer; Row : JSValue) : JSValue; override;
     Function CreateRow : JSValue; override;
@@ -407,6 +435,7 @@ type
   // Fieldmapper to be used when the data is in an array
   TJSONArrayFieldMapper = Class(TJSONFieldMapper)
   Public
+    Procedure RemoveField(Const FieldName : String; FieldIndex : Integer; Row : JSValue); override;
     procedure SetJSONDataForField(Const FieldName{%H-} : String; FieldIndex : Integer; Row,Data : JSValue); override;
     Function GetJSONDataForField(Const FieldName{%H-} : String; FieldIndex : Integer; Row : JSValue) : JSValue; override;
     Function CreateRow : JSValue; override;
@@ -420,11 +449,18 @@ uses DateUtils;
 
 { TJSONIndexDef }
 
+procedure TJSONIndexDef.ClearIndex;
+begin
+  FreeAndNil(FIndex);
+end;
+
 procedure TJSONIndexDef.BuildIndex(aDataset : TBaseJSONDataset);
 
 begin
   if Findex=Nil then
-    FIndex:=TSortedJSONIndex.Create(aDataset,aDataset.Rows);
+    FIndex:=TSortedJSONIndex.Create(aDataset,aDataset.Rows)
+  else
+    FIndex.ClearIndex;
   FIndex.CreateComparer(Self);
   FIndex.CreateIndex;
 end;
@@ -518,11 +554,6 @@ begin
 end;
 
 procedure TSortedJSONIndex.CreateComparer(aIndex: TJSONIndexDef);
-
-Var
-  L : TFPList;
-  I : Integer;
-
 begin
   FreeAndNil(FComparer);
   FComparer:=TRecordComparer.Create(Dataset,aindex);
@@ -631,9 +662,18 @@ function TDateTimeFieldComparer.Compare(RowIndex: Integer; aValue: JSValue): Int
 var
   D1,D2 : TDateTime;
 
+  Function ToDate(v: JSValue) : TDateTime;
+
+  begin
+    if IsDate(v) then
+      Result:= JSDateToDateTime(TJSDate(v))
+    else
+      Result:=Dataset.ConvertDateTimeField(String(v),Self.Field);
+  end;
+
 begin
-  D1:=Dataset.ConvertDateTimeField(String(GetFieldValue(Rowindex)),Self.Field);
-  D2:=TDateTime(aValue);
+  D1:=ToDate(GetFieldValue(RowIndex));
+  D2:=ToDate(aValue);
   Result:=Round(D1-D2);
 end;
 
@@ -941,6 +981,11 @@ begin
   Result:=FList.Length;
 end;
 
+procedure TJSONIndex.ClearIndex;
+begin
+  FList.Length:=0;
+end;
+
 function TJSONIndex.GetRecordIndex(aListIndex : Integer): NativeInt;
 begin
   if isUndefined(FList[aListIndex]) then
@@ -952,6 +997,11 @@ end;
 
 
 { TJSONFieldMapper }
+
+function TJSONFieldMapper.CopyRow(aRow: JSValue): JSValue;
+begin
+  Result:=TJSJSON.parse(TJSJSON.stringify(aRow));
+end;
 
 function TJSONFieldMapper.GetJSONDataForField(F: TField; Row: JSValue  ): JSValue;
 begin
@@ -967,14 +1017,18 @@ end;
 
 { TJSONArrayFieldMapper }
 
+procedure TJSONArrayFieldMapper.RemoveField(const FieldName: String; FieldIndex: Integer; Row: JSValue);
+begin
+  TJSArray(Row).Splice(FieldIndex,1);
+end;
+
 procedure TJSONArrayFieldMapper.SetJSONDataForField(const FieldName: String;
   FieldIndex: Integer; Row, Data: JSValue);
 begin
   TJSValueDynArray(Row)[FieldIndex]:=Data;
 end;
 
-function TJSONArrayFieldMapper.GetJSONDataForField(Const FieldName: String;
-  FieldIndex: Integer; Row: JSValue): JSValue;
+function TJSONArrayFieldMapper.GetJSONDataForField(const FieldName: String; FieldIndex: Integer; Row: JSValue): JSValue;
 begin
   Result:=TJSValueDynArray(Row)[FieldIndex];
 end;
@@ -986,6 +1040,11 @@ begin
 end;
 
 { TJSONObjectFieldMapper }
+
+procedure TJSONObjectFieldMapper.RemoveField(const FieldName: String; FieldIndex: Integer; Row: JSValue);
+begin
+  jsDelete(Row,FieldName);
+end;
 
 procedure TJSONObjectFieldMapper.SetJSONDataForField(const FieldName: String;
   FieldIndex: Integer; Row, Data: JSValue);
@@ -1020,32 +1079,35 @@ end;
 
 procedure TBaseJSONDataSet.SetActiveIndex(AValue: String);
 
+
+begin
+  if FActiveIndex=AValue then Exit;
+  FActiveIndex:=AValue;
+  if (csLoading in ComponentState) then
+    exit;
+  ActivateIndex(Active);
+end;
+
+procedure TBaseJSONDataSet.ActivateIndex(Build : Boolean);
+
 Var
   Idx : TJSONIndexDef;
 
 begin
-  if FActiveIndex=AValue then Exit;
-  if (csLoading in ComponentState) then
-    FActiveIndex:=AValue
+  if (FActiveIndex<>'') then
+    Idx:=FIndexes.Find(FActiveIndex) as TJSONIndexDef
+  else
+    Idx:=nil;
+  if Idx=Nil then
+    FCurrentIndex:=FDefaultIndex
   else
     begin
-    if (AValue<>'') then
-      Idx:=FIndexes.Find(aValue) as TJSONIndexDef
-    else
-      Idx:=nil;
-    FActiveIndex:=AValue;
-    if Not (csLoading in ComponentState) then
-    if Idx=Nil then
-      FCurrentIndex:=FDefaultIndex
-    else
-      begin
-      if Idx.Index=Nil then
-        Idx.BuildIndex(Self);
-      FCurrentIndex:=Idx.Index;
-      end;
-    if Active then
-      Resync([rmCenter]);
+    if (Idx.Index=Nil) and Build then
+      Idx.BuildIndex(Self);
+    FCurrentIndex:=Idx.Index;
     end;
+  if Active then
+    Resync([rmCenter]);
 end;
 
 procedure TBaseJSONDataSet.AddToRows(AValue: TJSArray);
@@ -1073,6 +1135,14 @@ begin
   if FRowType=AValue then Exit;
   CheckInactive;
   FRowType:=AValue;
+end;
+
+function TBaseJSONDataSet.ConvertDateTimeToNative(aField : TField; aValue: TDateTime): JSValue;
+begin
+  if jsISNan(aValue) then
+    Result:=Null
+  else
+    Result:=FormatDateTimeField(aValue,aField)
 end;
 
 
@@ -1128,16 +1198,19 @@ begin
 end;
 
 procedure TBaseJSONDataSet.FreeData;
+
+Var
+ I : integer;
+
 begin
   If FOwnsData then
     begin
     FRows:=Nil;
     FMetaData:=Nil;
     end;
-  if (FCurrentIndex<>FDefaultIndex) then
-    FreeAndNil(FCurrentIndex)
-  else
-    FCurrentIndex:=Nil;
+  For I:=0 to FIndexes.Count-1 do
+    FIndexes[i].ClearIndex;
+  FCurrentIndex:=Nil;
   FreeAndNil(FDefaultindex);
   FreeAndNil(FFieldMapper);
   FCurrentIndex:=Nil;
@@ -1148,6 +1221,8 @@ procedure TBaseJSONDataSet.AppendToIndexes;
 
 begin
   FDefaultIndex.AppendToIndex;
+  if Assigned(FCurrentIndex) and (FCurrentIndex<>FDefaultIndex) then
+    FCurrentIndex.AppendToIndex;
 end;
 
 procedure TBaseJSONDataSet.CreateIndexes;
@@ -1155,7 +1230,8 @@ procedure TBaseJSONDataSet.CreateIndexes;
 begin
   FDefaultIndex:=TDefaultJSONIndex.Create(Self,FRows);
   AppendToIndexes;
-  FCurrentIndex:=FDefaultIndex;
+  if FCurrentIndex=Nil then
+    FCurrentIndex:=FDefaultIndex;
 end;
 
 function TBaseJSONDataSet.FilterExpressionClass : TFPExpressionParserClass;
@@ -1164,7 +1240,7 @@ begin
   Result:=TFPExpressionParser;
 end;
 
-function TBaseJSONDataSet.GetFilterIsNull(Const Args : TExprParameterArray) : TFPExpressionResult;
+function TBaseJSONDataSet.GetFilterIsNull(const Args: TExprParameterArray): TFPExpressionResult;
 
 begin
   Result.ResultType:=rtBoolean;
@@ -1191,7 +1267,7 @@ begin
   end;
 end;
 
-function TBaseJSONDataSet.GetFilterField(Const AName : String) : TFPExpressionResult;
+function TBaseJSONDataSet.GetFilterField(const AName: String): TFPExpressionResult;
 
 Var
   F : TField;
@@ -1255,7 +1331,7 @@ begin
   end;
 end;
 
-function TBaseJSONDataSet.GetRecord(Var Buffer: TDataRecord; GetMode: TGetMode; DoCheck: Boolean): TGetResult;
+function TBaseJSONDataSet.GetRecord(var Buffer: TDataRecord; GetMode: TGetMode; DoCheck: Boolean): TGetResult;
 
 Var
   BkmIdx : Integer;
@@ -1276,7 +1352,7 @@ begin
         else
           Result := grBOF; // begin of file
       gmCurrent: // check if empty
-        if fCurrent >= fCurrentIndex.Count then
+        if (FCurrent<0) or (fCurrent >= fCurrentIndex.Count) then
           Result := grEOF;
     end;
     if Result = grOK then // read the data
@@ -1285,19 +1361,29 @@ begin
       Buffer.Data:=FRows[bkmIdx];
       Buffer.BookmarkFlag := bfCurrent;
       Buffer.Bookmark:=BkmIdx;
-      CalculateFields(Buffer);
+      GetCalcFields(Buffer);
       if Filtered then
         begin
         FFilterRow:=Buffer.Data;
         recordAccepted:=DoFilterRecord;
+        if Not RecordAccepted and (GetMode=gmCurrent) then
+          begin
+          // Transform to EOF.
+          RecordAccepted:=True;
+          Result:=grEOF;
+          end;
         end;
       end;
   until recordAccepted;
 end;
 
 function TBaseJSONDataSet.GetRecordCount: Integer;
+  
 begin
-  Result:=FCurrentIndex.Count;
+  if Assigned(FCurrentIndex) then
+    Result:=FCurrentIndex.Count
+  else
+    Result:=0;
 end;
 
 function TBaseJSONDataSet.GetRecordSize: Word;
@@ -1308,7 +1394,7 @@ end;
 
 procedure TBaseJSONDataSet.InternalClose;
 begin
-  // disconnet and destroy field objects
+  // disconnect and destroy field objects
   BindFields (False);
   if DefaultFields then
     DestroyFields;
@@ -1364,15 +1450,30 @@ begin
     end;
 end;
 
+procedure TBaseJSONDataSet.RemoveCalcFields(Buf : JSValue);
+
+Var
+  i : integer;
+
+begin
+  For I:=0 to Fields.Count-1 do
+    if Fields[i].FieldKind in [fkCalculated,fkInternalCalc,fkLookup] then
+      FieldMapper.RemoveField(FIelds[i].FieldName,FIelds[i].Index,Buf);
+
+end;
+
 procedure TBaseJSONDataSet.InternalEdit;
 
 begin
 //  Writeln('TBaseJSONDataSet.InternalEdit:  ');
   FEditIdx:=FCurrentIndex.RecordIndex[FCurrent];
   if not isUndefined(Rows[FEditIdx]) then
-    FEditRow:=TJSJSON.parse(TJSJSON.stringify(Rows[FEditIdx]))
+    begin
+    FEditRow:=FieldMapper.CopyRow(Rows[FEditIdx]);
+
+    end
   else
-    FEditRow:=TJSObject.new;
+    FEditRow:=FFieldMapper.CreateRow;
 //  Writeln('TBaseJSONDataSet.InternalEdit: ',FEditRow);
 end;
 
@@ -1409,13 +1510,15 @@ begin
     CreateFields;
   BindFields (True);
   InitDateTimeFields;
+  if FActiveIndex<>'' then
+    ActivateIndex(True);
   FCurrent := -1;
 end;
 
 procedure TBaseJSONDataSet.InternalPost;
 
 Var
-  I,OldC,NewCurrent,Idx : integer;
+  I,NewIdx,NewCurrent,Idx : integer;
   B : TBookmark;
 
 begin
@@ -1427,23 +1530,24 @@ begin
     if GetBookMarkFlag(ActiveBuffer)=bfEOF then
       begin // Append
       FDefaultIndex.Append(Idx);
-      // Must replace this by updating all indexes
       for I:=0 to FIndexes.Count-1 do
-        begin
-        NewCurrent:=FIndexes[i].Findex.Append(Idx);
-        if FIndexes[i].Findex<>FCurrentIndex then
-          NewCurrent:=-1;
-        end;
+        if Assigned(FIndexes[i].Findex) then
+          begin
+          NewIdx:=FIndexes[i].Findex.Append(Idx);
+          if FIndexes[i].Findex=FCurrentIndex then
+            NewCurrent:=NewIdx;
+          end;
       end
     else  // insert
       begin
       FCurrent:=FDefaultIndex.Insert(FCurrent,Idx);
       for I:=0 to FIndexes.Count-1 do
-        begin
-        NewCurrent:=FIndexes[i].Findex.Append(Idx);
-        if FIndexes[i].Findex<>FCurrentIndex then
-          NewCurrent:=-1;
-        end;
+	    if Assigned(FIndexes[i].Findex) then
+          begin
+          NewIdx:=FIndexes[i].Findex.Append(Idx);
+          if FIndexes[i].Findex=FCurrentIndex then
+            NewCurrent:=NewIdx;
+          end;
       end;
     end
   else
@@ -1459,9 +1563,10 @@ begin
     for I:=0 to FIndexes.Count-1 do
       begin
       // Determine old index.
-      NewCurrent:=FCurrentIndex.Update(Idx);
-      if FIndexes[i].Findex<>FCurrentIndex then
-        NewCurrent:=-1;
+      NewIdx:=FCurrentIndex.Update(Idx);
+      if Assigned(FIndexes[i].Findex) then
+        if FIndexes[i].Findex=FCurrentIndex then
+          NewCurrent:=NewIdx;
       end;
     end;
   // We have an active index, set current to that index.
@@ -1504,6 +1609,12 @@ begin
     Result:=inherited GetFieldClass(FieldType);
 end;
 
+function TBaseJSONDataSet.GetApplyUpdateData(Buffer: TDataRecord): JSValue;
+begin
+  Result:=FieldMapper.CopyRow(Buffer.Data);
+  RemoveCalcFields(Result);
+end;
+
 function TBaseJSONDataSet.IsCursorOpen: Boolean;
 begin
   Result := Assigned(FDefaultIndex);
@@ -1537,15 +1648,9 @@ begin
                Ptrn:=(F as TJSONDateTimeField).DateTimeFormat;
   end;
   If (Ptrn='') then
-    Case F.DataType of
-      ftDate : Result:=StrToDate(S);
-      ftTime : Result:=StrToTime(S);
-      ftDateTime : Result:=StrToDateTime(S);
-    end
+    Result := DefaultConvertToDateTime(F,S,True)
   else
-    begin
     Result:=ScanDateTime(ptrn,S,1);
-    end;
 end;
 
 function TBaseJSONDataSet.FormatDateTimeField(DT: TDateTime; F: TField
@@ -1565,13 +1670,17 @@ begin
                 Ptrn:=TJSONDateTimeField(F).DateTimeFormat;
   end;
   If (Ptrn='') then
-    Case F.DataType of
-      ftDate : Result:=DateToStr(DT);
-      ftTime : Result:=TimeToStr(DT);
-      ftDateTime : Result:=DateTimeToStr(DT);
-    end
+    Result := DateTimeToRFC3339(DT)
   else
     Result:=FormatDateTime(ptrn,DT);
+end;
+
+function TBaseJSONDataSet.CreateFieldMapper: TJSONFieldMapper;
+begin
+  if FRowType=rtJSONArray then
+    Result:=TJSONArrayFieldMapper.Create
+  else
+    Result:=TJSONObjectFieldMapper.Create;
 end;
 
 function TBaseJSONDataSet.GetFieldData(Field: TField; Buffer: TDatarecord): JSValue;
@@ -1589,7 +1698,7 @@ begin
     if State=dsOldValue then
       R:=Buffer.data
     else
-      R:=FEditRow
+      R:=FEditRow;
     end
   else
     begin
@@ -1599,6 +1708,8 @@ begin
       R:=Buffer.data;
     end;
   Result:=FFieldMapper.GetJSONDataForField(Field,R);
+  if isUndefined(Result) then
+    Result:=Null;
 end;
 
 procedure TBaseJSONDataSet.SetFieldData(Field: TField; var Buffer: TDatarecord; AValue : JSValue);
@@ -1646,10 +1757,12 @@ end;
 
 procedure TBaseJSONDataSet.SetRecNo(Value: Integer);
 begin
+  CheckBrowseMode;
+  DoBeforeScroll;
   if (Value < 1) or (Value > FCurrentIndex.Count) then
     raise EJSONDataset.CreateFmt('%s: SetRecNo: index %d out of range',[Name,Value]);
   FCurrent := Value - 1;
-  Resync([]); 
+  Resync([]);
   DoAfterScroll;
 end;
 
@@ -1664,14 +1777,14 @@ end;
 
 destructor TBaseJSONDataSet.Destroy;
 begin
+  Close;
   FreeAndNil(FFilterExpression);
   FreeAndNil(FIndexes);
   FEditIdx:=-1;
-  FreeData;
   inherited;
 end;
 
-Function TBaseJSONDataSet.CreateIndexDefs : TJSONIndexDefs;
+function TBaseJSONDataSet.CreateIndexDefs: TJSONIndexDefs;
 
 begin
   Result:=TJSONIndexDefs.Create(Self,Self,TJSONIndexDef);
@@ -1704,7 +1817,10 @@ begin
   Result:=-1;
   Comp:=RecordComparerClass.Create(Self,KeyFields,KeyValues,Options);
   try
-    I:=FCurrent;
+    if loFromCurrent in Options then
+      I:=FCurrent
+    else
+      I:=0;
     RI:=FCurrentIndex.GetRecordIndex(I);
     While (Result=-1) and (RI<>-1) do
       begin
@@ -1742,7 +1858,6 @@ function TBaseJSONDataSet.Lookup(const KeyFields: string; const KeyValues: JSVal
 
 Var
   RI,I : Integer;
-  BM : TBookMark;
   l : TFPList;
   Vals : TJSValueDynArray;
 
@@ -1753,8 +1868,7 @@ begin
     GetFieldList(L,ResultFields);
     Result:=inherited Lookup(KeyFields, KeyValues, ResultFields);
     RI:=LocateRecordIndex(KeyFields,KeyValues,[]);
-    Result:=RI<>-1;
-    if Result then
+    if RI<>-1 then
       begin
       SetLength(Vals,L.Count);
       For I:=0 to L.Count-1 do

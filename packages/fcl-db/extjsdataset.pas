@@ -1,3 +1,18 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 2019 by Michael Van Canneyt, member of the
+    Free Pascal development team
+
+    Simple EXTJS JSON dataset component.
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 unit ExtJSDataset;
 
 {$mode objfpc}
@@ -65,6 +80,7 @@ type
     property OnFilterRecord;
     property OnNewRecord;
     property OnPostError;
+    Property OwnsData;
   end;
 
   { TExtJSJSONObjectDataSet }
@@ -234,7 +250,8 @@ begin
     O:=TJSObject(A[0]);
     For I:=0 to Fields.Count-1 do
       begin
-      if O.hasOwnProperty(Fields[i].FieldName) then
+      FN:=Fields[i].FieldName;
+      if O.hasOwnProperty(FN) then
         FieldMapper.SetJSONDataForField(Fields[i],Rows[RecordIndex],O[FN]);
       end;
     end;

@@ -21,23 +21,29 @@
 }
 unit Pas2JSFS;
 
+{$IFDEF Pas2JS}
 {$I pas2js_defines.inc}
+{$ELSE}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
 uses
   // No filesystem-dependent units here !
-  Classes, SysUtils, PScanner, fpjson, FPCTypes;
+  Classes, SysUtils, PScanner, fpjson
+  {$IFNDEF Pas2JS}, FPCTypes{$ENDIF};
 
 const // Messages
+  nUsingPath = 104; sUsingPath = 'Using %s: "%s"';
+  nFolderNotFound = 105; sFolderNotFound = '%s not found: %s';
+
   nIncludeSearch = 201; sIncludeSearch = 'Include file search: %s';
   nUnitSearch = 202; sUnitSearch = 'Unitsearch: %s';
   nSearchingFileFound = 203; sSearchingFileFound = 'Searching file: %s... found';
   nSearchingFileNotFound = 204; sSearchingFileNotFound = 'Searching file: %s... not found';
   nDuplicateFileFound = 205; sDuplicateFileFound = 'Duplicate file found: "%s" and "%s"';
   nCustomJSFileNotFound = 206; sCustomJSFileNotFound = 'custom JS file not found: "%s"';
-  nUsingPath = 104; sUsingPath = 'Using %s: "%s"';
-  nFolderNotFound = 105; sFolderNotFound = '%s not found: %s';
 
 Type
   // Forward definitions
@@ -60,7 +66,7 @@ Type
     property Source: string read FSource;
     property SrcPos: integer read FSrcPos;
   public
-    constructor Create(Const aFileName, aSource: string); reintroduce; overload;
+    Constructor Create(Const aFileName, aSource: String); reintroduce; overload;
     function IsEOF: Boolean; override;
     function ReadLine: string; override;
     property LineNumber: integer read FLineNumber;
@@ -92,35 +98,37 @@ Type
     Function OptionIsSet(Index: Integer):  Boolean;
   Protected
     // Protected Abstract. Must be overridden
-    function FindSourceFileName(const aFilename: string): string; virtual; abstract;
+    function FindSourceFileName(const aFilename: string): String; virtual; abstract;
   Public
     // Public Abstract. Must be overridden
-    function FindIncludeFileName(const aFilename: string): string; virtual; abstract;
+    function FindResourceFileName(const aFilename, ModuleDir: string): String; virtual; abstract;
+    function FindIncludeFileName(const aFilename, SrcDir, ModuleDir: string; Mode: TModeSwitch): String; virtual; abstract;
     function LoadFile(Filename: string; Binary: boolean = false): TPas2jsFile; virtual; abstract;
-    Function FileExists(Const aFileName: string): Boolean; virtual; abstract;
-    function FindUnitJSFileName(const aUnitFilename: string): string; virtual; abstract;
-    function FindCustomJSFileName(const aFilename: string): string; virtual; abstract;
+    Function FileExists(Const aFileName: String): Boolean; virtual; abstract;
+    function FindUnitJSFileName(const aUnitFilename: string): String; virtual; abstract;
+    function FindCustomJSFileName(const aFilename: string): String; virtual; abstract;
     function FindUnitFileName(const aUnitname, InFilename, ModuleDir: string; out IsForeign: boolean): String; virtual; abstract;
     procedure SaveToFile(ms: TFPJSStream; Filename: string); virtual; abstract;
     function PCUExists(var aFileName: string): Boolean; virtual;
-    procedure GetPCUDirs(aList: TStrings; const aBaseDir: string); virtual;
+    procedure GetPCUDirs(aList: TStrings; const aBaseDir: String); virtual;
   Public
     // Public, may be overridden
-    Function SameFileName(Const File1,File2: string): Boolean; virtual;
-    Function File1IsNewer(Const File1,File2: string): Boolean; virtual;
+    Function SameFileName(Const File1,File2: String): Boolean; virtual;
+    Function File1IsNewer(Const File1,File2: String): Boolean; virtual;
     function ExpandDirectory(const Filename: string): string; virtual;
     function ExpandFileName(const Filename: string): string; virtual;
     function ExpandExecutable(const Filename: string): string; virtual;
-    Function FormatPath(Const aFileName: string): string; virtual;
+    Function FormatPath(Const aFileName: string): String; virtual;
     Function DirectoryExists(Const aDirectory: string): boolean; virtual;
-    function TryCreateRelativePath(const Filename, BaseDirectory: string; UsePointDirectory: boolean; out RelPath: string): Boolean; virtual;
+    function TryCreateRelativePath(const Filename, BaseDirectory: String;
+      UsePointDirectory, AlwaysRequireSharedBaseFolder: boolean; out RelPath: String): Boolean; virtual;
     procedure DeleteDuplicateFiles(List: TStrings); virtual;
     function IndexOfFile(FileList: TStrings; aFilename: string; Start: integer = 0): integer; virtual;// -1 if not found
     Procedure WriteFoldersAndSearchPaths; virtual;
     function CreateResolver: TPas2jsFSResolver; virtual;
     // On success, return '', On error, return error message.
-    Function AddForeignUnitPath(Const aValue: string; FromCmdLine: Boolean): string; virtual;
-    Function HandleOptionPaths(C: Char; aValue: string; FromCmdLine: Boolean): string; virtual;
+    Function AddForeignUnitPath(Const aValue: String; FromCmdLine: Boolean): String; virtual;
+    Function HandleOptionPaths(C: Char; aValue: String; FromCmdLine: Boolean): String; virtual;
   Public
     Constructor Create; virtual;
     Procedure Reset; virtual;
@@ -135,25 +143,30 @@ Type
     property UnitOutputPath: string read FUnitOutputPath write SetUnitOutputPath; // includes trailing pathdelim
   end;
 
+  // Source type for Binary files
+  TBinarySource = {$IFDEF pas2js}string{$ELSE}RawByteString{$ENDIF};
+
   { TPas2jsFile }
 
   TPas2jsFile = class
   private
+    FAllowSrcMap: boolean;
     FFilename: string;
     FFS: TPas2JSFS;
-    FBinary: RawByteString; // Source for Binary files
+    FBinarySource: TBinarySource; // Source for Binary files
     FSource: string; // Source for Text files, UTF-16
   Protected
-    Procedure SetBinary(const aBinary: RawByteString);
+    Procedure SetBinarySource(const BinarySource: TBinarySource);
     Procedure SetSource(const aSource: string);
   public
     constructor Create(aFS: TPas2jsFS; const aFilename: string);
     function CreateLineReader(RaiseOnError: boolean): TSourceLineReader; virtual; abstract;
     function Load(RaiseOnError: boolean; Binary: boolean): boolean; virtual; abstract;
-    property Binary: RawByteString read FBinary;
+    property BinarySource: TBinarySource read FBinarySource;
     property Source: string read FSource; // UTF-16 without BOM
-    Property FS: TPas2JSFS Read FFS;
+    property FS: TPas2JSFS Read FFS;
     property Filename: string read FFilename;
+    property AllowSrcMap: boolean read FAllowSrcMap write FAllowSrcMap;
   end;
 
   { TPas2jsFSResolver }
@@ -164,7 +177,8 @@ Type
   public
     constructor Create(aFS: TPas2jsFS); reintroduce;
     // Redirect all calls to FS.
-    function FindIncludeFileName(const aFilename: string): string; override;
+    function FindResourceFileName(const aFilename: string): String; override;
+    function FindIncludeFileName(const aFilename: string): String; override;
     function FindIncludeFile(const aFilename: string): TLineReader; override;
     function FindSourceFile(const aFilename: string): TLineReader; override;
     property FS: TPas2jsFS read FFS;
@@ -213,19 +227,19 @@ begin
   Result:=Self.FileExists(aFileName);
 end;
 
-procedure TPas2JSFS.GetPCUDirs(aList: TStrings; const aBaseDir: string);
+procedure TPas2JSFS.GetPCUDirs(aList: TStrings; const aBaseDir: String);
 begin
   if UnitOutputPath<>'' then
     aList.Add(UnitOutputPath);
   aList.Add(aBaseDir);
 end;
 
-function TPas2JSFS.SameFileName(const File1, File2: string): Boolean;
+function TPas2JSFS.SameFileName(const File1, File2: String): Boolean;
 begin
   Result:=CompareText(File1,File2)=0;
 end;
 
-function TPas2JSFS.File1IsNewer(const File1, File2: string): Boolean;
+function TPas2JSFS.File1IsNewer(const File1, File2: String): Boolean;
 begin
   Result:=False;
   if File1=File2 then ;
@@ -246,7 +260,7 @@ begin
   Result:=FileName
 end;
 
-function TPas2JSFS.FormatPath(const aFileName: string): string;
+function TPas2JSFS.FormatPath(const aFileName: string): String;
 begin
   Result:=aFileName;
 end;
@@ -256,12 +270,13 @@ begin
   Result:=aDirectory='';
 end;
 
-function TPas2JSFS.TryCreateRelativePath(const Filename, BaseDirectory: string; UsePointDirectory: boolean; out RelPath: string
+function TPas2JSFS.TryCreateRelativePath(const Filename, BaseDirectory: String;
+  UsePointDirectory, AlwaysRequireSharedBaseFolder: boolean; out RelPath: String
   ): Boolean;
 begin
   Result:=True;
   RelPath:=FileName;
-  if (BaseDirectory='') or UsePointDirectory then ;
+  if (BaseDirectory='') or UsePointDirectory or AlwaysRequireSharedBaseFolder then ;
 end;
 
 procedure TPas2JSFS.DeleteDuplicateFiles(List: TStrings);
@@ -295,13 +310,13 @@ begin
   Result:=TPas2jsFSResolver.Create(Self);
 end;
 
-function TPas2JSFS.AddForeignUnitPath(const aValue: string; FromCmdLine: Boolean): string;
+function TPas2JSFS.AddForeignUnitPath(const aValue: String; FromCmdLine: Boolean): String;
 begin
   Result:='';
   if (aValue='') or FromCmdLine then ;
 end;
 
-function TPas2JSFS.HandleOptionPaths(C: Char; aValue: string; FromCmdLine: Boolean): string;
+function TPas2JSFS.HandleOptionPaths(C: Char; aValue: String; FromCmdLine: Boolean): String;
 begin
   Result:='Invalid parameter: -F'+C+aValue;
   if FromCmdLine then ;
@@ -342,16 +357,16 @@ end;
 
 { TPas2jsFile }
 
-procedure TPas2jsFile.SetBinary(const aBinary: RawByteString);
+procedure TPas2jsFile.SetBinarySource(const BinarySource: TBinarySource);
 begin
   FSource := '';
-  FBinary := ABinary;
+  FBinarySource := BinarySource;
 end;
 
-procedure TPas2jsFile.SetSource(const aSource: string);
+procedure TPas2jsFile.SetSource(const aSource: String);
 begin
-  FBinary := '';
-  FSource := ASource;
+  SetLength(FBinarySource, 0);
+  FSource:=ASource;
 end;
 
 constructor TPas2jsFile.Create(aFS: TPas2jsFS; const aFilename: string);
@@ -365,7 +380,7 @@ begin
   inc(FLineNumber);
 end;
 
-Constructor TSourceLineReader.Create(Const aFileName, aSource: string);
+Constructor TSourceLineReader.Create(Const aFileName, aSource: String);
 begin
   Inherited Create(aFileName);
   FSource:=aSource;
@@ -422,10 +437,10 @@ end;
 
 function TPas2jsFSResolver.FindIncludeFile(const aFilename: string): TLineReader;
 var
-  Filename: string;
+  Filename: String;
 begin
   Result:=nil;
-  Filename:=FS.FindIncludeFileName(aFilename);
+  Filename:=FS.FindIncludeFileName(aFilename,BaseDirectory,ModuleDirectory,Mode);
   if Filename='' then exit;
   try
     Result:=FindSourceFile(Filename);
@@ -436,22 +451,33 @@ end;
 
 constructor TPas2jsFSResolver.Create(aFS: TPas2jsFS);
 begin
+  Inherited Create;
   FFS:=aFS;
 end;
 
-function TPas2jsFSResolver.FindIncludeFileName(const aFilename: string): string;
+function TPas2jsFSResolver.FindResourceFileName(const aFilename: string): String;
 begin
-  Result:=FS.FindIncludeFileName(aFilename);
+  Result:=FS.FindResourceFileName(aFilename,BaseDirectory);
+end;
+
+function TPas2jsFSResolver.FindIncludeFileName(const aFilename: string): String;
+
+begin
+  Result:=FS.FindIncludeFileName(aFilename,BaseDirectory,ModuleDirectory,Mode);
 end;
 
 
 function TPas2jsFSResolver.FindSourceFile(const aFilename: string): TLineReader;
+
 var
-  CurFilename: string;
+  CurFilename: String;
+
 begin
   CurFilename:=FS.FindSourceFileName(aFileName);
   Result:=FS.LoadFile(CurFilename).CreateLineReader(false);
 end;
+
+
 
 end.
 

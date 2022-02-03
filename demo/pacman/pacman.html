@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Pacman using pas2js</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="pacman.css">
+    <script src="pacman.js"></script>
+</head>
+<body>
+    <audio id="audio-start" src="audio/start.mp3" type="audio/mp3" preload="true" autobuffer="true"></audio>
+    <audio id="audio-die" src="audio/die.mp3" type="audio/mp3" preload="true" autobuffer="true"></audio>
+    <audio id="audio-eatghost" src="audio/eatghost.mp3" type="audio/mp3" preload="true" autobuffer="true"></audio>
+    <audio id="audio-eatpill" src="audio/eating.mp3" type="audio/mp3" preload="true" autobuffer="true"></audio>
+    <div id="pacman">
+      <div id="gameboard">
+        <canvas id="my-canvas"></canvas>
+      </div>
+      <div id="info">
+        <div id="logo">
+          <img id="logo-img" src="pacmanlogo.jpeg" width="80%"/>
+        </div>
+        <div id="scare-envelope">
+          <div id="scare-outer" class="progress">
+            <div id="scare-inner" class="progress-inner"></div>
+          </div>
+        </div>
+        <div id="bonus-envelope">
+          <div id="bonus-outer" class="progress">
+            <div id="bonus-inner" class="progress-inner"></div>
+          </div>
+        </div>
+        <div id="highscore-envelope">
+          <div id="highscore-label" class="label">High Score:</div>
+          <div id="highscore">0</div>
+        </div>
+        <div id="score-envelope">
+          <div id="score-label" class="label">Score:</div>
+          <div id="score">0</div>
+        </div>
+        <div id="lives-envelope">
+          <div id="lives-label" class="label">Lives:</div>
+          <div id="lives">3</div>
+        </div>
+        <div id="status-envelope">
+          <div id="status-label" class="label">Game status:</div>
+          <div id="status">Playing</div>
+        </div>
+        <div id="ghosts-envelope">
+          <div id="ghosts-label" class="label">
+            <img id="ghost-scared" src="ghost-scared.png" class="img"/>
+          </div>
+          <div id="ghosts">0</div>
+        </div>
+        <div id="bonus-envelope">
+          <div id="bonus-label" class="label">
+            <img id="cherry" src="cherry.png" class="img"/>
+          </div>
+          <div id="bonus">0</div>
+        </div>
+        <div id="controls-envelope">
+          <div id="controls-label" class="label">Controls:</div>
+          <div id="controls">
+            <div class="one-btn">
+              <button class="button" id="control-up"><i class="fas fa-arrow-up"></i>&nbsp; &nbsp; Move Up</button>
+            </div>
+            <div class="two-btn">
+              <button class="button" id="control-left"><i class="fas fa-arrow-left"></i>&nbsp;&nbsp;Move Left</button>
+              <button class="button" id="control-right">Move Right&nbsp; &nbsp;<i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="one-btn">
+              <button class="button" id="control-down"><i class="fas fa-arrow-down"></i>&nbsp; &nbsp;Move Down</button>
+            </div>
+            <div class="one-btn">
+              <button class="button" id="control-pause"><i class="fas fa-pause"></i>&nbsp; &nbsp;Pause / Resume</button>
+            </div>
+          </div>
+        </div>
+        <div id=sound-envelope >
+          <label id="sound-label" class="label" for="cbx-sound">Sound:</label>
+          <div id="sound">
+            <input id="cbx-sound" type="checkbox" value="0" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="source">
+      <div class="source-inner">
+        <div>
+          Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> &nbsp;&nbsp;Sources: &nbsp; <a target="new" href="pacman.lpr">Program</a> &nbsp; <a target="new" href="upacman.pp">unit</a>.
+        </div>
+        <button id="btn-reset">Restart</button>
+      </div>
+    </div>
+    <div style="display: none;">
+      <img id="ghost1" src="ghost1.png"/>
+      <img id="ghost2" src="ghost2.png"/>
+      <img id="ghost3" src="ghost3.png"/>
+      <img id="ghost4" src="ghost4.png"/>
+    </div>
+    <script>
+      // window.addEventListener("load", rtl.run);
+      rtl.run()
+    </script>
+</body>
+</html>

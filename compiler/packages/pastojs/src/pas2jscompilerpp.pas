@@ -18,12 +18,14 @@
 }
 unit Pas2JSCompilerPP;
 
-{$I pas2js_defines.inc}
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 interface
 
 uses
-  Classes, SysUtils, pas2jscompiler, jswriter, FPPJSSrcMap, contnrs, StrUtils;
+  Classes, SysUtils, pas2jscompiler, jswriter, FPPJSSrcMap, contnrs;
 
 Type
 
@@ -46,6 +48,9 @@ Type
 implementation
 
 uses
+  {$IFNDEF pas2js}
+  StrUtils,
+  {$ENDIF}
   process, pas2jslogger, pas2jsutils, pas2jsfileutils;
 
 function TPas2JSFSPostProcessorSupport.CmdListAsStr(CmdList: TStrings): string;
@@ -133,6 +138,7 @@ begin
 end;
 
 function TPas2JSFSPostProcessorSupport.Execute(const JSFilename: String; Cmd: TStringList; JS: TJSWriterString): TJSWriterString;
+
 const
   BufSize = 65536;
 var
@@ -249,7 +255,8 @@ begin
     else HandleJSException('[20181118170506] TPas2jsCompiler.CallPostProcessor Cmd: '+CmdListAsStr(Cmd),JSExceptValue,true);
     {$ENDIF}
   end;
-  if CurExitCode<>0 then begin
+  if CurExitCode<>0 then
+  begin
     Compiler.Log.LogMsg(nPostProcessorFailX,[CmdListAsStr(Cmd)]);
     Compiler.Terminate(ExitCodeToolError);
   end;

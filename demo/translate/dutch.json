@@ -1,0 +1,13 @@
+{
+  "program" : {
+    "URLTitle":"Vertaling met resourcestrings - URL API"
+  },
+  "mystrings": {
+      "Button":"Vertaal deze pagina",
+      "Header":"Vertaling met resourcestrings",
+      "Paragraph":"Deze tekst wordt vertaald.",
+      "TranslateDirect":"De directe API wordt gebruikt voor dit voorbeeld.",
+      "TranslateJSON":"Een JSON object wordt gebruikt voor dit voorbeeld.",
+      "TranslateURL":"Een URL wordt gebruikt voor dit voorbeeld."
+  }
+}

@@ -1,0 +1,98 @@
+
+<html>
+  <head>
+      <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>OpenTok Pas2js Demo</title>
+      <link href="css/app.css" rel="stylesheet" type="text/css">
+      <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"/>
+      <script src="https://code.jquery.com/jquery-3.3.1.js" type="text/javascript"></script>
+      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" type="text/javascript"></script>
+      <script src="https://static.opentok.com/v2/js/opentok.min.js"></script>
+      <script src="demoopentok.js"></script>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div id="Options">
+        <div class="card">
+          <div class="card-header" id="OpenTokOptionsHeader">
+            <h5 class="mb-0">
+              <button class="btn btn-link" data-toggle="collapse" data-target="#OpenTokOptions" aria-expanded="true" aria-controls="OpenTokOptions">
+                OpenTok Options
+              </button>
+            </h5>
+          </div>
+          <div id="OpenTokOptions" class="collapse show" aria-labelledby="OpenTokOptionsHeader" data-parent="#Options">
+            <div class="card-body">
+              <div class="row" >
+                <div class="col-12 panel panel-info">
+                  <div class="panel-body lead">
+                    You must obtain an API Key, Session ID and Token from <a href="http://www.tokbox.com">Tokbox</a>.
+                    You can get a test account for free.
+                  </div>
+                </div>
+              </div>
+              <div class="row mt-4" id="controls">
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="edtAPIKey">API Key</label>
+                    <input type="text" class="form-control" id="edtAPIKey" aria-describedby="lblAPIKey" placeholder="OpenTok API Key" value="">
+                    <small id="lblAPIKey" class="form-text text-muted">OpenTok API Key</small>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="edtSession">Session ID</label>
+                    <input type="text" class="form-control" id="edtSession" aria-describedby="lblSession" placeholder="OpenTok Session ID" value="">
+                    <small id="lblSession" class="form-text text-muted">Session you want to join.</small>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="edtToken">OpenTOK Token</label>
+                    <input type="text" class="form-control" id="edtToken" aria-describedby="lblToken" placeholder="OpenTok token" value="">
+                    <small id="lblToken" class="form-text text-muted">The OpenTok token you got from the OpenTok Server.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="Buttons" class="row mt-4">
+        <div class="col-12">
+          <div class="form-group">
+            <label class="ml-1 text-bold" for="edtName">Display Name</label>
+            <input type="text" class="form-control" id="edtName" aria-describedby="lblName" placeholder="Your name" value="">
+            <small id="lblName" class="form-text text-muted">The name you wish people to see</small>
+          </div>
+        </div>
+        <div class="col-12  ">
+          <div class="form-check">
+            <input id="cbPictureInPicture" type="checkbox" class="form-check-input" >
+            <label class="form-check-label" for="cbPictureInPicture">Picture-in-Picture mode</label>
+          </div>
+        </div>
+        <div class="col-6 col-sm-3 mt-3 ">
+          <button class="btn btn-primary btn-block" id="btnJoin">Join</button>
+        </div>
+        <div class="col-6 col-sm-3 mt-3">
+          <button class="btn btn-secondary btn-block" id="btnLeave" disabled>Leave</button>
+        </div>
+      </div>
+      <div class="row mt-3 ml-1 text-muted">
+        Created using &nbsp; <a target="_blank" href="https://wiki.freepascal.org/pas2js">pas2js.</a> &nbsp;&nbsp;
+         Sources: &nbsp; <a target="new" href="demoopentok.lpr">Program</a>
+      </div>
+      <div id="videos" class="row mt-3">
+        <div id="subscriber" class="col-6"></div>
+        <div id="publisher" class="col-6"></div>
+      </div>
+    </div>
+    <script>
+      rtl.run();
+    </script>
+  
+  </body>
+  </html>
+  

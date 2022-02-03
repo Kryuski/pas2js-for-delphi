@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo - descend Pascal class from JS function</title>
+  <script type="text/javascript">
+
+function Person(first, last, age) {
+  console.log('Person first='+first+' last='+last+' age='+age);
+  this.first = first;
+  this.last = last;
+  this.age = age;
+  this.run = function(value){
+    console.log('Person.run value='+value);
+  };
+}
+
+  </script>
+  <script src="ExtendJSFunctionClass1.js"></script>
+</head>
+<body>
+  <script>
+  rtl.run();
+  </script>
+  
+</body>
+</html>

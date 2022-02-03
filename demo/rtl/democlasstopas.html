@@ -1,13 +1,76 @@
 <!DOCTYPE html>
 <html>
-  <head>
+  <head id="head">
     <meta charset="utf-8"/>
+    <title>Generate class from Javascript object</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"/>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" type="text/javascript"></script>
+    <!--
+    <script type="application/javascript" src="theme.js"></script>
+  -->
     <script type="application/javascript" src="democlasstopas.js"></script>
   </head>
   <body>
-    <script type="application/javascript">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="edtJSObject">Object instance path</label>
+            <input type="text" class="form-control" id="edtJSObject" aria-describedby="lblJSObject" placeholder="Object instance path" value="">
+            <small id="lblJSObject" class="form-text text-muted">Path to instance of javascript object, relative to global scope</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="edtExternalName">Pascal Class external name</label>
+            <input type="text" class="form-control" id="edtExternalName" aria-describedby="lblExternalName" placeholder="Class external name" value="">
+            <small id="lblExternalName" class="form-text text-muted">The Object Pascal definition class external (JS) name.</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="edtPascalClass">Pascal Class name</label>
+            <input type="text" class="form-control" id="edtPascalClass" aria-describedby="lblPascalClass" placeholder="Class name" value="">
+            <small id="lblPascalClass" class="form-text text-muted">The Object Pascal definition class name.</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="form-group">
+            <label for="edtPascalClassAncestor">Pascal Class ancestor name</label>
+            <input type="text" class="form-control" id="edtPascalClassAncestor" aria-describedby="lblPascalClassAncestor" placeholder="Class ancestor name" value="TJSObject">
+            <small id="lblPascalClassAncestor" class="form-text text-muted">The Object Pascal class ancestor class name.</small>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-10">
+          <div class="form-group">
+            <label for="edtScript">Load javascript</label>
+            <input type="text" class="form-control" id="edtScript" aria-describedby="lblScript" placeholder="URL to javascript file" value="">
+            <small id="lblScript" class="form-text text-muted">A javascript file to load using a script tag. (jquery, popper and bootstrap are already loaded)</small>
+          </div>
+        </div>
+        <div class="col-md-2" style="display: flex; align-items: center;">
+          <button id="load" class="btn btn-secondary">Load script</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-1">
+          <button id="go" class="btn btn-primary">Create class</button>
+        </div>
+        <div class="col-md-11">
+          <div class="form-group">
+            <label for="edtClassDefinition">Generated Pascal Class:</label>
+            <textarea class="form-control" rows=25 id="edtClassDefinition" aria-describedby="edtClassDefinition" placeholder="Generated code comes here" value=""></textarea>
+            <small id="lblClassDefinition" class="form-text text-muted">The Object Pascal class.</small>
+          </div>
+        </div>
+      <div>
+    </div>
+  <script type="application/javascript">
      rtl.run();
     </script>
   </body>
 </html>
-

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Library Name="DAServer" Namespace="DAServer" UID="{59AAFC78-7AD0-424D-AD97-0584C946092C}" Version="3.0">
+<Services>
+<Service Name="DataService" UID="{B5A90444-B0A1-4235-BB21-E1D055A20CDD}" Ancestor="DataAbstractService">
+<Interfaces>
+<Interface Name="Default" UID="{81684074-E6C1-42E4-AA46-34365716E1EB}">
+<Operations>
+</Operations>
+</Interface>
+</Interfaces>
+</Service>
+</Services>
+<EventSinks>
+</EventSinks>
+<Structs>
+</Structs>
+<Enums>
+</Enums>
+<Arrays>
+</Arrays>
+<Uses>
+<Use Name="DataAbstract4" UID="{D11B1602-A237-4C77-8130-95A3B6A0CF72}" Rodl="$(Data Abstract for Delphi)\Source\DataAbstract4.RODL" AbsoluteRodl="E:\Components\RemObjects Software\Data Abstract for Delphi\Source\DataAbstract4.RODL" UsedRodlUID="{DC8B7BE2-14AF-402D-B1F8-E1008B6FA4F6}" DontCodeGen="1">
+<Includes UID="{ECE5910F-040B-4BDF-9502-EDF7F95642CF}" Delphi="DataAbstract4" DotNet="RemObjects.DataAbstract.Server" ObjC="DataAbstract/DataAbstract4_Intf" Java="com.remobjects.dataabstract.intf" Cocoa="DataAbstract"/>
+</Use>
+</Uses>
+<Exceptions>
+</Exceptions>
+</Library>

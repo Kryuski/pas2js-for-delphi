@@ -1,3 +1,24 @@
+{ Unit that emulates console output in the browser.
+
+  Copyright (C) 2020- Michael Van Canneyt michael@freepascal.org
+
+  This library is free software; you can redistribute it and/or modify it under the terms of the GNU Library General Public
+  License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version
+  with the following modification:
+
+  As a special exception, the copyright holders of this library give you permission to link this library with independent modules
+  to produce an executable, regardless of the license terms of these independent modules,and to copy and distribute the resulting
+  executable under terms of your choice, provided that you also meet, for each linked independent module, the terms and conditions
+  of the license of that module. An independent module is a module which is not derived from or based on this library. If you
+  modify this library, you may extend this exception to your version of the library, but you are not obligated to do so. If you do
+  not wish to do so, delete this exception statement from your version.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Library General Public License for more details.
+
+  You should have received a copy of the GNU Library General Public License along with this library; if not, write to the Free
+  Software Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1335, USA.
+}
 unit browserconsole;
 
 {$mode objfpc}
@@ -5,7 +26,7 @@ unit browserconsole;
 interface
 
 uses
-  js,web;
+  js, web, Rtl.BrowserLoadHelper,sysutils;
 
 Const
   BrowserLineBreak = #10;
@@ -78,20 +99,34 @@ begin
 end;
 
 
+Function EscapeString(S : String) : String;
+
+Var
+  CL : string;
+
+begin
+  cl:=StringReplace(S,'<','&lt;',[rfReplaceAll]);
+  cl:=StringReplace(cl,'>','&gt;',[rfReplaceAll]);
+  cl:=StringReplace(cl,' ','&nbsp;',[rfReplaceAll]);
+  cl:=StringReplace(cl,#13#10,'<br>',[rfReplaceAll]);
+  cl:=StringReplace(cl,#10,'<br>',[rfReplaceAll]);
+  cl:=StringReplace(cl,#13,'<br>',[rfReplaceAll]);
+  Result:=CL;
+end;
+
 Procedure WriteConsole(S : JSValue; NewLine : Boolean);
 
 Var
   CL: String;
 
 begin
-  // Maybe add some way to limit line length
-  CL:=LastLine.InnerText;
-  CL:=CL+String(S);
-  LastLine.InnerText:=CL;
+  CL:=LastLine.InnerHtml;
+  CL:=CL+EscapeString(String(S));
+  LastLine.InnerHtml:=CL;
   if NewLine then
     begin
     if ConsoleLinesToBrowserLog then
-      console.log(CL);
+      console.log(LastLine.InnerText);
     AppendLine;
     end;
 end;

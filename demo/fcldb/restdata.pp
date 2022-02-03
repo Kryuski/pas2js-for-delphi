@@ -136,8 +136,7 @@ end;
 Procedure GetRecords(aRequest : TRequest; AResponse : TResponse);
 
 Var
-  P : String;
-  I,ID,First,Last : Integer;
+  ID,First,Last : Integer;
 
 begin
   First:=0;
@@ -212,7 +211,7 @@ end;
 Procedure CreateRecord(aRequest : TRequest; AResponse : TResponse);
 
 Var
-  O,D,F : TJSONObject;
+  O,D: TJSONObject;
   I : integer;
   R : String;
 

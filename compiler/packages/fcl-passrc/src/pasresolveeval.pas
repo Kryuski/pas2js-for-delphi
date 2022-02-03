@@ -1,4 +1,4 @@
-{
+﻿{
     This file is part of the Free Component Library
 
     Pascal source parser
@@ -20,27 +20,27 @@ Works:
 - Emitting range check warnings
 - Error on overflow
 - bool:
-  - not, =, <>, and, or, xor, Low(), High(), Pred(), Succ(), Ord()
-  - Boolean(0), Boolean(1)
+  - not, =, <>, and, or, xor, low(), high(), pred(), succ(), ord()
+  - boolean(0), boolean(1)
 - int/uint
   - unary +, -
   - binary: +, -, *, div, mod, ^^, =, <>, <, >, <=, >=, and, or, xor, not, shl, shr
   - Low(), High(), Pred(), Succ(), Ord(), Lo(), Hi()
-  - typecast Longint(-1), Word(-2), intsingle(-1), uintsingle(1)
+  - typecast longint(-1), word(-2), intsingle(-1), uintsingle(1)
 - float:
-  - typecast single(double), double(single), float(Integer)
+  - typecast single(double), double(single), float(integer)
   - +, -, /, *, =, <>, <, >, <=, >=
 - string:
   - #65, '', 'a', 'ab'
   - +, =, <>, <, >, <=, >=
-  - Pred(), Succ(), chr(), Ord(), Low(char), High(char)
+  - pred(), succ(), chr(), ord(), low(char), high(char)
   - s[]
   - length(string)
   - #$DC00
   - unicodestring
 - enum
-  - Ord(), Low(), High(), Pred(), Succ()
-  - typecast enumtype(Integer)
+  - ord(), low(), high(), pred(), succ()
+  - typecast enumtype(integer)
 - set of enum, set of char, set of bool, set of int
   - [a,b,c..d]
   - +, -, *, ><, =, <>, >=, <=, in
@@ -54,12 +54,14 @@ ToDo:
   - [], [a..b], multi dim [a,b], concat with +
   - array of record
   - array of string
-  - error on: array[1..2] of Longint = (1,2,3);
+  - error on: array[1..2] of longint = (1,2,3);
 - anonymous enum range: type f=(a,b,c,d); g=b..c;
 }
 unit PasResolveEval;
 
-{$I pas2js_defines.inc}
+{$IFNDEF Pas2JS}
+{$I delphi_defines.inc}
+{$ENDIF}
 
 {$IFOPT Q+}{$DEFINE OverflowCheckOn}{$ENDIF}
 {$IFOPT R+}{$DEFINE RangeCheckOn}{$ENDIF}
@@ -67,7 +69,7 @@ unit PasResolveEval;
 interface
 
 uses
-  SysUtils, Math, PasTree, PScanner, FPCTypes;
+  Sysutils, Classes, Math, PasTree, PScanner{$IFNDEF Pas2JS}, FPCTypes{$ENDIF};
 
 // message numbers
 const
@@ -102,7 +104,7 @@ const
   nTypesAreNotRelatedXY = 3029;
   nAbstractMethodsCannotBeCalledDirectly = 3030;
   nMissingParameterX = 3031;
-  nCannotAccessThisMemberFromAX = 3032;
+  nInstanceMemberXInaccessible = 3032;
   nInOperatorExpectsSetElementButGot = 3033;
   nWrongNumberOfParametersForTypeCast = 3034;
   nIllegalTypeConversionTo = 3035;
@@ -156,7 +158,7 @@ const
   nIllegalQualifierAfter = 3084;
   nIllegalQualifierInFrontOf = 3085;
   nIllegalQualifierWithin = 3086;
-  nMethodClassXInOtherUnitY = 3087;
+  nClassXNotFoundInThisModule = 3087;
   nClassMethodsMustBeStaticInX = 3088;
   nCannotMixMethodResolutionAndDelegationAtX = 3089;
   nImplementsDoesNotSupportArrayProperty = 3101;
@@ -177,9 +179,34 @@ const
   nDerivedXMustExtendASubClassY = 3115;
   nDefaultPropertyNotAllowedInHelperForX = 3116;
   nHelpersCannotBeUsedAsTypes = 3117;
-  nBitWiseOperationsAre32Bit = 3118;
+  nMessageHandlersInvalidParams = 3118;
   nImplictConversionUnicodeToAnsi = 3119;
   nWrongTypeXInArrayConstructor = 3120;
+  nUnknownCustomAttributeX = 3121;
+  nAttributeIgnoredBecauseAbstractX = 3122;
+  nCreatingAnInstanceOfAbstractClassY = 3123;
+  nIllegalExpressionAfterX = 3124;
+  nMethodHidesNonVirtualMethodExactly = 3125;
+  nDuplicatePublishedMethodXAtY = 3126;
+  nConstraintXSpecifiedMoreThanOnce = 3127;
+  nConstraintXAndConstraintYCannotBeTogether = 3128;
+  nXIsNotAValidConstraint = 3129;
+  nWrongNumberOfParametersForGenericX = 3130;
+  nGenericsWithoutSpecializationAsType = 3131;
+  nDeclOfXDiffersFromPrevAtY = 3132;
+  nTypeParamXIsMissingConstraintY = 3133;
+  nTypeParamXIsNotCompatibleWithY = 3134;
+  nTypeParamXMustSupportIntfY = 3135;
+  nTypeParamsNotAllowedOnX = 3136;
+  nXMethodsCannotHaveTypeParams = 3137;
+  nImplMustNotRepeatConstraints = 3138;
+  nCouldNotInferTypeArgXForMethodY = 3139;
+  nInferredTypeXFromDiffArgsMismatchFromMethodY = 3140;
+  nParamOfThisTypeCannotHaveDefVal = 3141;
+  nClassTypesAreNotRelatedXY = 3142;
+  nDirectiveXNotAllowedHere = 3143;
+  nAwaitWithoutPromise = 3144;
+  nSymbolCannotExportedFromALibrary = 3145;
 
   // using same IDs as FPC
   nVirtualMethodXHasLowerVisibility = 3250; // was 3050
@@ -225,7 +252,7 @@ resourcestring
   sTypesAreNotRelatedXY = 'Types are not related: "%s" and "%s"';
   sAbstractMethodsCannotBeCalledDirectly = 'Abstract methods cannot be called directly';
   sMissingParameterX = 'Missing parameter %s';
-  sCannotAccessThisMemberFromAX = 'Cannot access this member from a %s';
+  sInstanceMemberXInaccessible = 'Instance member "%s" inaccessible here';
   sInOperatorExpectsSetElementButGot = 'the in-operator expects a set element, but got %s';
   sWrongNumberOfParametersForTypeCast = 'wrong number of parameters for type cast to %s';
   sIllegalTypeConversionTo = 'Illegal type conversion: "%s" to "%s"';
@@ -287,7 +314,7 @@ resourcestring
   sIllegalQualifierAfter = 'illegal qualifier "%s" after "%s"';
   sIllegalQualifierInFrontOf = 'illegal qualifier "%s" in front of "%s"';
   sIllegalQualifierWithin = 'illegal qualifier "%s" within "%s"';
-  sMethodClassXInOtherUnitY = 'method class "%s" in other unit "%s"';
+  sClassXNotFoundInThisModule = 'class "%s" not found in this module';
   sNoMatchingImplForIntfMethodXFound = 'No matching implementation for interface method "%s" found';
   sClassMethodsMustBeStaticInX = 'Class methods must be static in %s';
   sCannotMixMethodResolutionAndDelegationAtX = 'Cannot mix method resolution and delegation at %s';
@@ -308,9 +335,34 @@ resourcestring
   sDerivedXMustExtendASubClassY = 'Derived %s must extend a subclass of "%s" or the class itself';
   sDefaultPropertyNotAllowedInHelperForX = 'Default property not allowed in helper for %s';
   sHelpersCannotBeUsedAsTypes = 'helpers cannot be used as types';
-  sBitWiseOperationsAre32Bit = 'Bitwise operations are 32-bit';
+  sMessageHandlersInvalidParams = 'Message handlers can take only one call by ref. parameter';
   sImplictConversionUnicodeToAnsi = 'Implicit string type conversion with potential data loss from "UnicodeString" to "AnsiString"';
   sWrongTypeXInArrayConstructor = 'Wrong type "%s" in array constructor';
+  sUnknownCustomAttributeX = 'Unknown custom attribute "%s"';
+  sAttributeIgnoredBecauseAbstractX = 'attribute ignored because abstract %s';
+  sCreatingAnInstanceOfAbstractClassY = 'Creating an instance of abstract class "%s"';
+  sIllegalExpressionAfterX = 'illegal expression after %s';
+  sMethodHidesNonVirtualMethodExactly = 'method hides identifier at "%s". Use reintroduce';
+  sDuplicatePublishedMethodXAtY = 'Duplicate published method "%s" at %s';
+  sConstraintXSpecifiedMoreThanOnce = 'Constraint "%s" specified more than once';
+  sConstraintXAndConstraintYCannotBeTogether = '"%s" constraint and "%s" constraint cannot be specified together';
+  sXIsNotAValidConstraint = '"%s" is not a valid constraint';
+  sWrongNumberOfParametersForGenericX = 'wrong number of parameters for generic %s';
+  sGenericsWithoutSpecializationAsType = 'Generics without specialization cannot be used as a type for a %s';
+  sDeclOfXDiffersFromPrevAtY = 'Declaration of "%s" differs from previous declaration at %s';
+  sTypeParamXIsMissingConstraintY = 'Type parameter "%s" is missing constraint "%s"';
+  sTypeParamXIsNotCompatibleWithY = 'Type parameter "%s" is not compatible with type "%s"';
+  sTypeParamXMustSupportIntfY = 'Type parameter "%s" must support interface "%s"';
+  sTypeParamsNotAllowedOnX = 'Type parameters not allowed on %s';
+  sXMethodsCannotHaveTypeParams = '%s methods cannot have type parameters';
+  sImplMustNotRepeatConstraints = 'Implementations must not repeat constraints';
+  sCouldNotInferTypeArgXForMethodY = 'Could not infer generic type argument "%s" for method "%s"';
+  sInferredTypeXFromDiffArgsMismatchFromMethodY = 'Inferred type "%s" from different arguments mismatch for method "%s"';
+  sParamOfThisTypeCannotHaveDefVal = 'Parameters of this type cannot have default values';
+  sClassTypesAreNotRelatedXY = 'Class types "%s" and "%s" are not related';
+  sDirectiveXNotAllowedHere = 'Directive "%s" not allowed here';
+  sAwaitWithoutPromise = 'Await without promise';
+  sSymbolCannotExportedFromALibrary = 'The symbol cannot be exported from a library';
 
 type
   { TResolveData - base class for data stored in TPasElement.CustomData }
@@ -357,9 +409,9 @@ const
   MinSafeIntSingle = -16777216;
   MaxSafeIntSingle =  16777216;
   MaskUIntSingle = $3fffff;
-  MinSafeIntDouble = -$fffffffffffff-1; // -4503599627370496
-  MaxSafeIntDouble =  $fffffffffffff; //  4503599627370495
-  MaskUIntDouble = $fffffffffffff;
+  MinSafeIntDouble = -$1fffffffffffff; // -9007199254740991 54 bits (52 plus signed bit plus implicit highest bit)
+  MaxSafeIntDouble =  $1fffffffffffff; //  9007199254740991
+  MaskUIntDouble = $1fffffffffffff;
 
 type
   { TResEvalValue }
@@ -383,6 +435,7 @@ type
     revkSetOfInt,  // set of enum, int, char, widechar, e.g. [1,2..3]
     revkExternal // TResEvalExternal: an external const
     );
+  TREVKinds = set of TREVKind;
 const
   revkAllStrings = [{$ifdef FPC_HAS_CPSTRING}revkString,{$endif}revkUnicodeString];
 type
@@ -395,6 +448,7 @@ type
     function Clone: TResEvalValue; virtual;
     function AsDebugString: string; virtual;
     function AsString: string; virtual;
+    function TypeAsString: string; virtual;
   end;
   TResEvalValueClass = class of TResEvalValue;
 
@@ -402,11 +456,12 @@ type
 
   TResEvalBool = class(TResEvalValue)
   public
-    B: Boolean;
+    B: boolean;
     constructor Create; override;
-    constructor CreateValue(const aValue: Boolean);
+    constructor CreateValue(const aValue: boolean);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   TResEvalTypedInt = (
@@ -429,28 +484,28 @@ const
   reitAllUnsigned = [reitByte,reitWord,reitUIntSingle,reitLongWord,reitUIntDouble];
 
   reitLow: array[TResEvalTypedInt] of TMaxPrecInt = (
-    Low(TMaxPrecInt), // reitNone,
-    Low(Byte), // reitByte,
-    Low(ShortInt), // reitShortInt,
-    Low(Word), // reitWord,
-    Low(SmallInt), // reitSmallInt,
+    low(TMaxPrecInt), // reitNone,
+    low(Byte), // reitByte,
+    low(ShortInt), // reitShortInt,
+    low(Word), // reitWord,
+    low(SmallInt), // reitSmallInt,
     0, // reitUIntSingle,
     MinSafeIntSingle, // reitIntSingle,
-    Low(LongWord), // reitLongWord,
-    Low(Longint), // reitLongInt,
+    low(LongWord), // reitLongWord,
+    low(LongInt), // reitLongInt,
     0, // reitUIntDouble,
     MinSafeIntDouble // reitIntDouble)
     );
   reitHigh: array[TResEvalTypedInt] of TMaxPrecInt = (
-    High(TMaxPrecInt), // reitNone,
-    High(Byte), // reitByte,
-    High(ShortInt), // reitShortInt,
-    High(Word), // reitWord,
-    High(SmallInt), // reitSmallInt,
+    high(TMaxPrecInt), // reitNone,
+    high(Byte), // reitByte,
+    high(ShortInt), // reitShortInt,
+    high(Word), // reitWord,
+    high(SmallInt), // reitSmallInt,
     MaxSafeIntSingle, // reitUIntSingle,
     MaxSafeIntSingle, // reitIntSingle,
-    High(LongWord), // reitLongWord,
-    High(Longint), // reitLongInt,
+    high(LongWord), // reitLongWord,
+    high(LongInt), // reitLongInt,
     MaxSafeIntDouble, // reitUIntDouble,
     MaxSafeIntDouble // reitIntDouble)
     );
@@ -468,6 +523,7 @@ type
     function Clone: TResEvalValue; override;
     function AsString: string; override;
     function AsDebugString: string; override;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalUInt }
@@ -479,6 +535,7 @@ type
     constructor CreateValue(const aValue: TMaxPrecUInt);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalFloat }
@@ -490,7 +547,8 @@ type
     constructor CreateValue(const aValue: TMaxPrecFloat);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
-    function IsInt(out Int: TMaxPrecInt): Boolean;
+    function IsInt(out Int: TMaxPrecInt): boolean;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalCurrency }
@@ -502,8 +560,9 @@ type
     constructor CreateValue(const aValue: TMaxPrecCurrency);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
-    function IsInt(out Int: TMaxPrecInt): Boolean;
+    function IsInt(out Int: TMaxPrecInt): boolean;
     function AsInt: TMaxPrecInt; // value * 10.000
+    function TypeAsString: string; override;
   end;
 
   {$ifdef FPC_HAS_CPSTRING}
@@ -512,10 +571,12 @@ type
   TResEvalString = class(TResEvalValue)
   public
     S: RawByteString;
+    OnlyASCII: boolean;
     constructor Create; override;
     constructor CreateValue(const aValue: RawByteString);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
   {$endif}
 
@@ -528,21 +589,23 @@ type
     constructor CreateValue(const aValue: UnicodeString);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalEnum - Kind=revkEnum, Value.Int }
 
   TResEvalEnum = class(TResEvalValue)
   public
-    Index: Integer; // Beware: might be outside TPasEnumType
+    Index: integer; // Beware: might be outside TPasEnumType
     ElType: TPasEnumType; // TPasEnumType
     constructor Create; override;
-    constructor CreateValue(const aValue: Integer; aIdentEl: TPasEnumValue);
+    constructor CreateValue(const aValue: integer; aIdentEl: TPasEnumValue);
     function GetEnumValue: TPasEnumValue;
-    function GetEnumName: string;
+    function GetEnumName: String;
     function Clone: TResEvalValue; override;
     function AsDebugString: string; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   TRESetElKind = (
@@ -567,6 +630,7 @@ type
     function AsString: string; override;
     function AsDebugString: string; override;
     function ElementAsString(El: TMaxPrecInt): string; virtual;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalRangeUInt }
@@ -578,6 +642,7 @@ type
     constructor CreateValue(const aRangeStart, aRangeEnd: TMaxPrecUInt);
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   { TResEvalSet - Kind=revkSetOfInt }
@@ -599,9 +664,10 @@ type
       const aRangeStart, aRangeEnd: TMaxPrecInt); override;
     function Clone: TResEvalValue; override;
     function AsString: string; override;
-    function Add(aRangeStart, aRangeEnd: TMaxPrecInt): Boolean; // false if duplicate ignored
-    function IndexOfRange(Index: TMaxPrecInt; FindInsertPos: Boolean = false): Integer;
-    function Intersects(aRangeStart, aRangeEnd: TMaxPrecInt): Integer; // returns index of first intersecting range
+    function TypeAsString: string; override;
+    function Add(aRangeStart, aRangeEnd: TMaxPrecInt): boolean; // false if duplicate ignored
+    function IndexOfRange(Index: TMaxPrecInt; FindInsertPos: boolean = false): integer;
+    function Intersects(aRangeStart, aRangeEnd: TMaxPrecInt): integer; // returns index of first intersecting range
     procedure ConsistencyCheck;
   end;
 
@@ -612,6 +678,7 @@ type
     constructor Create; override;
     function Clone: TResEvalValue; override;
     function AsString: string; override;
+    function TypeAsString: string; override;
   end;
 
   TResEvalFlag = (
@@ -625,8 +692,8 @@ type
   TResExprEvaluator = class;
 
   TPasResEvalLogHandler = procedure(Sender: TResExprEvaluator; const id: TMaxPrecInt;
-    MsgType: TMessageType; MsgNumber: Integer;
-    const Fmt: string; Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif}; PosEl: TPasElement) of object;
+    MsgType: TMessageType; MsgNumber: integer;
+    const Fmt: String; Args: Array of const; PosEl: TPasElement) of object;
   TPasResEvalIdentHandler = function(Sender: TResExprEvaluator;
     Expr: TPrimitiveExpr; Flags: TResEvalFlags): TResEvalValue of object;
   TPasResEvalParamsHandler = function(Sender: TResExprEvaluator;
@@ -640,17 +707,18 @@ type
   private
     FAllowedInts: TResEvalTypedInts;
     {$ifdef FPC_HAS_CPSTRING}
-    FDefaultEncoding: TSystemCodePage;
+    FDefaultSourceEncoding: TSystemCodePage;
+    FDefaultStringEncoding: TSystemCodePage;
     {$endif}
     FOnEvalIdentifier: TPasResEvalIdentHandler;
     FOnEvalParams: TPasResEvalParamsHandler;
     FOnLog: TPasResEvalLogHandler;
     FOnRangeCheckEl: TPasResEvalRangeCheckElHandler;
   protected
-    procedure LogMsg(const id: TMaxPrecInt; MsgType: TMessageType; MsgNumber: Integer;
-      const Fmt: string; Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif}; PosEl: TPasElement); overload;
-    procedure RaiseMsg(const Id: TMaxPrecInt; MsgNumber: Integer; const Fmt: string;
-      Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif}; ErrorPosEl: TPasElement);
+    procedure LogMsg(const id: TMaxPrecInt; MsgType: TMessageType; MsgNumber: integer;
+      const Fmt: String; Args: Array of const; PosEl: TPasElement); overload;
+    procedure RaiseMsg(const Id: TMaxPrecInt; MsgNumber: integer; const Fmt: String;
+      Args: Array of const; ErrorPosEl: TPasElement);
     procedure RaiseNotYetImplemented(id: TMaxPrecInt; El: TPasElement; Msg: string = ''); virtual;
     procedure RaiseInternalError(id: TMaxPrecInt; const Msg: string = '');
     procedure RaiseConstantExprExp(id: TMaxPrecInt; ErrorEl: TPasElement);
@@ -693,20 +761,21 @@ type
     procedure SuccUnicodeString(Value: TResEvalUTF16; ErrorEl: TPasElement);
     procedure PredEnum(Value: TResEvalEnum; ErrorEl: TPasElement);
     procedure SuccEnum(Value: TResEvalEnum; ErrorEl: TPasElement);
+    function DivideByZero(LeftSign, RightSign: TValueSign): TMaxPrecFloat;
     function CreateResEvalInt(UInt: TMaxPrecUInt): TResEvalValue; virtual;
   public
     constructor Create;
     function Eval(Expr: TPasExpr; Flags: TResEvalFlags): TResEvalValue;
-    function IsInRange(Expr, RangeExpr: TPasExpr; EmitHints: Boolean): Boolean; overload;
+    function IsInRange(Expr, RangeExpr: TPasExpr; EmitHints: boolean): boolean; overload;
     function IsInRange(Value: TResEvalValue; ValueExpr: TPasExpr;
-      RangeValue: TResEvalValue; RangeExpr: TPasExpr; EmitHints: Boolean): Boolean; overload;
+      RangeValue: TResEvalValue; RangeExpr: TPasExpr; EmitHints: boolean): boolean; overload;
     function IsSetCompatible(Value: TResEvalValue; ValueExpr: TPasExpr;
-      RangeValue: TResEvalValue; EmitHints: Boolean): Boolean;
-    function IsConst(Expr: TPasExpr): Boolean;
-    function IsSimpleExpr(Expr: TPasExpr): Boolean; // true = no need to store result
-    procedure EmitRangeCheckConst(id: TMaxPrecInt; const aValue, MinVal, MaxVal: string;
+      RangeValue: TResEvalValue; EmitHints: boolean): boolean;
+    function IsConst(Expr: TPasExpr): boolean;
+    function IsSimpleExpr(Expr: TPasExpr): boolean; // true = no need to store result
+    procedure EmitRangeCheckConst(id: TMaxPrecInt; const aValue, MinVal, MaxVal: String;
       PosEl: TPasElement; MsgType: TMessageType = mtWarning); overload; virtual;
-    procedure EmitRangeCheckConst(id: TMaxPrecInt; const aValue: string;
+    procedure EmitRangeCheckConst(id: TMaxPrecInt; const aValue: String;
       MinVal, MaxVal: TMaxPrecInt; PosEl: TPasElement; MsgType: TMessageType = mtWarning); overload;
     function ChrValue(Value: TResEvalValue; ErrorEl: TPasElement): TResEvalValue; virtual;
     function OrdValue(Value: TResEvalValue; ErrorEl: TPasElement): TResEvalValue; virtual;
@@ -716,16 +785,19 @@ type
     function EvalStrFunc(Params: TParamsExpr; Flags: TResEvalFlags): TResEvalValue; virtual;
     function EvalStringAddExpr(Expr, LeftExpr, RightExpr: TPasExpr;
       LeftValue, RightValue: TResEvalValue): TResEvalValue; virtual;
-    function LoHiValue(Value: TResEvalValue; ShiftSize: Integer; Mask: LongWord;
+    function ShiftAndMaskValue(Value: TResEvalValue; ShiftSize: Integer; Mask: LongWord;
       ErrorEl: TPasElement): TResEvalValue; virtual;
     function EnumTypeCast(EnumType: TPasEnumType; Expr: TPasExpr;
       Flags: TResEvalFlags): TResEvalEnum; virtual;
     {$ifdef FPC_HAS_CPSTRING}
-    function CheckValidUTF8(const S: RawByteString; ErrorEl: TPasElement): Boolean;
+    function CheckValidUTF8(const s: RawByteString; ErrorEl: TPasElement): boolean;
     function GetCodePage(const s: RawByteString): TSystemCodePage;
     function GetRawByteString(const s: UnicodeString; CodePage: TSystemCodePage; ErrorEl: TPasElement): RawByteString;
+    function GetUTF8Str(const s: RawByteString; ErrorEl: TPasElement): UTF8String;
     function GetUnicodeStr(const s: RawByteString; ErrorEl: TPasElement): UnicodeString;
-    function GetWideChar(const s: RawByteString; out w: WideChar): Boolean;
+    function GetWideChar(const s: RawByteString; out w: WideChar): boolean;
+    function GetExprStringTargetCP(Expr: TPasExpr): TSystemCodePage; virtual; // e.g. var s: String(1234) = 'ä' return 1234
+    function GetExprStringSourceCP(Expr: TPasExpr): TSystemCodePage; virtual; // e.g. {$codepage 123}var s: String = 'ä' return 123
     {$endif}
     property OnLog: TPasResEvalLogHandler read FOnLog write FOnLog;
     property OnEvalIdentifier: TPasResEvalIdentHandler read FOnEvalIdentifier write FOnEvalIdentifier;
@@ -733,21 +805,28 @@ type
     property OnRangeCheckEl: TPasResEvalRangeCheckElHandler read FOnRangeCheckEl write FOnRangeCheckEl;
     property AllowedInts: TResEvalTypedInts read FAllowedInts write FAllowedInts;
     {$ifdef FPC_HAS_CPSTRING}
-    property DefaultStringCodePage: TSystemCodePage read FDefaultEncoding write FDefaultEncoding;
+    property DefaultSourceCodePage: TSystemCodePage read FDefaultSourceEncoding write FDefaultSourceEncoding;
+    property DefaultStringCodePage: TSystemCodePage read FDefaultStringEncoding write FDefaultStringEncoding;
     {$endif}
   end;
   TResExprEvaluatorClass = class of TResExprEvaluator;
 
 procedure ReleaseEvalValue(var Value: TResEvalValue);
 function NumberIsFloat(const Value: string): boolean;
+function Sign(const Value: TMaxPrecUInt): TValueSign; overload;
 
-function UnicodeStrToCaption(const u: UnicodeString; MaxLength: Integer): Unicodestring;
-function CodePointToString(CodePoint: LongWord): string;
-function CodePointToUnicodeString(u: LongWord): UnicodeString;
+function UnicodeStrToCaption(const u: UnicodeString; MaxLength: integer): Unicodestring;
+function CodePointToString(CodePoint: longword): String;
+function CodePointToUnicodeString(u: longword): UnicodeString;
 
 function GetObjName(o: TObject): string;
+function GetObjPath(o: TObject): string;
+function GetGenericParamCommas(Cnt: integer): string;
+function GetElementNameAndParams(El: TPasElement; MaxLvl: integer = 3): string;
+function GetTypeParamNames(Templates: TFPList; MaxLvl: integer = 3): string;
 function dbgs(const Flags: TResEvalFlags): string; overload;
 function dbgs(v: TResEvalValue): string; overload;
+function LastPos(c: char; const s: string): sizeint;
 
 implementation
 
@@ -770,13 +849,22 @@ begin
   Result:=false;
 end;
 
-function UnicodeStrToCaption(const u: UnicodeString; MaxLength: Integer
-  ): Unicodestring;
-var
-  InLit: Boolean;
-  Len: Integer;
+function Sign(const Value: TMaxPrecUInt): TValueSign;
+begin
+  if Value>0 then
+    Result:=1
+  else
+    Result:=0;
+end;
 
-  procedure AddHash(o: Integer);
+function UnicodeStrToCaption(const u: UnicodeString; MaxLength: integer
+  ): Unicodestring;
+// encode a string as a Pascal string literal using '' and #
+var
+  InLit: boolean;
+  Len: integer;
+
+  procedure AddHash(o: integer);
   var
     h: UnicodeString;
   begin
@@ -792,7 +880,7 @@ var
       Result:=Result+h;
   end;
 
-  procedure AddLit(const Lit: Unicodestring; CaptionLen: Integer);
+  procedure AddLit(const Lit: Unicodestring; CaptionLen: integer);
   begin
     if not InLit then
       begin
@@ -805,7 +893,7 @@ var
   end;
 
 var
-  p: Integer;
+  p: integer;
 begin
   Result:='';
   p:=1;
@@ -820,7 +908,7 @@ begin
       end;
     #0..#31,#127..#255,#$D800..#$ffff:
       begin
-      AddHash(Ord(u[p]));
+      AddHash(ord(u[p]));
       inc(p);
       end
     else
@@ -833,7 +921,7 @@ begin
     Result:=Result+'''';
 end;
 
-function CodePointToString(CodePoint: LongWord): string;
+function CodePointToString(CodePoint: longword): String;
 begin
   case CodePoint of
     0..$7f:
@@ -863,7 +951,7 @@ begin
   end;
 end;
 
-function CodePointToUnicodeString(u: LongWord): UnicodeString;
+function CodePointToUnicodeString(u: longword): UnicodeString;
 begin
   if u < $10000 then
     // Note: codepoints $D800 - $DFFF are reserved
@@ -873,13 +961,111 @@ begin
 end;
 
 function GetObjName(o: TObject): string;
+var
+  GenType: TPasGenericType;
 begin
   if o=nil then
     Result:='nil'
+  else if (o is TPasArrayType) and (TPasArrayType(o).Name='') then
+    begin
+    if TPasArrayType(o).ElType = nil then
+      Result:='array of const'
+    else
+      Result:=Format('TArray<%s>', [TPasArrayType(o).ElType.Name]);
+    end
   else if o is TPasElement then
-    Result:=TPasElement(o).Name+':'+o.ClassName
+    begin
+    Result:=TPasElement(o).Name;
+    if o is TPasGenericType then
+      begin
+      GenType:=TPasGenericType(o);
+      if (GenType.GenericTemplateTypes<>nil)
+          and (GenType.GenericTemplateTypes.Count>0) then
+        Result:=Result+GetGenericParamCommas(GenType.GenericTemplateTypes.Count);
+      end;
+    Result:=Result+':'+o.ClassName;
+    end
   else
     Result:=o.ClassName;
+end;
+
+function GetObjPath(o: TObject): string;
+var
+  El: TPasElement;
+  GenType: TPasGenericType;
+begin
+  if o is TPasElement then
+    begin
+    El:=TPasElement(o);
+    Result:=':'+El.ClassName;
+    while El<>nil do
+      begin
+      if El<>o then
+        Result:='.'+Result;
+      if El is TPasGenericType then
+        begin
+        GenType:=TPasGenericType(El);
+        if (GenType.GenericTemplateTypes<>nil)
+            and (GenType.GenericTemplateTypes.Count>0)
+            and (Pos('<',El.Name)<1) then
+          Result:=GetGenericParamCommas(GenType.GenericTemplateTypes.Count)+Result;
+        end;
+      if El.Name<>'' then
+        begin
+        if IsValidIdent(El.Name) then
+          Result:=El.Name+Result
+        else
+          Result:='"'+El.Name+'"'+Result;
+        end
+      else
+        Result:='['+El.ClassName+']'+Result;
+      El:=El.Parent;
+      end;
+    end
+  else
+    Result:=GetObjName(o);
+end;
+
+function GetGenericParamCommas(Cnt: integer): string;
+begin
+  if Cnt<=0 then
+    Result:=''
+  else
+    Result:='<'+StringOfChar(',',Cnt-1)+'>';
+end;
+
+function GetElementNameAndParams(El: TPasElement; MaxLvl: integer): string;
+begin
+  if El=nil then
+    exit('(nil)');
+  Result:=El.Name;
+  if El is TPasGenericType then
+    Result:=Result+GetTypeParamNames(TPasGenericType(El).GenericTemplateTypes,MaxLvl-1);
+end;
+
+function GetTypeParamNames(Templates: TFPList; MaxLvl: integer): string;
+var
+  i: Integer;
+  El: TPasElement;
+begin
+  if (Templates=nil) or (Templates.Count=0) then
+    exit('');
+  if MaxLvl<=0 then
+    exit('...');
+  Result:='<';
+  for i:=0 to Templates.Count-1 do
+    begin
+    if i>0 then
+      Result:=Result+',';
+    El:=TPasElement(Templates[i]);
+    if El.Name<>'' then
+      Result:=Result+GetElementNameAndParams(El,MaxLvl-1)
+    else if El is TPasArrayType then
+      Result:=Result+'array...'
+    else
+      Result:=Result+'...';
+    end;
+  Result:=Result+'>';
 end;
 
 function dbgs(const Flags: TResEvalFlags): string;
@@ -890,11 +1076,11 @@ begin
   Result:='';
   for f in Flags do
     if f in Flags then
-    begin
-      if Result <> '' then Result := Result + ',';
+      begin
+      if Result<>'' then Result:=Result+',';
       s := Byte(f).ToString;
       Result:=Result+s;
-    end;
+      end;
   Result:='['+Result+']';
 end;
 
@@ -904,6 +1090,15 @@ begin
     Result:='nil'
   else
     Result:=v.AsDebugString;
+end;
+
+function LastPos(c: char; const s: string): sizeint;
+var
+  i: SizeInt;
+begin
+  for i:=length(s) downto 1 do
+    if s[i]=c then exit(i);
+  Result:=-1;
 end;
 
 { TResEvalExternal }
@@ -924,6 +1119,11 @@ begin
   Result:=inherited AsString;
 end;
 
+function TResEvalExternal.TypeAsString: string;
+begin
+  Result:='external value';
+end;
+
 { TResEvalCurrency }
 
 constructor TResEvalCurrency.Create;
@@ -935,30 +1135,27 @@ end;
 constructor TResEvalCurrency.CreateValue(const aValue: TMaxPrecCurrency);
 begin
   Create;
-  Value := aValue;
+  Value:=aValue;
 end;
 
 function TResEvalCurrency.Clone: TResEvalValue;
 begin
-  Result := inherited Clone;
-  TResEvalCurrency(Result).Value := Value;
+  Result:=inherited Clone;
+  TResEvalCurrency(Result).Value:=Value;
 end;
 
 function TResEvalCurrency.AsString: string;
-var
-  ss: AnsiString;
 begin
-  Str(Value, ss);
-  Result := string(ss)
+  Result := FloatToStr(Value);
 end;
 
-function TResEvalCurrency.IsInt(out Int: TMaxPrecInt): Boolean;
+function TResEvalCurrency.IsInt(out Int: TMaxPrecInt): boolean;
 var
   i: TMaxPrecInt;
 begin
   i:=AsInt;
-  Result := (i mod 10000) = 0;
-  Int := i div 10000;
+  Result:=(i mod 10000)=0;
+  Int:=i div 10000;
 end;
 
 function TResEvalCurrency.AsInt: TMaxPrecInt;
@@ -970,6 +1167,11 @@ begin
   {$endif};
 end;
 
+function TResEvalCurrency.TypeAsString: string;
+begin
+  Result:='currency';
+end;
+
 { TResEvalBool }
 
 constructor TResEvalBool.Create;
@@ -978,7 +1180,7 @@ begin
   Kind:=revkBool;
 end;
 
-constructor TResEvalBool.CreateValue(const aValue: Boolean);
+constructor TResEvalBool.CreateValue(const aValue: boolean);
 begin
   Create;
   B:=aValue;
@@ -996,6 +1198,11 @@ begin
     Result:='true'
   else
     Result:='false';
+end;
+
+function TResEvalBool.TypeAsString: string;
+begin
+  Result:='boolean';
 end;
 
 { TResEvalRangeUInt }
@@ -1026,18 +1233,23 @@ begin
   Result:=IntToStr(RangeStart)+'..'+IntToStr(RangeEnd);
 end;
 
+function TResEvalRangeUInt.TypeAsString: string;
+begin
+  Result:='unsigned integer range';
+end;
+
 { TResExprEvaluator }
 
 procedure TResExprEvaluator.LogMsg(const id: TMaxPrecInt; MsgType: TMessageType;
-  MsgNumber: Integer; const Fmt: string;
-  Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif};
+  MsgNumber: integer; const Fmt: String;
+  Args: array of const;
   PosEl: TPasElement);
 begin
   OnLog(Self,id,MsgType,MsgNumber,Fmt,Args,PosEl);
 end;
 
-procedure TResExprEvaluator.RaiseMsg(const Id: TMaxPrecInt; MsgNumber: Integer;
-  const Fmt: string; Args: array of {$ifdef pas2js}jsvalue{$else}const{$endif};
+procedure TResExprEvaluator.RaiseMsg(const Id: TMaxPrecInt; MsgNumber: integer;
+  const Fmt: String; Args: array of const;
   ErrorPosEl: TPasElement);
 begin
   LogMsg(id,mtError,MsgNumber,Fmt,Args,ErrorPosEl);
@@ -1047,7 +1259,7 @@ end;
 procedure TResExprEvaluator.RaiseNotYetImplemented(id: TMaxPrecInt; El: TPasElement;
   Msg: string);
 var
-  s: string;
+  s: String;
 begin
   s:=sNotYetImplemented+' ['+IntToStr(id)+']';
   if Msg<>'' then
@@ -1118,7 +1330,7 @@ begin
               begin
               // switch to float
               ReleaseEvalValue(Result);
-              Result:=TResEvalFloat.CreateValue(-TMaxPrecFloat(Low(TMaxPrecInt)));
+              Result:=TResEvalFloat.CreateValue(-TMaxPrecFloat(low(TMaxPrecInt)));
               exit;
               end;
             end;
@@ -1185,12 +1397,12 @@ begin
         case TResEvalInt(Result).Typed of
           reitByte: TResEvalInt(Result).Int:=not byte(TResEvalInt(Result).Int);
           reitShortInt: TResEvalInt(Result).Int:=not shortint(TResEvalInt(Result).Int);
-          reitWord: TResEvalInt(Result).Int:=not Word(TResEvalInt(Result).Int);
+          reitWord: TResEvalInt(Result).Int:=not word(TResEvalInt(Result).Int);
           reitSmallInt: TResEvalInt(Result).Int:=not smallint(TResEvalInt(Result).Int);
           reitUIntSingle: TResEvalInt(Result).Int:=(not TResEvalInt(Result).Int) and $3fffff;
           reitIntSingle: TResEvalInt(Result).Int:=(not TResEvalInt(Result).Int) and $7fffff;
-          reitLongWord: TResEvalInt(Result).Int:=not LongWord(TResEvalInt(Result).Int);
-          reitLongInt: TResEvalInt(Result).Int:=not Longint(TResEvalInt(Result).Int);
+          reitLongWord: TResEvalInt(Result).Int:=not longword(TResEvalInt(Result).Int);
+          reitLongInt: TResEvalInt(Result).Int:=not longint(TResEvalInt(Result).Int);
           reitUIntDouble: TResEvalInt(Result).Int:=(not TResEvalInt(Result).Int) and $fffffffffffff;
           reitIntDouble: {$ifdef fpc}TResEvalInt(Result).Int:=(not TResEvalInt(Result).Int) and $1fffffffffffff{$endif};
           else TResEvalInt(Result).Int:=not TResEvalInt(Result).Int;
@@ -1227,6 +1439,8 @@ function TResExprEvaluator.EvalBinaryExpr(Expr: TBinaryExpr;
   Flags: TResEvalFlags): TResEvalValue;
 var
   LeftValue, RightValue: TResEvalValue;
+  Left: TPasExpr;
+  SubBin: TBinaryExpr;
 begin
   Result:=nil;
   if (Expr.Kind=pekBinary) and (Expr.OpCode=eopSubIdent) then
@@ -1237,6 +1451,52 @@ begin
   LeftValue:=nil;
   RightValue:=nil;
   try
+    if Expr.OpCode=eopAdd then
+      begin
+      // handle multi adds without stack
+      Left:=Expr.left;
+      while Left.ClassType=TBinaryExpr do
+        begin
+        SubBin:=TBinaryExpr(Left);
+        if SubBin.OpCode<>eopAdd then break;
+        Left:=SubBin.left;
+        end;
+      LeftValue:=Eval(Left,Flags);
+      while LeftValue<>nil do
+        begin
+        SubBin:=TBinaryExpr(Left.Parent);
+        RightValue:=Eval(SubBin.right,Flags);
+        if RightValue=nil then exit;
+
+        if LeftValue.Kind=revkExternal then
+          begin
+          if [refConst,refConstExt]*Flags=[refConst] then
+            RaiseConstantExprExp(20210321205928,Expr.left);
+          Result:=LeftValue;
+          LeftValue:=nil;
+          exit;
+          end;
+        if RightValue.Kind=revkExternal then
+          begin
+          if [refConst,refConstExt]*Flags=[refConst] then
+            RaiseConstantExprExp(20210321205948,Expr.right);
+          Result:=RightValue;
+          RightValue:=nil;
+          exit;
+          end;
+
+        Result:=EvalBinaryAddExpr(SubBin,LeftValue,RightValue);
+        ReleaseEvalValue(LeftValue);
+        if SubBin=Expr then exit;
+
+        LeftValue:=Result;
+        Result:=nil;
+        Left:=SubBin;
+        end;
+
+      exit;
+      end;
+
     LeftValue:=Eval(Expr.left,Flags);
     if LeftValue=nil then exit;
     RightValue:=Eval(Expr.right,Flags);
@@ -1330,8 +1590,8 @@ begin
       RaiseRangeCheck(20170714133017,Expr.Right)
     else
       begin
-      LeftInt:=Ord(TResEvalBool(LeftValue).B);
-      RightInt:=Ord(TResEvalBool(RightValue).B);
+      LeftInt:=ord(TResEvalBool(LeftValue).B);
+      RightInt:=ord(TResEvalBool(RightValue).B);
       if LeftInt>RightInt then
         RaiseMsg(20170714133540,nHighRangeLimitLTLowRangeLimit,
            sHighRangeLimitLTLowRangeLimit,[],Expr.Right);
@@ -1662,7 +1922,7 @@ begin
       // int - uint
       try
         {$Q+}{$WARNINGS OFF}
-        Int := Int - TResEvalUInt(RightValue).UInt;
+        Int:=Int - TResEvalUInt(RightValue).UInt;
         {$IFNDEF OverflowCheckOn}{$Q-}{$ENDIF}{$WARNINGS ON}
         Result:=TResEvalInt.CreateValue(Int);
       except
@@ -1794,7 +2054,7 @@ begin
       // float - currency
       try
         {$Q+}
-        aCurrency := Flo - TResEvalCurrency(RightValue).Value;
+        aCurrency:=Flo - TResEvalCurrency(RightValue).Value;
         {$IFNDEF OverflowCheckOn}{$Q-}{$ENDIF}
         Result:=TResEvalCurrency.CreateValue(aCurrency);
       except
@@ -2192,45 +2452,44 @@ var
   Flo: TMaxPrecFloat;
   aCurrency: TMaxPrecCurrency;
 begin
-  Result:=nil;
+  Flo:=0.0;
   case LeftValue.Kind of
   revkInt:
     begin
     Int:=TResEvalInt(LeftValue).Int;
     case RightValue.Kind of
     revkInt:
+      begin
       // int / int
       if TResEvalInt(RightValue).Int=0 then
-        RaiseDivByZero(20170711143925,Expr)
+        Flo:=DivideByZero(Sign(Int),Sign(TResEvalInt(RightValue).Int))
       else
-        Result:=TResEvalFloat.CreateValue(Int / TResEvalInt(RightValue).Int);
+        Flo:=Int / TResEvalInt(RightValue).Int;
+      end;
     revkUInt:
       // int / uint
       if TResEvalUInt(RightValue).UInt=0 then
-        RaiseDivByZero(20170711144013,Expr)
+        Flo:=DivideByZero(Math.Sign(Int),Sign(TResEvalUInt(RightValue).UInt))
       else
-        Result:=TResEvalFloat.CreateValue(Int / TResEvalUInt(RightValue).UInt);
+        Flo:=Int / TResEvalUInt(RightValue).UInt;
     revkFloat:
-      begin
       // int / float
       try
         Flo:=Int / TResEvalFloat(RightValue).FloatValue;
       except
-        RaiseMsg(20170711144525,nDivByZero,sDivByZero,[],Expr);
-        Flo := 0
-      end;
-      Result:=TResEvalFloat.CreateValue(Flo);
+        Flo:=DivideByZero(Sign(Int),Sign(TResEvalFloat(RightValue).FloatValue))
       end;
     revkCurrency:
       begin
       // int / currency
       try
-        aCurrency := Int / TResEvalCurrency(RightValue).Value;
+        aCurrency:=Int / TResEvalCurrency(RightValue).Value;
       except
         RaiseMsg(20180421164915,nDivByZero,sDivByZero,[],Expr);
         aCurrency := 0;
       end;
       Result:=TResEvalCurrency.CreateValue(aCurrency);
+      exit;
       end;
     else
       {$IFDEF VerbosePasResolver}
@@ -2239,135 +2498,136 @@ begin
       RaiseNotYetImplemented(20170711144057,Expr);
     end;
     end;
-  revkUInt: begin
+  revkUInt:
+    begin
     UInt:=TResEvalUInt(LeftValue).UInt;
     case RightValue.Kind of
-      revkInt:
-        // uint / int
-        if TResEvalInt(RightValue).Int=0 then
-          RaiseDivByZero(20170711144103,Expr)
-        else
-          Result:=TResEvalFloat.CreateValue(UInt / TResEvalInt(RightValue).Int);
-      revkUInt:
-        // uint / uint
-        if TResEvalUInt(RightValue).UInt=0 then
-          RaiseDivByZero(20170711144203,Expr)
-        else
-          Result:=TResEvalFloat.CreateValue(UInt / TResEvalUInt(RightValue).UInt);
-      revkFloat: begin
-        // uint / float
-        try
-          Flo:=UInt / TResEvalFloat(RightValue).FloatValue;
-        except
-          RaiseMsg(20170711144912,nDivByZero,sDivByZero,[],Expr);
-          Flo := 0.0
-        end;
-        Result:=TResEvalFloat.CreateValue(Flo);
-      end;
-      revkCurrency: begin
-        // uint / currency
-        try
-          aCurrency := UInt / TResEvalCurrency(RightValue).Value;
-        except
-          RaiseMsg(20180421164959,nDivByZero,sDivByZero,[],Expr);
-          aCurrency := 0
-        end;
-        Result:=TResEvalCurrency.CreateValue(aCurrency);
-      end;
+    revkInt:
+      // uint / int
+      if TResEvalInt(RightValue).Int=0 then
+        Flo:=DivideByZero(Sign(UInt),Sign(TResEvalInt(RightValue).Int))
       else
-        {$IFDEF VerbosePasResolver}
-        writeln('TResExprEvaluator.EvalBinaryDivideExpr uint / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
-        {$ENDIF}
-        RaiseNotYetImplemented(20170711144239,Expr);
+        Flo:=UInt / TResEvalInt(RightValue).Int;
+    revkUInt:
+      // uint / uint
+      if TResEvalUInt(RightValue).UInt=0 then
+        Flo:=DivideByZero(Sign(UInt),Sign(TResEvalUInt(RightValue).UInt))
+      else
+        Flo:=UInt / TResEvalUInt(RightValue).UInt;
+    revkFloat:
+      // uint / float
+      try
+        Flo:=UInt / TResEvalFloat(RightValue).FloatValue;
+      except
+        Flo:=DivideByZero(Sign(UInt),Sign(TResEvalFloat(RightValue).FloatValue))
+      end;
+    revkCurrency:
+      begin
+      // uint / currency
+      try
+        aCurrency:=UInt / TResEvalCurrency(RightValue).Value;
+      except
+        RaiseMsg(20180421164959,nDivByZero,sDivByZero,[],Expr);
+        aCurrency := 0;
+      end;
+      Result:=TResEvalCurrency.CreateValue(aCurrency);
+      exit;
+      end;
+    else
+      {$IFDEF VerbosePasResolver}
+      writeln('TResExprEvaluator.EvalBinaryDivideExpr uint / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
+      {$ENDIF}
+      RaiseNotYetImplemented(20170711144239,Expr);
     end;
-  end;
-  revkFloat: begin
+    end;
+  revkFloat:
+    begin
     Flo:=TResEvalFloat(LeftValue).FloatValue;
     case RightValue.Kind of
-      revkInt:
-        // float / int
-        if TResEvalInt(RightValue).Int=0 then
-          RaiseDivByZero(20170711144954,Expr)
-        else
-          Result:=TResEvalFloat.CreateValue(Flo / TResEvalInt(RightValue).Int);
-      revkUInt:
-        // float / uint
-        if TResEvalUInt(RightValue).UInt=0 then
-          RaiseDivByZero(20170711145023,Expr)
-        else
-          Result:=TResEvalFloat.CreateValue(Flo / TResEvalUInt(RightValue).UInt);
-      revkFloat: begin
-        // float / float
-        try
-          Flo:=Flo / TResEvalFloat(RightValue).FloatValue;
-        except
-          RaiseMsg(20170711145040,nDivByZero,sDivByZero,[],Expr);
-        end;
-        Result:=TResEvalFloat.CreateValue(Flo);
-      end;
-      revkCurrency: begin
-        // float / currency
-        try
-          aCurrency := Flo / TResEvalCurrency(RightValue).Value;
-        except
-          RaiseMsg(20180421165058,nDivByZero,sDivByZero,[],Expr);
-          aCurrency := 0
-        end;
-        Result:=TResEvalCurrency.CreateValue(aCurrency);
-      end;
+    revkInt:
+      // float / int
+      if TResEvalInt(RightValue).Int=0 then
+        Flo:=DivideByZero(Sign(Flo),Sign(TResEvalInt(RightValue).Int))
       else
-        {$IFDEF VerbosePasResolver}
-        writeln('TResExprEvaluator.EvalBinaryDivideExpr float / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
-        {$ENDIF}
-        RaiseNotYetImplemented(20170711145050,Expr);
+        Flo:=Flo / TResEvalInt(RightValue).Int;
+    revkUInt:
+      // float / uint
+      if TResEvalUInt(RightValue).UInt=0 then
+        Flo:=DivideByZero(Sign(Flo),Sign(TResEvalUInt(RightValue).UInt))
+      else
+        Flo:=Flo / TResEvalUInt(RightValue).UInt;
+    revkFloat:
+      // float / float
+      try
+        Flo:=Flo / TResEvalFloat(RightValue).FloatValue;
+      except
+        Flo:=DivideByZero(Sign(Flo),Sign(TResEvalFloat(RightValue).FloatValue))
+      end;
+    revkCurrency:
+      begin
+      // float / currency
+      try
+        aCurrency:=Flo / TResEvalCurrency(RightValue).Value;
+      except
+        RaiseMsg(20180421165058,nDivByZero,sDivByZero,[],Expr);
+        aCurrency := 0;
+      end;
+      Result:=TResEvalCurrency.CreateValue(aCurrency);
+      exit; //!!
+      end;
+    else
+      {$IFDEF VerbosePasResolver}
+      writeln('TResExprEvaluator.EvalBinaryDivideExpr float / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
+      {$ENDIF}
+      RaiseNotYetImplemented(20170711145050,Expr);
     end;
-  end;
-  revkCurrency: begin
+    end;
+  revkCurrency:
+    begin
     aCurrency:=TResEvalCurrency(LeftValue).Value;
     case RightValue.Kind of
-      revkInt:
-        // currency / int
-        if TResEvalInt(RightValue).Int=0 then
-          RaiseDivByZero(20180421165154,Expr)
-        else
-          Result:=TResEvalCurrency.CreateValue(aCurrency / TResEvalInt(RightValue).Int);
-      revkUInt:
-        // currency / uint
-        if TResEvalUInt(RightValue).UInt=0 then
-          RaiseDivByZero(20180421165205,Expr)
-        else
-          Result:=TResEvalCurrency.CreateValue(aCurrency / TResEvalUInt(RightValue).UInt);
-      revkFloat: begin
-        // currency / float
-        try
-          aCurrency:=aCurrency / TResEvalFloat(RightValue).FloatValue;
-        except
-          RaiseMsg(20180421165237,nDivByZero,sDivByZero,[],Expr);
-        end;
-        Result:=TResEvalCurrency.CreateValue(aCurrency);
-      end;
-      revkCurrency: begin
-        // currency / currency
-        try
-          aCurrency:=aCurrency / TResEvalCurrency(RightValue).Value;
-        except
-          RaiseMsg(20180421165252,nDivByZero,sDivByZero,[],Expr);
-        end;
-        Result:=TResEvalCurrency.CreateValue(aCurrency);
-      end;
+    revkInt:
+      // currency / int
+      if TResEvalInt(RightValue).Int=0 then
+        RaiseMsg(20210515133307,nDivByZero,sDivByZero,[],Expr)
       else
-        {$IFDEF VerbosePasResolver}
-        writeln('TResExprEvaluator.EvalBinaryDivideExpr currency / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
-        {$ENDIF}
-        RaiseNotYetImplemented(20180421165301,Expr);
+        aCurrency:=aCurrency / TResEvalInt(RightValue).Int;
+    revkUInt:
+      // currency / uint
+      if TResEvalUInt(RightValue).UInt=0 then
+        RaiseMsg(20210515133318,nDivByZero,sDivByZero,[],Expr)
+      else
+        aCurrency:=aCurrency / TResEvalUInt(RightValue).UInt;
+    revkFloat:
+      // currency / float
+      try
+        aCurrency:=aCurrency / TResEvalFloat(RightValue).FloatValue;
+      except
+        RaiseMsg(20180421165237,nDivByZero,sDivByZero,[],Expr);
+      end;
+    revkCurrency:
+      // currency / currency
+      try
+        aCurrency:=aCurrency / TResEvalCurrency(RightValue).Value;
+      except
+        RaiseMsg(20180421165252,nDivByZero,sDivByZero,[],Expr);
+      end;
+    else
+      {$IFDEF VerbosePasResolver}
+      writeln('TResExprEvaluator.EvalBinaryDivideExpr currency / ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
+      {$ENDIF}
+      RaiseNotYetImplemented(20180421165301,Expr);
     end;
-  end;
+    Result:=TResEvalCurrency.CreateValue(aCurrency);
+    exit;
+    end;
   else
     {$IFDEF VerbosePasResolver}
-    writeln('TResExprEvaluator.EvalBinaryDivExpr div ?- Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
+    writeln('TResExprEvaluator.EvalBinaryDivExpr ? / - Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
     {$ENDIF}
     RaiseNotYetImplemented(20170530102352,Expr);
   end;
+  Result:=TResEvalFloat.CreateValue(Flo);
 end;
 
 function TResExprEvaluator.EvalBinaryDivExpr(Expr: TBinaryExpr; LeftValue,
@@ -3214,40 +3474,41 @@ end;
 function TResExprEvaluator.EvalBinaryInExpr(Expr: TBinaryExpr; LeftValue,
   RightValue: TResEvalValue): TResEvalValue;
 var
-  rightSet: TResEvalSet;
-  int: TMaxPrecInt;
+  RightSet: TResEvalSet;
+  Int: TMaxPrecInt;
 begin
   Result:=nil;
   case RightValue.Kind of
-  revkSetOfInt: begin
-    int := 0;
-    rightSet:=TResEvalSet(RightValue);
+  revkSetOfInt:
+    begin
+    Int := 0;
+    RightSet:=TResEvalSet(RightValue);
     case LeftValue.Kind of
-      revkBool:
-        int:=Ord(TResEvalBool(LeftValue).B);
-      revkInt:
-        int:=TResEvalInt(LeftValue).int;
-      revkUInt:
-        // Note: when FPC compares int64 with qword it converts the qword to an int64
-        if TResEvalUInt(LeftValue).UInt>HighIntAsUInt then
-          RaiseMsg(20170714123700,nRangeCheckError,sRangeCheckError,[],Expr)
-        else
-          int:=TResEvalUInt(LeftValue).UInt;
-      {$ifdef FPC_HAS_CPSTRING}
-      revkString,
-      {$endif}
-      revkUnicodeString:
-        Int:=StringToOrd(LeftValue,Expr);
-      revkEnum:
-        int:=TResEvalEnum(LeftValue).Index;
+    revkBool:
+      Int:=ord(TResEvalBool(LeftValue).B);
+    revkInt:
+      Int:=TResEvalInt(LeftValue).Int;
+    revkUInt:
+      // Note: when FPC compares int64 with qword it converts the qword to an int64
+      if TResEvalUInt(LeftValue).UInt>HighIntAsUInt then
+        RaiseMsg(20170714123700,nRangeCheckError,sRangeCheckError,[],Expr)
       else
-        {$IFDEF VerbosePasResolver}
-        writeln('TResExprEvaluator.EvalBinaryInExpr ? in Set Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
-        {$ENDIF}
-        RaiseNotYetImplemented(20170714123412,Expr);
+        Int:=TResEvalUInt(LeftValue).UInt;
+    {$ifdef FPC_HAS_CPSTRING}
+    revkString,
+    {$endif}
+    revkUnicodeString:
+      Int:=StringToOrd(LeftValue,Expr);
+    revkEnum:
+      Int:=TResEvalEnum(LeftValue).Index;
+    else
+      {$IFDEF VerbosePasResolver}
+      writeln('TResExprEvaluator.EvalBinaryInExpr ? in Set Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
+      {$ENDIF}
+      RaiseNotYetImplemented(20170714123412,Expr);
     end;
-    Result:=TResEvalBool.CreateValue(rightSet.IndexOfRange(int)>=0);
-  end;
+    Result:=TResEvalBool.CreateValue(RightSet.IndexOfRange(Int)>=0);
+    end;
   else
     {$IFDEF VerbosePasResolver}
     writeln('TResExprEvaluator.EvalBinaryInExpr ? ',Expr.OpCode,' ? Left=',LeftValue.AsDebugString,' Right=',RightValue.AsDebugString);
@@ -3350,55 +3611,58 @@ begin
   IndexValue:=nil;
   try
     case ArrayValue.Kind of
-      {$ifdef FPC_HAS_CPSTRING}
-      revkString,
-      {$endif}
-      revkUnicodeString: begin
-        // string[index]
-        Param0:=Expr.Params[0];
-        IndexValue:=Eval(Param0,Flags);
-        if IndexValue=nil then begin
-          if [refConst,refConstExt]*Flags<>[] then
-            RaiseConstantExprExp(20170711181603,Param0);
-          exit;
-        end;
-        Int := 0;
-        case IndexValue.Kind of
-          revkInt: Int := TResEvalInt(IndexValue).Int;
-          revkUInt:
-            // Note: when FPC compares int64 with qword it converts the qword to an int64
-            if TResEvalUInt(IndexValue).UInt>HighIntAsUInt then
-              RaiseRangeCheck(20170711182006,Param0)
-            else
-              Int:=TResEvalUInt(IndexValue).UInt;
-          else
-            {$IFDEF VerbosePasResolver}
-            writeln('TResExprEvaluator.EvalParamsExpr string[',IndexValue.AsDebugString,']');
-            {$ENDIF}
-            RaiseNotYetImplemented(20170711182100,Expr);
-        end;
-        {$ifdef FPC_HAS_CPSTRING}
-        if ArrayValue.Kind=revkString then
-          MaxIndex:=length(TResEvalString(ArrayValue).S)
-        else
-        {$endif}
-          MaxIndex:=length(TResEvalUTF16(ArrayValue).S);
-        if (Int<1) or (Int>MaxIndex) then
-          EmitRangeCheckConst(20170711183058,IntToStr(Int),'1',IntToStr(MaxIndex),Param0,mtError);
-        {$ifdef FPC_HAS_CPSTRING}
-        if ArrayValue.Kind=revkString then
-          Result:=TResEvalString.CreateValue(TResEvalString(ArrayValue).S[Int])
-        else
-        {$endif}
-          Result:=TResEvalUTF16.CreateValue(TResEvalUTF16(ArrayValue).S[Int]);
+    {$ifdef FPC_HAS_CPSTRING}
+    revkString,
+    {$endif}
+    revkUnicodeString:
+      begin
+      // string[index]
+      Param0:=Expr.Params[0];
+      IndexValue:=Eval(Param0,Flags);
+      if IndexValue=nil then
+        begin
+        if [refConst,refConstExt]*Flags<>[] then
+          RaiseConstantExprExp(20170711181603,Param0);
         exit;
-      end;
+        end;
+      Int := 0;
+      case IndexValue.Kind of
+        revkInt: Int:=TResEvalInt(IndexValue).Int;
+        revkUInt:
+          // Note: when FPC compares int64 with qword it converts the qword to an int64
+          if TResEvalUInt(IndexValue).UInt>HighIntAsUInt then
+            RaiseRangeCheck(20170711182006,Param0)
+          else
+            Int:=TResEvalUInt(IndexValue).UInt;
       else
         {$IFDEF VerbosePasResolver}
-        writeln('TResExprEvaluator.EvalParamsExpr array=',ArrayValue.AsDebugString);
+        writeln('TResExprEvaluator.EvalParamsExpr string[',IndexValue.AsDebugString,']');
         {$ENDIF}
-        RaiseNotYetImplemented(20170711181507,Expr);
+        RaiseNotYetImplemented(20170711182100,Expr);
+      end;
+      {$ifdef FPC_HAS_CPSTRING}
+      if ArrayValue.Kind=revkString then
+        MaxIndex:=length(TResEvalString(ArrayValue).S)
+      else
+      {$endif}
+        MaxIndex:=length(TResEvalUTF16(ArrayValue).S);
+      if (Int<1) or (Int>MaxIndex) then
+        EmitRangeCheckConst(20170711183058,IntToStr(Int),'1',IntToStr(MaxIndex),Param0,mtError);
+      {$ifdef FPC_HAS_CPSTRING}
+      if ArrayValue.Kind=revkString then
+        Result:=TResEvalString.CreateValue(TResEvalString(ArrayValue).S[Int])
+      else
+      {$endif}
+        Result:=TResEvalUTF16.CreateValue(TResEvalUTF16(ArrayValue).S[Int]);
+      exit;
+      end;
+    else
+      {$IFDEF VerbosePasResolver}
+      writeln('TResExprEvaluator.EvalParamsExpr Array=',ArrayValue.AsDebugString);
+      {$ENDIF}
+      RaiseNotYetImplemented(20170711181507,Expr);
     end;
+
     if [refConst,refConstExt]*Flags<>[] then
       RaiseConstantExprExp(20170522173150,Expr);
   finally
@@ -3434,17 +3698,19 @@ begin
   OnlyConstElements:=true;
   ok:=false;
   try
-    for i:=0 to length(ExprArray)-1 do begin
+    for i:=0 to length(ExprArray)-1 do
+      begin
       El:=ExprArray[i];
       {$IFDEF VerbosePasResEval}
       writeln('TResExprEvaluator.EvalSetExpr ',i,' of ',length(ExprArray),' El=',GetObjName(El));
       {$ENDIF}
       Value:=Eval(El,Flags);
-      if Value=nil then begin
+      if Value=nil then
+        begin
         // element is not a const -> the set is not a const
         OnlyConstElements:=false;
         continue;
-      end;
+        end;
       {$IFDEF VerbosePasResEval}
       //writeln('TResExprEvaluator.EvalSetExpr ',i,' of ',length(ExprArray),' Value=',Value.AsDebugString);
       {$ENDIF}
@@ -3457,7 +3723,7 @@ begin
           Result.ElKind:=revskBool
         else if Result.ElKind<>revskBool then
           RaiseNotYetImplemented(20170714132843,El);
-        RangeStart:=Ord(TResEvalBool(Value).B);
+        RangeStart:=ord(TResEvalBool(Value).B);
         RangeEnd:=RangeStart;
         end;
       revkInt:
@@ -3483,7 +3749,7 @@ begin
         RangeEnd:=RangeStart;
         end;
       {$ifdef FPC_HAS_CPSTRING}
-      revkString: //**
+      revkString:
         begin
         if Result.ElKind=revskNone then
           Result.ElKind:=revskChar
@@ -3511,7 +3777,7 @@ begin
           ReleaseEvalValue(TResEvalValue(Result));
           exit;
           end;
-        RangeStart:=Ord(TResEvalUTF16(Value).S[1]);
+        RangeStart:=ord(TResEvalUTF16(Value).S[1]);
         RangeEnd:=RangeStart;
         end;
       revkEnum:
@@ -3560,16 +3826,18 @@ begin
         {$ENDIF}
         RaiseNotYetImplemented(20170713143422,El);
       end;
-      if Result.Intersects(RangeStart,RangeEnd)>=0 then begin
+
+      if Result.Intersects(RangeStart,RangeEnd)>=0 then
+        begin
         {$IF defined(VerbosePasResEval) or defined(VerbosePasResolver)}
         writeln('TResExprEvaluator.EvalSetExpr Value=',Value.AsDebugString,' Range=',RangeStart,'..',RangeEnd,' Result=',Result.AsDebugString);
         {$ENDIF}
         RaiseMsg(20170714141326,nRangeCheckInSetConstructor,
           sRangeCheckInSetConstructor,[],El);
-      end;
+        end;
       Result.Add(RangeStart,RangeEnd);
       ReleaseEvalValue(Value);
-    end;
+      end;
     ok:=OnlyConstElements;
   finally
     ReleaseEvalValue(Value);
@@ -3803,7 +4071,7 @@ begin
 end;
 
 function TResExprEvaluator.StringToOrd(Value: TResEvalValue;
-  PosEl: TPasElement): LongWord;
+  PosEl: TPasElement): longword;
 const
   Invalid = $12345678; // bigger than $ffff and smaller than $8000000
 var
@@ -3814,110 +4082,262 @@ var
 begin
   Result := 0;
   case Value.Kind of
-    {$ifdef FPC_HAS_CPSTRING}
-    revkString: begin
-      // Ord(ansichar)
-      S:=TResEvalString(Value).S;
-      if length(S)=1 then
-        Result:=ord(S[1])
-      else if (length(S)=0) or (length(S)>4) then begin
+  {$ifdef FPC_HAS_CPSTRING}
+  revkString:
+    begin
+    // ord(ansichar)
+    S:=TResEvalString(Value).S;
+    if length(S)=1 then
+      Result:=ord(S[1])
+    else if (length(S)=0) or (length(S)>4) then
+      begin
+      if PosEl<>nil then
+        RaiseMsg(20170522221143,nXExpectedButYFound,sXExpectedButYFound,
+          ['char','string'],PosEl)
+      else
+        exit(Invalid);
+      end
+    else
+      begin
+      U:=GetUnicodeStr(S,nil);
+      if length(U)<>1 then
+        begin
         if PosEl<>nil then
-          RaiseMsg(20170522221143,nXExpectedButYFound,sXExpectedButYFound,
+          RaiseMsg(20190124180407,nXExpectedButYFound,sXExpectedButYFound,
             ['char','string'],PosEl)
         else
           exit(Invalid);
-        end
-      else begin
-        U:=GetUnicodeStr(S,nil);
-        if length(U)<>1 then begin
-          if PosEl<>nil then
-            RaiseMsg(20190124180407,nXExpectedButYFound,sXExpectedButYFound,
-              ['char','string'],PosEl)
-          else
-            exit(Invalid);
         end;
-        Result:=ord(U[1]);
+      Result:=ord(U[1]);
       end;
     end;
-    {$endif}
-    revkUnicodeString: begin
-      // Ord(widechar)
-      U:=TResEvalUTF16(Value).S;
-      if length(U)<>1 then begin
-        if PosEl<>nil then
-          RaiseMsg(20170522221358,nXExpectedButYFound,sXExpectedButYFound,
-            ['char','string'],PosEl)
-        else
-          exit(Invalid);
-      end else
-        Result:=Ord(U[1]);
-    end;
+  {$endif}
+  revkUnicodeString:
+    begin
+    // ord(widechar)
+    U:=TResEvalUTF16(Value).S;
+    if length(U)<>1 then
+      begin
+      if PosEl<>nil then
+        RaiseMsg(20170522221358,nXExpectedButYFound,sXExpectedButYFound,
+          ['char','string'],PosEl)
+      else
+        exit(Invalid);
+      end
     else
-      RaiseNotYetImplemented(20170522220959,PosEl);
+      Result:=ord(U[1]);
+    end;
+  else
+    RaiseNotYetImplemented(20170522220959,PosEl);
   end;
 end;
 
 function TResExprEvaluator.EvalPrimitiveExprString(Expr: TPrimitiveExpr
   ): TResEvalValue;
-{ Extracts the value from a Pascal string literal
-
-  S is a Pascal string literal e.g. 'Line'#10
-    ''  empty string
-    '''' => "'"
-    #decimal
-    #$hex
-    ^l  l is a letter a-z
-}
+ //Extracts the value from a Pascal string literal
+ //
+ // S is a Pascal string literal e.g. 'Line'#10
+ //   ''  empty string
+ //   '''' => "'"
+ //   #decimal
+ //   #$hex
+ //   ^l  l is a letter a-z
+ //
+ // Codepage:
+ //   For example {$codepage utf8}var s: AnsiString(CP_1251) = 'a';
+ //     Source codepage is CP_UTF8, target codepage is CP_1251
+ //
+ //   Source codepage is needed for reading non ASCII string literals 'ä'.
+ //   Target codepage is needed for reading non ASCII # literals.
+ //   Target codepage costs time to compute.
+var
+  Value: TResEvalValue;
 
   procedure RangeError(id: TMaxPrecInt);
   begin
-    Result.Free;
+    Value.Free;
     RaiseRangeCheck(id,Expr);
   end;
 
-  procedure Add(h: string);
+{$IFDEF FPC_HAS_CPSTRING}
+var
+  TargetCPValid: boolean;
+  TargetCP: word;
+  SourceCPValid: boolean;
+  SourceCP: word;
+
+  procedure FetchSourceCP;
   begin
-    {$ifdef FPC_HAS_CPSTRING}
-    if Result.Kind = revkString then
-      TResEvalString(Result).S := TResEvalString(Result).S + AnsiString(h)
-    else
-      TResEvalUTF16(Result).S := TResEvalUTF16(Result).S + h;
-    {$else}
-    TResEvalUTF16(Result).S := TResEvalUTF16(Result).S + h;
-    {$endif}
+    if SourceCPValid then exit;
+    SourceCP:=GetExprStringSourceCP(Expr);
+    if SourceCP=DefaultSystemCodePage then
+      SourceCP:=CP_ACP;
+    SourceCPValid:=true;
   end;
 
-  procedure AddHash(u: longword; ForceUTF16: boolean);
-  {$ifdef FPC_HAS_CPSTRING}
+  procedure FetchTargetCP;
+  begin
+    if TargetCPValid then exit;
+    TargetCP:=GetExprStringTargetCP(Expr);
+    if TargetCP=DefaultSystemCodePage then
+      TargetCP:=CP_ACP;
+    TargetCPValid:=true;
+  end;
+
+  procedure ForceUTF16;
   var
     h: RawByteString;
   begin
-    if ((u>255) or (ForceUTF16)) and (Result.Kind=revkString) then begin
+    if Value.Kind=revkString then
+      begin
       // switch to unicodestring
-      h := TResEvalString(Result).S;
-      Result.Free;
-      Result := nil; // in case of exception in GetUnicodeStr
-      Result := TResEvalUTF16.CreateValue(GetUnicodeStr(h, Expr));
-    end;
-    if Result.Kind = revkString then
-      TResEvalString(Result).S := TResEvalString(Result).S + AnsiChar(Chr(u))
+      h:=TResEvalString(Value).S;
+      Value.Free;
+      Value:=nil; // in case of exception in GetUnicodeStr
+      Value:=TResEvalUTF16.CreateValue(GetUnicodeStr(h,Expr));
+      end;
+  end;
+{$ENDIF}
+
+  procedure AddSrc(h: String);
+  begin
+    if h='' then exit;
+    //writeln('AddSrc ',length(h),' ',ord(h[1]),' ',stringcodepage(h),' ',defaultsystemcodepage);
+    TResEvalUTF16(Value).S:=TResEvalUTF16(Value).S+h;
+  end;
+
+  procedure AddHash(u: longword);
+  {$ifdef FPC_HAS_CPSTRING}
+  begin
+    if Value.Kind=revkString then
+      TResEvalString(Value).s:=TResEvalString(Value).S+AnsiChar(u)
     else
-      TResEvalUTF16(Result).S := TResEvalUTF16(Result).S+WideChar(u);
+      TResEvalUTF16(Value).S:=TResEvalUTF16(Value).S+WideChar(u);
   end;
   {$else}
   begin
-    TResEvalUTF16(Result).S := TResEvalUTF16(Result).S+WideChar(u);
-    if ForceUTF16 then ;
+    TResEvalUTF16(Value).S:=TResEvalUTF16(Value).S+WideChar(u);
   end;
   {$endif}
 
+  function ReadHash(const S: string; p, l: integer): integer;
+  var
+    StartP: Integer;
+    u: longword;
+    c: Char;
+    {$ifdef FPC_HAS_CPSTRING}
+    ValueAnsi: TResEvalString;
+    ValueUTF16: TResEvalUTF16;
+    OldCP: TSystemCodePage;
+    {$ENDIF}
+  begin
+    //writeln('ReadHash S="',S,'" p=',p,' l=',l,' ',StringCodePage(S));
+    Result:=p;
+    inc(Result);
+    if Result>l then
+      RaiseInternalError(20181016121354); // error in scanner
+    if S[Result]='$' then
+      begin
+      // #$hexnumber
+      inc(Result);
+      StartP:=Result;
+      u:=0;
+      while Result<=l do
+        begin
+        c:=S[Result];
+        case c of
+        '0'..'9': u:=u*16+longword(ord(c)-ord('0'));
+        'a'..'f': u:=u*16+longword(ord(c)-ord('a'))+10;
+        'A'..'F': u:=u*16+longword(ord(c)-ord('A'))+10;
+        else break;
+        end;
+        if u>$10FFFF then
+          RangeError(20170523115712);
+        inc(Result);
+        end;
+      end
+    else
+      begin
+      // #decimalnumber
+      StartP:=Result;
+      u:=0;
+      while Result<=l do
+        begin
+        c:=S[Result];
+        case c of
+        '0'..'9': u:=u*10+longword(ord(c)-ord('0'));
+        else break;
+        end;
+        if u>$ffff then
+          RangeError(20170523123137);
+        inc(Result);
+        end;
+      end;
+    if Result=StartP then
+      RaiseInternalError(20170523123806);
+    {$IFDEF FPC_HAS_CPSTRING}
+    if u<128 then
+      begin
+      // ASCII
+      AddHash(u);
+      exit;
+      end;
+    // non ASCII
+    FetchTargetCP;
+    if (TargetCP=CP_UTF16) or (TargetCP=CP_UTF16BE) or (u>255) then
+      begin
+      ForceUTF16;
+      ValueUTF16:=TResEvalUTF16(Value);
+      if u>$ffff then
+        begin
+        // split into two
+        dec(u,$10000);
+        ValueUTF16.S:=ValueUTF16.S
+                       +WideChar($D800+(u shr 10))+WideChar($DC00+(u and $3ff));
+        end
+      else
+        ValueUTF16.S:=ValueUTF16.S+WideChar(u);
+      if TargetCP=CP_UTF16BE then
+        RaiseNotYetImplemented(20201220212206,Expr);
+      end
+    else
+      begin
+      // byte encoding
+      ValueAnsi:=TResEvalString(Value);
+      if ValueAnsi.S<>'' then
+        begin
+        // append
+        OldCP:=StringCodePage(ValueAnsi.S);
+        if OldCP<>TargetCP then
+          SetCodePage(ValueAnsi.S,TargetCP,false);
+        ValueAnsi.S:=ValueAnsi.S+AnsiChar(u);
+        end
+      else
+        begin
+        // start
+        ValueAnsi.S:=AnsiChar(u);
+        SetCodePage(ValueAnsi.S,TargetCP,false);
+        end;
+      ValueAnsi.OnlyASCII:=false;
+      end;
+    {$ELSE}
+    if u>$ffff then
+      begin
+      // split into two
+      dec(u,$10000);
+      AddHash($D800+(u shr 10));
+      AddHash($DC00+(u and $3ff));
+      end
+    else
+      AddHash(u);
+    {$ENDIF}
+  end;
+
 var
-  p, StartP, l: Integer;
+  p, StartP, l: integer;
   c: Char;
-  u: LongWord;
-  S: string;
+  S: String;
 begin
-  Result:=nil;
   S:=Expr.Value;
   {$IFDEF VerbosePasResEval}
   //writeln('TResExprEvaluator.EvalPrimitiveExprString (',S,')');
@@ -3926,11 +4346,14 @@ begin
   if l=0 then
     RaiseInternalError(20170523113809);
   {$ifdef FPC_HAS_CPSTRING}
-  Result:=TResEvalString.Create;
-  {$else}
-  Result:=TResEvalUTF16.Create;
+  TargetCPValid:=false;
+  TargetCP:=CP_ACP;
+  SourceCPValid:=false;
+  SourceCP:=CP_ACP;
   {$endif}
+  Value:=TResEvalUTF16.Create;
   p:=1;
+  //writeln('TResExprEvaluator.EvalPrimitiveExprString ',GetObjPath(Expr),' ',Expr.SourceFilename,' ',Expr.SourceLinenumber div 2048,' S=[',S,']');
   while p<=l do
     case S[p] of
     {$ifdef UsePChar}
@@ -3948,12 +4371,12 @@ begin
         '''':
           begin
           if p>StartP then
-            Add(copy(S,StartP,p-StartP));
+            AddSrc(copy(S,StartP,p-StartP));
           inc(p);
           StartP:=p;
           if (p>l) or (S[p]<>'''') then
             break;
-          Add('''');
+          AddSrc('''');
           inc(p);
           StartP:=p;
           end;
@@ -3962,65 +4385,10 @@ begin
         end;
       until false;
       if p>StartP then
-        Add(copy(S,StartP,p-StartP));
+        AddSrc(copy(S,StartP,p-StartP));
       end;
     '#':
-      begin
-      inc(p);
-      if p>l then
-        RaiseInternalError(20181016121354);
-      if S[p]='$' then
-        begin
-        // #$hexnumber
-        inc(p);
-        StartP:=p;
-        u:=0;
-        while p<=l do
-          begin
-          c:=S[p];
-          case c of
-          '0'..'9': u:=u*16+LongWord(Ord(c)-Ord('0'));
-          'a'..'f': u:=u*16+LongWord(Ord(c)-Ord('a'))+10;
-          'A'..'F': u:=u*16+LongWord(Ord(c)-Ord('A'))+10;
-          else break;
-          end;
-          if u>$10FFFF then
-            RangeError(20170523115712);
-          inc(p);
-          end;
-        if p=StartP then
-          RaiseInternalError(20170207164956);
-        if u>$ffff then
-          begin
-          // split into two
-          dec(u,$10000);
-          AddHash($D800+(u shr 10),true);
-          AddHash($DC00+(u and $3ff),true);
-          end
-        else
-          AddHash(u,p-StartP>2);
-        end
-      else
-        begin
-        // #decimalnumber
-        StartP:=p;
-        u:=0;
-        while p<=l do
-          begin
-          c:=S[p];
-          case c of
-          '0'..'9': u:=u*10+LongWord(Ord(c)-Ord('0'));
-          else break;
-          end;
-          if u>$ffff then
-            RangeError(20170523123137);
-          inc(p);
-          end;
-        if p=StartP then
-          RaiseInternalError(20170523123806);
-        AddHash(u,false);
-        end;
-      end;
+      p:=ReadHash(S,p,l);
     '^':
       begin
       // ^A is #1
@@ -4029,15 +4397,16 @@ begin
         RaiseInternalError(20181016121520);
       c:=S[p];
       case c of
-      'a'..'z': AddHash(ord(c)-ord('a')+1,false);
-      'A'..'Z': AddHash(ord(c)-ord('A')+1,false);
+      'a'..'z': AddHash(ord(c)-ord('a')+1);
+      'A'..'Z': AddHash(ord(c)-ord('A')+1);
       else RaiseInternalError(20170523123809);
       end;
       inc(p);
       end;
     else
-      RaiseNotYetImplemented(20170523123815,Expr,'Ord='+IntToStr(Ord(S[p])));
+      RaiseNotYetImplemented(20170523123815,Expr,'ord='+IntToStr(ord(S[p])));
     end;
+  Result:=Value;
   {$IFDEF VerbosePasResEval}
   //writeln('TResExprEvaluator.EvalPrimitiveExprString Result=',Result.AsString);
   {$ENDIF}
@@ -4056,7 +4425,8 @@ begin
   inherited Create;
   FAllowedInts:=ReitDefaults;
   {$ifdef FPC_HAS_CPSTRING}
-  FDefaultEncoding:=CP_ACP;
+  FDefaultSourceEncoding:=system.DefaultSystemCodePage;
+  FDefaultStringEncoding:=CP_ACP;
   {$endif}
 end;
 
@@ -4064,7 +4434,7 @@ function TResExprEvaluator.Eval(Expr: TPasExpr; Flags: TResEvalFlags
   ): TResEvalValue;
 var
   C: TClass;
-  Code: Integer;
+  Code: integer;
   Int: TMaxPrecInt;
   UInt: TMaxPrecUInt;
   Flo: TMaxPrecFloat;
@@ -4110,7 +4480,7 @@ begin
           writeln('TResExprEvaluator.Eval Int=',Int,' Value="',TPrimitiveExpr(Expr).Value,'"');
           {$ENDIF}
           if (Int<0) and (Pos('-',TPrimitiveExpr(Expr).Value)<1) then
-            // FPC Str() converts $8000000000000000 to a negative int64 -> ignore
+            // FPC str() converts $8000000000000000 to a negative int64 -> ignore
           else
             begin
             Result:=TResEvalInt.CreateValue(Int);
@@ -4174,7 +4544,7 @@ begin
 end;
 
 function TResExprEvaluator.IsInRange(Expr, RangeExpr: TPasExpr;
-  EmitHints: Boolean): Boolean;
+  EmitHints: boolean): boolean;
 var
   Value, RangeValue: TResEvalValue;
 begin
@@ -4194,7 +4564,7 @@ begin
 end;
 
 function TResExprEvaluator.IsInRange(Value: TResEvalValue; ValueExpr: TPasExpr;
-  RangeValue: TResEvalValue; RangeExpr: TPasExpr; EmitHints: Boolean): Boolean;
+  RangeValue: TResEvalValue; RangeExpr: TPasExpr; EmitHints: boolean): boolean;
 var
   RgInt: TResEvalRangeInt;
   RgUInt: TResEvalRangeUInt;
@@ -4347,7 +4717,7 @@ begin
 end;
 
 function TResExprEvaluator.IsSetCompatible(Value: TResEvalValue;
-  ValueExpr: TPasExpr; RangeValue: TResEvalValue; EmitHints: Boolean): Boolean;
+  ValueExpr: TPasExpr; RangeValue: TResEvalValue; EmitHints: boolean): boolean;
 // checks if Value fits into a set of RangeValue
 var
   RightSet: TResEvalSet;
@@ -4410,7 +4780,7 @@ begin
   end;
 end;
 
-function TResExprEvaluator.IsConst(Expr: TPasExpr): Boolean;
+function TResExprEvaluator.IsConst(Expr: TPasExpr): boolean;
 var
   El: TPasElement;
   C: TClass;
@@ -4426,7 +4796,7 @@ begin
   Result:=true;
 end;
 
-function TResExprEvaluator.IsSimpleExpr(Expr: TPasExpr): Boolean;
+function TResExprEvaluator.IsSimpleExpr(Expr: TPasExpr): boolean;
 var
   C: TClass;
 begin
@@ -4437,7 +4807,7 @@ begin
 end;
 
 procedure TResExprEvaluator.EmitRangeCheckConst(id: TMaxPrecInt; const aValue,
-  MinVal, MaxVal: string; PosEl: TPasElement; MsgType: TMessageType);
+  MinVal, MaxVal: String; PosEl: TPasElement; MsgType: TMessageType);
 begin
   if Assigned(OnRangeCheckEl) then
     OnRangeCheckEl(Self,PosEl,MsgType);
@@ -4446,7 +4816,7 @@ begin
 end;
 
 procedure TResExprEvaluator.EmitRangeCheckConst(id: TMaxPrecInt;
-  const aValue: string; MinVal, MaxVal: TMaxPrecInt; PosEl: TPasElement;
+  const aValue: String; MinVal, MaxVal: TMaxPrecInt; PosEl: TPasElement;
   MsgType: TMessageType);
 begin
   EmitRangeCheckConst(id,aValue,IntToStr(MinVal),IntToStr(MaxVal),PosEl,MsgType);
@@ -4455,33 +4825,36 @@ end;
 function TResExprEvaluator.ChrValue(Value: TResEvalValue; ErrorEl: TPasElement
   ): TResEvalValue;
 var
-  int: TMaxPrecInt;
+  Int: TMaxPrecInt;
 begin
-  Result := nil;
+  Result:=nil;
   case Value.Kind of
-    revkInt,revkUInt: begin
-      int := 0;
-      if Value.Kind=revkUInt then begin
-        if TResEvalUInt(Value).UInt>$ffff then
-          EmitRangeCheckConst(20170711195605,Value.AsString,0,$ffff,ErrorEl,mtError)
-        else
-          int := TResEvalUInt(Value).UInt;
-      end else
-        int := TResEvalInt(Value).int;
-      if (int<0) or (int>$ffff) then
+    revkInt,revkUInt:
+      begin
+      if Value.Kind=revkUInt then
+        begin
+        if TResEvalUInt(Value).UInt>$ffff then begin
+          EmitRangeCheckConst(20170711195605,Value.AsString,0,$ffff,ErrorEl,mtError);
+          Int:=0;
+        end else
+          Int:=TResEvalUInt(Value).UInt;
+        end
+      else
+        Int:=TResEvalInt(Value).Int;
+      if (Int<0) or (Int>$ffff) then
         EmitRangeCheckConst(20170711195747,Value.AsString,0,$ffff,ErrorEl,mtError);
       {$ifdef FPC_HAS_CPSTRING}
-      if int <= $ff then
-        Result := TResEvalString.CreateValue(AnsiChar(Chr(int)))
+      if Int<=$ff then
+        Result:=TResEvalString.CreateValue(AnsiChar(Int))
       else
       {$endif}
-        Result:=TResEvalUTF16.CreateValue(WideChar(int))
-    end;
-    else
-      {$IFDEF VerbosePasResEval}
-      writeln('TResExprEvaluator.ChrValue ',Value.AsDebugString);
-      {$ENDIF}
-      RaiseNotYetImplemented(20170711195440,ErrorEl);
+        Result:=TResEvalUTF16.CreateValue(WideChar(Int))
+      end;
+  else
+    {$IFDEF VerbosePasResEval}
+    writeln('TResExprEvaluator.ChrValue ',Value.AsDebugString);
+    {$ENDIF}
+    RaiseNotYetImplemented(20170711195440,ErrorEl);
   end;
 end;
 
@@ -4595,89 +4968,95 @@ var
 
 var
   i: Integer;
-  param: TPasExpr;
-  s, valStr: string;
-  value: TResEvalValue;
-  format1, format2: TMaxPrecInt;
+  Param: TPasExpr;
+  S, ValStr: String;
+  Value: TResEvalValue;
+  Format1, Format2: TMaxPrecInt;
 begin
   Result:=nil;
-  value:=nil;
+  Value:=nil;
   AllConst:=true;
-  s:='';
-  for i:=0 to length(Params.Params)-1 do begin
-    param:=Params.Params[i];
+  S:='';
+  for i:=0 to length(Params.Params)-1 do
+    begin
+    Param:=Params.Params[i];
     {$IFDEF VerbosePasResEval}
-    writeln('TPasResolver.BI_StrFunc_OnEval i=',i,' of ',length(Params.Params),' Param=',GetObjName(param));
+    writeln('TPasResolver.BI_StrFunc_OnEval i=',i,' of ',length(Params.Params),' Param=',GetObjName(Param));
     {$ENDIF}
-    value:=Eval(param,Flags);
-    if value=nil then begin
+    Value:=Eval(Param,Flags);
+    if Value=nil then
+      begin
       AllConst:=false;
       continue;
-    end;
-    format1:=-1;
-    format2:=-1;
+      end;
+    Format1:=-1;
+    Format2:=-1;
     try
-      valStr:='';
-      if param.format1<>nil then begin
-        format1:=EvalFormat(param.format1,1,255);
-        if format1<0 then
+      ValStr:='';
+      if Param.format1<>nil then
+        begin
+        Format1:=EvalFormat(Param.format1,1,255);
+        if Format1<0 then
           continue;
-        if param.format2<>nil then begin
-          format2:=EvalFormat(param.format2,0,255);
-          if format2<0 then
+        if Param.format2<>nil then
+          begin
+          Format2:=EvalFormat(Param.format2,0,255);
+          if Format2<0 then
             continue;
+          end;
         end;
-      end;
-      {$WARN IMPLICIT_STRING_CAST OFF} // W1057 Implicit string cast from 'ShortString' to 'string'
-      case value.Kind of
-        revkBool:
-          if format1<0 then
-            Str(Byte(TResEvalBool(value).B),valStr)
-          else
-            Str(Byte(TResEvalBool(value).B):format1,valStr);
-        revkInt:
-          if format1<0 then
-            Str(TResEvalInt(value).Int,valStr)
-          else
-            Str(TResEvalInt(value).Int:format1,valStr);
-        revkUInt:
-          if format1<0 then
-            Str(TResEvalUInt(value).UInt,valStr)
-          else
-            Str(TResEvalUInt(value).UInt:format1,valStr);
-        revkFloat:
-          if format1<0 then
-            Str(TResEvalFloat(value).FloatValue,valStr)
-          else if format2<0 then
-            Str(TResEvalFloat(value).FloatValue:format1,valStr)
-          else
-            Str(TResEvalFloat(value).FloatValue:format1:format2,valStr);
-        revkCurrency:
-          if format1<0 then
-            Str(TResEvalCurrency(value).value,valStr)
-          else if format2<0 then
-            Str(TResEvalCurrency(value).value:format1,valStr)
-          else
-            Str(TResEvalCurrency(value).value:format1:format2,valStr);
-        revkEnum: begin
-          valStr:=TResEvalEnum(value).AsString;
-          if format1>0 then
-            valStr:=StringOfChar(' ',format1)+valStr;
-        end;
+      {$WARN IMPLICIT_STRING_CAST OFF} // Notes: on using Str, the Delphi compiler
+      // may issue a warning: W1057 Implicit string cast from '%s' to '%s'
+      case Value.Kind of
+      revkBool:
+        if Format1<0 then
+          str(Byte(TResEvalBool(Value).B),ValStr)
         else
-          AllConst:=false;
-          continue;
+          str(Byte(TResEvalBool(Value).B):Format1,ValStr);
+      revkInt:
+        if Format1<0 then
+          str(TResEvalInt(Value).Int,ValStr)
+        else
+          str(TResEvalInt(Value).Int:Format1,ValStr);
+      revkUInt:
+        if Format1<0 then
+          str(TResEvalUInt(Value).UInt,ValStr)
+        else
+          str(TResEvalUInt(Value).UInt:Format1,ValStr);
+      revkFloat:
+        if Format1<0 then
+          str(TResEvalFloat(Value).FloatValue,ValStr)
+        else if Format2<0 then
+          str(TResEvalFloat(Value).FloatValue:Format1,ValStr)
+        else
+          str(TResEvalFloat(Value).FloatValue:Format1:Format2,ValStr);
+      revkCurrency:
+        if Format1<0 then
+          str(TResEvalCurrency(Value).Value,ValStr)
+        else if Format2<0 then
+          str(TResEvalCurrency(Value).Value:Format1,ValStr)
+        else
+          str(TResEvalCurrency(Value).Value:Format1:Format2,ValStr);
+      revkEnum:
+        begin
+        ValStr:=TResEvalEnum(Value).AsString;
+        if Format1>0 then
+          ValStr:=StringOfChar(' ',Format1)+ValStr;
+        end;
+      else
+        AllConst:=false;
+        continue;
       end;
-      {$WARN IMPLICIT_STRING_CAST ON} // W1057 Implicit string cast from 'ShortString' to 'string'
+      {$WARN IMPLICIT_STRING_CAST ON}
     finally
-      ReleaseEvalValue(value);
-      ReleaseEvalValue(value);
-      ReleaseEvalValue(value);
+      ReleaseEvalValue(Value);
+      ReleaseEvalValue(Value);
+      ReleaseEvalValue(Value);
     end;
-    s:=s+valStr;
+    S:=S+ValStr;
   end;
   if AllConst then
-    Result:=TResEvalUTF16.CreateValue(s);
+    Result:=TResEvalUTF16.CreateValue(S);
 end;
 
 function TResExprEvaluator.EvalStringAddExpr(Expr, LeftExpr,
@@ -4751,7 +5130,7 @@ begin
   end;
 end;
 
-function TResExprEvaluator.LoHiValue(Value: TResEvalValue; ShiftSize: Integer;
+function TResExprEvaluator.ShiftAndMaskValue(Value: TResEvalValue; ShiftSize: Integer;
   Mask: LongWord; ErrorEl: TPasElement): TResEvalValue;
 var
   uint: LongWord;
@@ -4784,43 +5163,43 @@ end;
 function TResExprEvaluator.EnumTypeCast(EnumType: TPasEnumType; Expr: TPasExpr;
   Flags: TResEvalFlags): TResEvalEnum;
 var
-  value: TResEvalValue;
-  maxIndex, index: Integer;
+  Value: TResEvalValue;
+  MaxIndex, Index: Integer;
 begin
   Result:=nil;
-  value:=Eval(Expr,Flags);
-  if value=nil then exit;
+  Value:=Eval(Expr,Flags);
+  if Value=nil then exit;
   try
-    maxIndex:=EnumType.Values.Count-1;
+    MaxIndex:=EnumType.Values.Count-1;
     index := -1;
-    case value.Kind of
-      revkInt:
-        if TResEvalInt(value).Int>High(index) then
-          EmitRangeCheckConst(20170713105944,
-            IntToStr(TResEvalInt(value).Int),'0',IntToStr(maxIndex),Expr,mtError)
-        else
-          index:=TResEvalInt(value).Int;
-      revkUInt:
-        if TResEvalUInt(value).UInt>maxIndex then
-          EmitRangeCheckConst(20170713105944,
-            IntToStr(TResEvalUInt(value).UInt),'0',IntToStr(maxIndex),Expr,mtError)
-        else
-          index:=TResEvalUInt(value).UInt;
+    case Value.Kind of
+    revkInt:
+      if TResEvalInt(Value).Int>High(Index) then
+        EmitRangeCheckConst(20170713105944,
+          IntToStr(TResEvalInt(Value).Int),'0',IntToStr(MaxIndex),Expr,mtError)
       else
-        RaiseNotYetImplemented(20170713105625,Expr);
+        Index:=TResEvalInt(Value).Int;
+    revkUInt:
+      if TResEvalUInt(Value).UInt>MaxIndex then
+        EmitRangeCheckConst(20170713105944,
+          IntToStr(TResEvalUInt(Value).UInt),'0',IntToStr(MaxIndex),Expr,mtError)
+      else
+        Index:=TResEvalUInt(Value).UInt;
+    else
+      RaiseNotYetImplemented(20170713105625,Expr);
     end;
-    if (index<0) or (index>maxIndex) then
+    if (Index<0) or (Index>MaxIndex) then
       EmitRangeCheckConst(20170713110232,
-        IntToStr(index),'0',IntToStr(maxIndex),Expr,mtError);
-    Result:=TResEvalEnum.CreateValue(index,TPasEnumValue(EnumType.Values[index]));
+        IntToStr(Index),'0',IntToStr(MaxIndex),Expr,mtError);
+    Result:=TResEvalEnum.CreateValue(Index,TPasEnumValue(EnumType.Values[Index]));
   finally
-    ReleaseEvalValue(value);
+    ReleaseEvalValue(Value);
   end;
 end;
 
 {$ifdef FPC_HAS_CPSTRING}
-function TResExprEvaluator.CheckValidUTF8(const S: RawByteString;
-  ErrorEl: TPasElement): Boolean;
+function TResExprEvaluator.CheckValidUTF8(const s: RawByteString;
+  ErrorEl: TPasElement): boolean;
 begin
   Result := (S = '')
     or (UTF8ToString(S) <> '');
@@ -4830,16 +5209,18 @@ end;
 
 function TResExprEvaluator.GetCodePage(const s: RawByteString): TSystemCodePage;
 begin
-  if s='' then exit(DefaultStringCodePage);
+  if s='' then exit(DefaultSourceCodePage);
   Result:=StringCodePage(s);
-  if (Result=CP_ACP) or (Result=CP_NONE) then begin
-    Result:=DefaultStringCodePage;
-    if (Result=CP_ACP) or (Result=CP_NONE) then begin
+  if (Result=CP_ACP) or (Result=CP_NONE) then
+    begin
+    Result:=DefaultSourceCodePage;
+    if (Result=CP_ACP) or (Result=CP_NONE) then
+      begin
       Result:=System.DefaultSystemCodePage;
       if Result=CP_NONE then
         Result:=CP_ACP;
+      end;
     end;
-  end;
 end;
 
 function TResExprEvaluator.GetRawByteString(const s: UnicodeString;
@@ -4869,6 +5250,14 @@ begin
     end;
 end;
 
+function TResExprEvaluator.GetUTF8Str(const s: RawByteString;
+  ErrorEl: TPasElement): UTF8String;
+begin
+  if s='' then exit('');
+  // use default conversion
+  Result:=UTF8Encode(UnicodeString(s));
+end;
+
 function TResExprEvaluator.GetUnicodeStr(const s: RawByteString;
   ErrorEl: TPasElement): UnicodeString;
 var
@@ -4876,35 +5265,54 @@ var
 begin
   if s='' then exit('');
   CP:=GetCodePage(s);
-  if CP=CP_UTF8 then begin
+  if (CP=CP_UTF8) or ((CP=CP_ACP) and (DefaultSystemCodePage=CP_UTF8)) then
+    begin
     if ErrorEl<>nil then
       CheckValidUTF8(s,ErrorEl);
-    Result := UTF8ToString(s);
-  end else
+    Result:=UTF8ToString(s);
+    end
+  else
     // use default conversion
-    Result := UnicodeString(s);
+    Result:=UnicodeString(s);
 end;
 
 function TResExprEvaluator.GetWideChar(const s: RawByteString; out w: WideChar
-  ): Boolean;
+  ): boolean;
 var
   CP: TSystemCodePage;
   u: UnicodeString;
 begin
   w:=#0;
-  Result := false;
-  if s = '' then exit;
-  CP := GetCodePage(s);
-  if CP = CP_UTF8 then begin
-    if length(s) > 4 then exit;
-    u := UTF8ToString(s);
+  Result:=false;
+  if s='' then exit;
+  CP:=GetCodePage(s);
+  if CP=CP_UTF8 then
+    begin
+    if length(s)>4 then exit;
+    u:=UTF8ToString(s);
     if length(u)<>1 then exit;
-    w := u[1];
-    Result := true;
-  end else if length(s) = 1 then begin
+    w:=u[1];
+    Result:=true;
+    end
+  else if length(s)=1 then
+    begin
     w := WideChar(s[1]);
-    Result := true;
-  end;
+    Result:=true;
+    end;
+end;
+
+function TResExprEvaluator.GetExprStringTargetCP(Expr: TPasExpr
+  ): TSystemCodePage;
+begin
+  Result:=DefaultStringCodePage;
+  if Expr=nil then ;
+end;
+
+function TResExprEvaluator.GetExprStringSourceCP(Expr: TPasExpr
+  ): TSystemCodePage;
+begin
+  Result:=DefaultSourceCodePage;
+  if Expr=nil then ;
 end;
 {$endif}
 
@@ -4926,43 +5334,51 @@ end;
 
 procedure TResExprEvaluator.PredInt(Value: TResEvalInt; ErrorEl: TPasElement);
 begin
-  if Value.Int=Low(TMaxPrecInt) then begin
+  if Value.Int=low(TMaxPrecInt) then
+    begin
     EmitRangeCheckConst(20170624142511,IntToStr(Value.Int),
-      IntToStr(Succ(Low(TMaxPrecInt))),IntToStr(High(TMaxPrecInt)),ErrorEl);
-    Value.Int:=High(Value.Int);
-  end else
+      IntToStr(succ(low(TMaxPrecInt))),IntToStr(high(TMaxPrecInt)),ErrorEl);
+    Value.Int:=high(Value.Int);
+    end
+  else
     dec(Value.Int);
 end;
 
 procedure TResExprEvaluator.SuccInt(Value: TResEvalInt; ErrorEl: TPasElement);
 begin
-  if Value.Int=High(TMaxPrecInt) then begin
+  if Value.Int=high(TMaxPrecInt) then
+    begin
     EmitRangeCheckConst(20170624142920,IntToStr(Value.Int),
-      IntToStr(Low(TMaxPrecInt)),IntToStr(Pred(High(TMaxPrecInt))),ErrorEl);
-    Value.Int:=Low(Value.Int);
-  end else
+      IntToStr(low(TMaxPrecInt)),IntToStr(pred(high(TMaxPrecInt))),ErrorEl);
+    Value.Int:=low(Value.Int);
+    end
+  else
     inc(Value.Int);
 end;
 
 procedure TResExprEvaluator.PredUInt(Value: TResEvalUInt; ErrorEl: TPasElement);
 begin
-  if Value.UInt=Low(TMaxPrecUInt) then begin
+  if Value.UInt=low(TMaxPrecUInt) then
+    begin
     EmitRangeCheckConst(20170624143122,IntToStr(Value.UInt),
-      UIntToStr(Succ(Low(TMaxPrecUInt))),UIntToStr(High(TMaxPrecUInt)),ErrorEl);
-    Value.UInt:=High(Value.UInt);
-  end else
+      UIntToStr(succ(low(TMaxPrecUInt))),UIntToStr(high(TMaxPrecUInt)),ErrorEl);
+    Value.UInt:=high(Value.UInt);
+    end
+  else
     dec(Value.UInt);
 end;
 
 procedure TResExprEvaluator.SuccUInt(Value: TResEvalUInt; ErrorEl: TPasElement);
 begin
   // Note: when FPC compares int64 with qword it converts the qword to an int64
-  if Value.UInt=HighIntAsUInt then begin
-    EmitRangeCheckConst(20170624142921, IntToStr(Value.UInt),
-      UIntToStr(Low(TMaxPrecUInt)), UIntToStr(High(TMaxPrecUInt)-1), ErrorEl);
-    Value.UInt := Low(Value.UInt);
-  end else
-    Inc(Value.UInt);
+  if Value.UInt=HighIntAsUInt then
+    begin
+    EmitRangeCheckConst(20170624142921,IntToStr(Value.UInt),
+      UIntToStr(low(TMaxPrecUInt)),UIntToStr(high(TMaxPrecUInt)-1),ErrorEl);
+    Value.UInt:=low(Value.UInt);
+    end
+  else
+    inc(Value.UInt);
 end;
 
 {$ifdef FPC_HAS_CPSTRING}
@@ -4977,7 +5393,7 @@ begin
     Value.S:=#255;
     end
   else
-    Value.S:=Pred(Value.S[1]);
+    Value.S:=pred(Value.S[1]);
 end;
 
 procedure TResExprEvaluator.SuccString(Value: TResEvalString;
@@ -4991,7 +5407,7 @@ begin
     Value.S:=#0;
     end
   else
-    Value.S:=Succ(Value.S[1]);
+    Value.S:=succ(Value.S[1]);
 end;
 {$endif}
 
@@ -5006,7 +5422,7 @@ begin
     Value.S:=WideChar(#65535);
     end
   else
-    Value.S:=Pred(Value.S[1]);
+    Value.S:=pred(Value.S[1]);
 end;
 
 procedure TResExprEvaluator.SuccUnicodeString(Value: TResEvalUTF16;
@@ -5020,7 +5436,7 @@ begin
     Value.S:=#0;
     end
   else
-    Value.S:=Succ(Value.S[1]);
+    Value.S:=succ(Value.S[1]);
 end;
 
 procedure TResExprEvaluator.PredEnum(Value: TResEvalEnum; ErrorEl: TPasElement);
@@ -5059,6 +5475,18 @@ begin
   else
     inc(Value.Index);
   Value.IdentEl:=TPasEnumValue(EnumType.Values[Value.Index]);
+end;
+
+function TResExprEvaluator.DivideByZero(LeftSign, RightSign: TValueSign
+  ): TMaxPrecFloat;
+// FPC/Delphi compatibility: exception at runtime, no exception at compile time
+begin
+  if LeftSign=0 then
+    Result:=0.0
+  else if (LeftSign<0)<>(RightSign<0) then
+    Result:=Math.NegInfinity
+  else
+    Result:=Math.Infinity;
 end;
 
 { TResolveData }
@@ -5109,10 +5537,8 @@ end;
 
 function TResEvalValue.AsDebugString: string;
 begin
-  {$WARN IMPLICIT_STRING_CAST OFF}
-  Str(Byte(Kind), Result);
-  {$WARN IMPLICIT_STRING_CAST ON}
-  Result := Result + '=' + AsString;
+  Result := IntToStr(Byte(Kind));
+  Result:=Result+'='+AsString;
 end;
 
 function TResEvalValue.AsString: string;
@@ -5121,9 +5547,16 @@ begin
     revkNone: Result:='<None>';
     revkNil: Result:='nil';
   else
-    {$WARN IMPLICIT_STRING_CAST OFF}
-    Str(Byte(Kind), Result);
-    {$WARN IMPLICIT_STRING_CAST ON}
+    Result := IntToStr(Byte(Kind));
+  end;
+end;
+
+function TResEvalValue.TypeAsString: string;
+begin
+  case Kind of
+    revkNil: Result:='nil';
+  else
+    Result:='';
   end;
 end;
 
@@ -5150,6 +5583,11 @@ end;
 function TResEvalUInt.AsString: string;
 begin
   Result:=IntToStr(UInt);
+end;
+
+function TResEvalUInt.TypeAsString: string;
+begin
+  Result:='unsigned int';
 end;
 
 { TResEvalInt }
@@ -5192,9 +5630,7 @@ begin
     Result:=inherited AsDebugString
   else
     begin
-    {$WARN IMPLICIT_STRING_CAST OFF}
-    Str(Byte(Kind), Result);
-    {$WARN IMPLICIT_STRING_CAST ON}
+    Result := IntToStr(Byte(Kind));
     case Typed of
       reitByte: Result:=Result+':byte';
       reitShortInt: Result:=Result+':shortint';
@@ -5209,6 +5645,24 @@ begin
     end;
     Result:=Result+'='+AsString;
     end;
+end;
+
+function TResEvalInt.TypeAsString: string;
+begin
+  case Typed of
+    reitByte: Result:='byte';
+    reitShortInt: Result:='shortint';
+    reitWord: Result:='word';
+    reitSmallInt: Result:='smallint';
+    reitUIntSingle: Result:='unsinged int single';
+    reitIntSingle: Result:='int single';
+    reitLongWord: Result:='longword';
+    reitLongInt: Result:='longint';
+    reitUIntDouble: Result:='unsigned int double';
+    reitIntDouble: Result:='int double';
+  else
+    Result:='int';
+  end;
 end;
 
 { TResEvalFloat }
@@ -5233,19 +5687,22 @@ end;
 
 function TResEvalFloat.AsString: string;
 begin
-  {$WARN IMPLICIT_STRING_CAST OFF}
-  Str(FloatValue,Result);
-  {$WARN IMPLICIT_STRING_CAST ON}
+  Result := FloatToStr(FloatValue);
 end;
 
-function TResEvalFloat.IsInt(out Int: TMaxPrecInt): Boolean;
+function TResEvalFloat.IsInt(out Int: TMaxPrecInt): boolean;
 begin
   Int:=0;
   if Frac(FloatValue)<>0 then exit(false);
-  if FloatValue<TMaxPrecFloat(Low(TMaxPrecInt)) then exit(false);
-  if FloatValue>TMaxPrecFloat(High(TMaxPrecInt)) then exit(false);
+  if FloatValue<TMaxPrecFloat(low(TMaxPrecInt)) then exit(false);
+  if FloatValue>TMaxPrecFloat(high(TMaxPrecInt)) then exit(false);
   Int:=Trunc(FloatValue);
   Result:=true;
+end;
+
+function TResEvalFloat.TypeAsString: string;
+begin
+  Result:='float';
 end;
 
 {$ifdef FPC_HAS_CPSTRING}
@@ -5254,6 +5711,7 @@ end;
 constructor TResEvalString.Create;
 begin
   inherited Create;
+  OnlyASCII:=true;
   Kind:=revkString;
 end;
 
@@ -5267,12 +5725,22 @@ function TResEvalString.Clone: TResEvalValue;
 begin
   Result:=inherited Clone;
   TResEvalString(Result).S:=S;
+  TResEvalString(Result).OnlyASCII:=OnlyASCII;
 end;
 
 function TResEvalString.AsString: string;
 begin
-  Result := string(Copy(S, 1, 60));
+  Result:=UnicodeStrToCaption(string(S),60);
 end;
+
+function TResEvalString.TypeAsString: string;
+begin
+  if OnlyASCII then
+    Result:='string'
+  else
+    Result:='ansistring';
+end;
+
 {$endif}
 
 { TResEvalUTF16 }
@@ -5292,12 +5760,17 @@ end;
 function TResEvalUTF16.Clone: TResEvalValue;
 begin
   Result:=inherited Clone;
-  TResEvalUTF16(Result).S := S;
+  TResEvalUTF16(Result).S:=S;
 end;
 
 function TResEvalUTF16.AsString: string;
 begin
-  Result := UnicodeStrToCaption(S, 60);
+  Result:=String(UnicodeStrToCaption(S,60));
+end;
+
+function TResEvalUTF16.TypeAsString: string;
+begin
+  Result:='unicodestring';
 end;
 
 { TResEvalEnum }
@@ -5308,7 +5781,7 @@ begin
   Kind:=revkEnum;
 end;
 
-constructor TResEvalEnum.CreateValue(const aValue: Integer;
+constructor TResEvalEnum.CreateValue(const aValue: integer;
   aIdentEl: TPasEnumValue);
 begin
   Create;
@@ -5327,7 +5800,7 @@ begin
       Result:=TObject(ElType.Values[Index]) as TPasEnumValue;
 end;
 
-function TResEvalEnum.GetEnumName: string;
+function TResEvalEnum.GetEnumName: String;
 var
   V: TPasEnumValue;
 begin
@@ -5347,10 +5820,8 @@ end;
 
 function TResEvalEnum.AsDebugString: string;
 begin
-  {$WARN IMPLICIT_STRING_CAST OFF}
-  Str(Byte(Kind), Result);
-  {$WARN IMPLICIT_STRING_CAST ON}
-  Result := Result + '=' + AsString + '=' + IntToStr(Index);
+  Result := IntToStr(Byte(Kind));
+  Result:=Result+'='+AsString+'='+IntToStr(Index);
 end;
 
 function TResEvalEnum.AsString: string;
@@ -5363,6 +5834,13 @@ begin
   Result:=GetEnumName;
   if Result<>'' then exit;
   Result:=ElType.Name+'('+IntToStr(Index)+')';
+end;
+
+function TResEvalEnum.TypeAsString: string;
+begin
+  Result:=ElType.Name;
+  if Result='' then
+    Result:='enum';
 end;
 
 { TResEvalRangeInt }
@@ -5400,10 +5878,8 @@ function TResEvalRangeInt.AsDebugString: string;
 var
   s: string;
 begin
-  {$WARN IMPLICIT_STRING_CAST OFF}
-  Str(Byte(Kind), Result);
-  Str(Byte(ElKind), s);
-  {$WARN IMPLICIT_STRING_CAST ON}
+  Result := IntToStr(Byte(Kind));
+  s := IntToStr(Byte(ElKind));
   Result:=Result+'/'+s+':'+GetObjName(ElType)+'='+AsString;
 end;
 
@@ -5435,6 +5911,18 @@ begin
         Result:=''''+Chr(El)+''''
       else
         Result:='#'+IntToStr(El);
+  end;
+end;
+
+function TResEvalRangeInt.TypeAsString: string;
+begin
+  case ElKind of
+    revskEnum: Result:='enum range';
+    revskInt: Result:='integer range';
+    revskChar: Result:='char range';
+    revskBool: Result:='boolean range';
+  else
+    Result:='integer range';
   end;
 end;
 
@@ -5498,10 +5986,15 @@ begin
   Result:=Result+']';
 end;
 
-function TResEvalSet.Add(aRangeStart, aRangeEnd: TMaxPrecInt): Boolean;
+function TResEvalSet.TypeAsString: string;
+begin
+  Result:='set';
+end;
+
+function TResEvalSet.Add(aRangeStart, aRangeEnd: TMaxPrecInt): boolean;
 
   {$IF FPC_FULLVERSION<30101}
-  procedure Insert(const Item: TItem; var Items: TItems; Index: Integer);
+  procedure Insert(const Item: TItem; var Items: TItems; Index: integer);
   var
     i: Integer;
   begin
@@ -5511,7 +6004,7 @@ function TResEvalSet.Add(aRangeStart, aRangeEnd: TMaxPrecInt): Boolean;
     Items[Index]:=Item;
   end;
 
-  procedure Delete(var Items: TItems; Start, Size: Integer);
+  procedure Delete(var Items: TItems; Start, Size: integer);
   var
     i: Integer;
   begin
@@ -5638,15 +6131,16 @@ begin
   {$ENDIF}
 end;
 
-function TResEvalSet.IndexOfRange(Index: TMaxPrecInt; FindInsertPos: Boolean
-  ): Integer;
+function TResEvalSet.IndexOfRange(Index: TMaxPrecInt; FindInsertPos: boolean
+  ): integer;
 var
   l, r, m: Integer;
 begin
   m := -1;
   l:=0;
   r:=length(Ranges)-1;
-  while l<=r do begin
+  while l<=r do
+    begin
     m:=(l+r) div 2;
     if Ranges[m].RangeStart>Index then
       r:=m-1
@@ -5654,7 +6148,7 @@ begin
       l:=m+1
     else
       exit(m);
-  end;
+    end;
   if not FindInsertPos then
     exit(-1);
   // find insert position
@@ -5664,10 +6158,9 @@ begin
     exit(l)
   else
     exit(m);
-  Result:=-1;
 end;
 
-function TResEvalSet.Intersects(aRangeStart, aRangeEnd: TMaxPrecInt): Integer;
+function TResEvalSet.Intersects(aRangeStart, aRangeEnd: TMaxPrecInt): integer;
 var
   Index: Integer;
 begin

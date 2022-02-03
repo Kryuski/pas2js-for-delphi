@@ -63,8 +63,14 @@ begin
 end;
 
 function MyGetEnvironmentVariable(Const EnvVar: String): String;
+var
+  v: JSValue;
 begin
-  Result:=String(TNJSProcess.env[EnvVar]);
+  v:=TNJSProcess.env[EnvVar];
+  if isString(v) then
+    Result:=String(v)
+  else
+    Result:='';
 end;
 
 function MyGetEnvironmentVariableCount: Integer;
