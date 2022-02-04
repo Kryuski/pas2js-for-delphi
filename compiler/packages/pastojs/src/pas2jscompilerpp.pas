@@ -42,7 +42,7 @@ Type
     Procedure WriteUsedTools; override;
     Procedure AddPostProcessor(const Cmd: String); override;
     Procedure CallPostProcessors(const JSFileName: String; aWriter: TPas2JSMapper); override;
-    function Execute(const JSFilename: String; Cmd: TStringList; JS: TJSWriterString): TJSWriterString;
+    function Execute(const JSFilename: String; Cmd: TStringList; JS: UTF8String): UTF8String;
   end;
 
 implementation
@@ -120,24 +120,24 @@ procedure TPas2JSFSPostProcessorSupport.CallPostProcessors(const JSFileName: Str
 
 var
   i: Integer;
-  JS, OrigJS: TJSWriterString;
+  JS, OrigJS: UTF8String;
 
 begin
   if FPostProcs.Count=0 then exit;
-  OrigJS:=aWriter.AsString;
+  OrigJS := UTF8Encode(aWriter.AsString);
   JS:=OrigJS;
   for i:=0 to FPostProcs.Count-1 do
     JS:=Execute(JSFilename,TStringList(FPostProcs[i]),JS);
   if JS<>OrigJS then
   begin
-    aWriter.AsString:=JS;
+    aWriter.AsString := UTF8ToString(JS);
     if aWriter.SrcMap<>nil then
       aWriter.SrcMap.Clear;
   end;
 
 end;
 
-function TPas2JSFSPostProcessorSupport.Execute(const JSFilename: String; Cmd: TStringList; JS: TJSWriterString): TJSWriterString;
+function TPas2JSFSPostProcessorSupport.Execute(const JSFilename: String; Cmd: TStringList; JS: UTF8String): UTF8String;
 
 const
   BufSize = 65536;
