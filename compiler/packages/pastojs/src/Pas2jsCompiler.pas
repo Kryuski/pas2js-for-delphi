@@ -159,7 +159,7 @@ type
   TResourceMode = (Skip,rmNone,rmHTML,rmJS);
 
 const
-  DefaultP2jsCompilerOptions = [coShowErrors,coWriteableConst,coUseStrict{!![Kryvich],coSourceMapXSSIHeader}];
+  DefaultP2jsCompilerOptions = [coShowErrors,coWriteableConst,coUseStrict,coSourceMapXSSIHeader];
   DefaultP2JSResourceStringFile = rsfProgram;
   DefaultP2jsRTLVersionCheck = rvcNone;
   DefaultResourceMode = rmHTML;
@@ -4817,7 +4817,7 @@ begin
   w('     -Jmbasedir=<x>: write source file names relative to directory x, default is map file folder.');
   w('     -Jminclude: include Pascal sources in source map.');
   w('     -Jmabsolute: store absolute filenames, not relative.');
-  w('     -Jmxssiheader: start source map with XSSI protection )]}''.');  //!![Kryvich] removed ', default'
+  w('     -Jmxssiheader: start source map with XSSI protection )]}'', default.');
   w('     -Jm-: disable generating source maps');
   w('   -Jo<x>: Enable or disable extra option. The x is case insensitive:');
   w('     -JoSearchLikeFPC: search source files like FPC, default: search case insensitive.');

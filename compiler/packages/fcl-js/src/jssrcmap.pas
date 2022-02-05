@@ -1102,7 +1102,7 @@ begin
       {$ifdef pas2js}
       aStream.push(DefaultSrcMapHeader);
       {$else}
-      aStream.Write(DefaultSrcMapHeader[1],length(DefaultSrcMapHeader));
+      aStream.Write(DefaultSrcMapHeader[1],length(DefaultSrcMapHeader)*SizeOf(Char));
       {$endif}
       end;
     Obj.DumpJSON(aStream);

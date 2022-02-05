@@ -79,10 +79,11 @@ function SetDirSeparators(Const FileName : PathStr) : PathStr;
 function BoolToStr(B: Boolean;UseBoolStrs:Boolean=False): string; overload;
 function BoolToStr(B: boolean; const TrueS, FalseS: string): string; overload;
 function HexStr(Val: Int64; Cnt: Byte): string;
-function StrToQWord(const s: string): QWord;
+function StrToQWord(const s: string): QWord; inline;
 function TryStrToQWord(const s: string; Out Q : QWord) : boolean;
 function TryStringToGUID(const S: string; out Guid: TGUID): Boolean;
 function MethodPointersEqual(const MethodPointer1, MethodPointer2): Boolean;
+procedure MyVal(const S: string; out V: Int64; out Code: Integer);
 
 resourcestring
   SListIndexError               = 'List index (%d) out of bounds';
@@ -228,6 +229,32 @@ var
   Method2: System.TMethod absolute MethodPointer2;
 begin
   Result := (Method1.Code=Method2.Code) and (Method1.Data=Method2.Data)
+end;
+
+// Converts a binary value in string representation ('%11111') to an integer
+// For Delphi 10.4 and below. Delphi 11 supports binary constants.
+procedure BinToInt(const S: string; out V: Int64; out Code: Integer);
+begin
+  V := 0;
+  Code := Length(S);
+  if Code > SizeOf(V)*8+1 then
+    Exit;
+  while Code > 1 do begin
+    case S[Code] of
+      '0', '1': V := V or Byte(S[Code] = '1') shl (Code-2);
+      else Exit;
+    end;
+    Dec(Code);
+  end;
+  Dec(Code);
+end;
+
+procedure MyVal(const S: string; out V: Int64; out Code: Integer);
+begin
+  if (Length(S) >= 2) and (S[1] = '%') then
+    BinToInt(S, V, Code)
+  else
+    Val(S, V, Code);
 end;
 
 end.

@@ -10189,7 +10189,7 @@ begin
         end;
       '$','&','%':
         begin
-          val(El.Value,i,Code);
+          {$IFDEF pas2js}val{$ELSE}MyVal{$ENDIF}(El.Value,i,Code);
           if Code<>0 then
             DoError(20161024224442,nInvalidNumber,sInvalidNumber,[El.Value],El);
           Number:=i;
@@ -13048,7 +13048,7 @@ begin
       StaticDims.Free;
     end;
     end
-  else if ResolvedParam0.BaseType in [btString, btUnicodeString{!![Kryvich]}] then
+  else if ResolvedParam0.BaseType in btAllJSStrings then
     begin
     // convert "SetLength(astring,NewLen);" to "astring = rtl.strSetLength(astring,NewLen);"
     {$IFDEF VerbosePasResolver}
