@@ -241,7 +241,7 @@ begin
     Exit;
   while Code > 1 do begin
     case S[Code] of
-      '0', '1': V := V or Byte(S[Code] = '1') shl (Code-2);
+      '0', '1': V := V or Byte(S[Code] = '1') shl (Length(S)-Code);
       else Exit;
     end;
     Dec(Code);

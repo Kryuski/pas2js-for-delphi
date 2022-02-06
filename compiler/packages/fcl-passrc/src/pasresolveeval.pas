@@ -4473,7 +4473,7 @@ begin
       pekNumber:
         begin
         // try TMaxPrecInt
-        val(TPrimitiveExpr(Expr).Value,Int,Code);
+        {$IFDEF pas2js}val{$ELSE}MyVal{$ENDIF}(TPrimitiveExpr(Expr).Value,Int,Code);
         if Code=0 then
           begin
           {$IFDEF VerbosePasResEval}
